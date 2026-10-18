@@ -1,6 +1,7 @@
 // Saved data and town transactions for one life. This module has no browser state.
 import { createRng } from './rng.js';
 import { WEAPONS } from './weapons.js';
+import { emptyBlackjack, validBlackjack } from './blackjack.js';
 
 export const WORLD_HALF = 210;
 export const MAP_CELL = 12;
@@ -12,11 +13,13 @@ export const CATALOGUE = {
   rifle: { name: 'Rifle', price: 130 },
   map: { name: 'Road and landmark map', price: 25 },
   coat: { name: 'Trail coat', price: 20 },
+  drink: { name: 'Whiskey', price: 2 },
 };
 const CAMP_NAMES = ['Coyote Wash', 'Dry Gulch', 'Rattler Flats', 'Buzzard Mesa', 'Red Hollow', 'Cinder Draw'];
 const TARGET_NAMES = ['Silas Crow', 'Ada Flint', 'Jed Mercer', 'Ruth Voss', 'Cal Rusk', 'Mae Talbot'];
 const STAT_KEYS = ['camp', 'bounty', 'kills', 'shots', 'hits', 'time', 'damageTaken'];
 const CONTRACT_STATES = new Set(['offered', 'active', 'proof', 'paid']);
+const INTERIOR_IDS = new Set(['guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable']);
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const nonnegative = (value) => Number.isFinite(value) && value >= 0;
@@ -43,6 +46,7 @@ export function createLife(seed) {
     version: 2, status: 'alive', seed, camp: 0, bounty: 0, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
     simTime: 0, projectiles: [],
     hp: 100, unlocked: ['revolver'], weapon: 0, deadEye: 0, bandages: 1, hasMap: false, coat: false,
+    interior: null, blackjack: emptyBlackjack(),
     player: { x: 0, z: 12, yaw: 0, sinceHit: 99, rollT: -1, rollCooldown: 0, rollX: 0, rollZ: 1 },
     guns: { revolver: gunState('revolver') }, discovered: {},
     world: { seed, half: WORLD_HALF, town: { x: 0, z: 0, radius: 32 }, camps,
@@ -139,6 +143,10 @@ export function normalizeLife(value) {
       && (!gun.reloading || (gun.reloadTotal > 0 && gun.reloadT <= gun.reloadTotal && gun.reserve > 0 && gun.ammo < WEAPONS[key].mag));
   })) return null;
   if (typeof value.hasMap !== 'boolean' || typeof value.coat !== 'boolean' || !object(value.contracts) || !object(value.camps) || !object(value.discovered)) return null;
+  if (value.interior !== undefined && value.interior !== null
+    && (!object(value.interior) || !INTERIOR_IDS.has(value.interior.id) || !position(value.interior.outside)
+      || Math.hypot(value.interior.outside.x, value.interior.outside.z) > 36)) return null;
+  if (value.blackjack !== undefined && !validBlackjack(value.blackjack)) return null;
   const life = createLife(value.seed);
   for (const camp of life.world.camps) {
     const contract = value.contracts[camp.id], snapshot = value.camps[camp.id];
@@ -156,12 +164,15 @@ export function normalizeLife(value) {
   for (const key of [...STAT_KEYS, 'status', 'hp', 'unlocked', 'weapon', 'deadEye', 'bandages', 'hasMap', 'coat', 'player', 'guns', 'discovered']) life[key] = saved[key];
   life.simTime = saved.simTime ?? 0;
   life.projectiles = saved.projectiles ?? [];
+  life.interior = saved.interior ?? null;
+  life.blackjack = saved.blackjack ?? emptyBlackjack();
   for (const camp of life.world.camps) { life.contracts[camp.id] = saved.contracts[camp.id]; life.camps[camp.id] = saved.camps[camp.id]; }
   return life;
 }
 
 function townError(life) {
   if (life.status !== 'alive') return 'This life has ended.';
+  if (life.interior) return null;
   const { x, z, radius } = life.world.town;
   return Math.hypot(life.player.x - x, life.player.z - z) > radius ? 'Return to town first.' : null;
 }
@@ -181,6 +192,7 @@ export function purchase(life, itemId) {
   else if (itemId === 'heal') life.hp = 100;
   else if (itemId === 'map') life.hasMap = true;
   else if (itemId === 'coat') life.coat = true;
+  else if (itemId === 'drink') life.deadEye = Math.min(1, life.deadEye + 0.2);
   else { life.unlocked.push(itemId); life.guns[itemId] = gunState(itemId); }
   return result(true, `${item.name} purchased for $${item.price}.`);
 }

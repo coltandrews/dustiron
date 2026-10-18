@@ -294,6 +294,11 @@ export class Player {
       speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: !this.game.inTown(), flash: this.flash,
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
+    if (this.game.frontier?.seated) {
+      m.legs[0].rotation.x = -1.25;
+      m.legs[1].rotation.x = -1.25;
+      m.body.position.y = 0.48;
+    } else m.body.position.y = 0;
     showGun(m, this.game.inTown() ? null : this.gun.def.key);
     if (this.game.inTown()) m.arm.rotation.x = 1.1;
   }

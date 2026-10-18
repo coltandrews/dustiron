@@ -116,6 +116,7 @@ export class Game {
       if (Number.isFinite(run.player[key])) this.player[key] = run.player[key];
     }
     this.player.prevYaw = this.player.yaw;
+    this.frontier.restore(run.interior);
     this.encounters = buildEncounters(this);
     this.props = this.encounters.flatMap((c) => c.props);
     this.enemies = this.encounters.flatMap((c) => c.enemies);
@@ -196,7 +197,7 @@ export class Game {
   }
 
   inTown() {
-    return !!this.player && Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius;
+    return !!this.player && (this.frontier?.inside || Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius);
   }
 
   useBandage() {
@@ -242,7 +243,7 @@ export class Game {
   /** Marks outlaws the player can currently see, for the map. */
   updateSpotting() {
     const P = this.player;
-    if (!P.alive) return;
+    if (!P.alive || this.frontier.inside) return;
     for (const e of this.enemies) {
       if (!e.alive || Math.hypot(e.x - P.x, e.z - P.z) > 26) continue;
       if (this.physics.los(P.x, P.z, e.x, e.z)) e.markSpotted();
@@ -446,14 +447,23 @@ export class Game {
     if (this.navDirty || this.navT <= 0) this.rebuildNav();
 
     const p = this.player;
+    this.frontier.beforePlayer(this.intent);
     p.tick(dt, gunDt, this.intent);
     this.frontier.tick(dt);
     if (p.alive) {
-      discover(this.run, p.x, p.z);
-      if (Math.hypot(p.x - this.camp.x, p.z - this.camp.z) > 2) { this.camp.x = p.x; this.camp.z = p.z; this.camp.t = 0; }
-      else this.camp.t += dt;
+      if (!this.frontier.inside) discover(this.run, p.x, p.z);
+      if (!this.frontier.inside) {
+        if (Math.hypot(p.x - this.camp.x, p.z - this.camp.z) > 2) { this.camp.x = p.x; this.camp.z = p.z; this.camp.t = 0; }
+        else this.camp.t += dt;
+      }
     }
     for (const e of this.enemies) {
+      if (this.frontier.inside) {
+        if (this.flanker === e) this.flanker = null;
+        if (e.token) e.releaseToken();
+        e.hideAimLine();
+        continue;
+      }
       if (Math.hypot(e.x - p.x, e.z - p.z) < 65) e.tick(dt);
       else {
         if (this.flanker === e) this.flanker = null;
@@ -499,18 +509,35 @@ export class Game {
     const p = this.player;
     if (p) {
       const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
-      this.locationName = this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
+      this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
       this.interactionHint = this.townActions.hint();
       this.frontier.render(alpha);
       const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);
-      for (const e of this.enemies) e.render(alpha, simDt);
-      for (const pr of this.props) pr.render(alpha, dt, this.realTime);
-      this.debris.render(alpha);
-      for (const c of this.corpses) c.render(alpha);
-      this.projectiles.render(alpha);
-      const focus = p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position;
-      this.rig.update(dt, focus, p.alive ? this.intent.aim : null);
+      if (this.frontier.inside) {
+        for (const e of this.enemies) { e.model.root.visible = false; e.hideAimLine(); }
+        for (const pr of this.props) {
+          pr.mesh.visible = false;
+          if (pr.flame) pr.flame.visible = false;
+          if (pr.fireLight) pr.fireLight.visible = false;
+        }
+        for (const item of this.debris.items) item.mesh.visible = false;
+        for (const c of this.corpses) c.mesh.visible = false;
+      } else {
+        for (const e of this.enemies) { e.model.root.visible = e.alive; e.render(alpha, simDt); }
+        for (const pr of this.props) {
+          pr.mesh.visible = pr.alive;
+          if (pr.flame) pr.flame.visible = pr.alive;
+          if (pr.fireLight) pr.fireLight.visible = pr.alive;
+          pr.render(alpha, dt, this.realTime);
+        }
+        for (const item of this.debris.items) item.mesh.visible = true;
+        this.debris.render(alpha);
+        for (const c of this.corpses) { c.mesh.visible = true; c.render(alpha); }
+        this.projectiles.render(alpha);
+      }
+      const focus = this.frontier.cameraFocus() ?? (p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position);
+      this.rig.update(dt, focus, p.alive && !this.frontier.inside ? this.intent.aim : null);
       this.render.focusShadow(this.rig.target.x, this.rig.target.z);
       this.audio.setListener(this.rig.target.x, this.rig.target.z);
       const fxScale = (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;

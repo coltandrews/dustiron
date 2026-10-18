@@ -1,8 +1,9 @@
 // Town menus use the same saved life as combat. Each purchase is saved at once.
 import { CATALOGUE, purchase, acceptContract, claimContracts, work } from './life.js';
+import { blackjackText, hitBlackjack, standBlackjack, startBlackjack } from './blackjack.js';
 
 const stock = {
-  guns: ['ammo', 'shotgun', 'rifle'], doctor: ['heal', 'bandage'], maps: ['map'], clothes: ['coat'],
+  guns: ['ammo', 'shotgun', 'rifle'], doctor: ['heal', 'bandage'], maps: ['map'], clothes: ['coat'], saloon: ['drink'],
 };
 const sayings = {
   clara: 'The doctor sells bandages. Press H to use one on the trail. You have one life, so come back before it is too late.',
@@ -17,21 +18,26 @@ export class TownActions {
     const g = this.game;
     if (!g.player?.alive || !g.inTown() || !g.frontier) return null;
     let best = null, distance = 3;
-    for (const point of [...g.frontier.sites, ...g.frontier.npcs]) {
+    for (const point of g.frontier.interactions()) {
       const d = Math.hypot(point.x - g.player.x, point.z - g.player.z);
-      if (d < distance) { best = point; distance = d; }
+      const range = point.kind === 'seat' ? 1.15 : 3;
+      if (d < range && d < distance) { best = point; distance = d; }
     }
     return best;
   }
 
   hint() {
     const point = this.nearest();
-    return point ? `E · ${point.name ? 'Talk to ' + point.name : point.label}` : '';
+    return point ? `E · ${point.kind === 'seat' ? 'Sit down' : point.kind === 'blackjack' ? 'Play blackjack' : point.name ? 'Talk to ' + point.name : point.label}` : '';
   }
 
   open() {
     const point = this.nearest();
     if (!point) return;
+    if (point.kind === 'seat') {
+      if (this.game.frontier.sit(point)) this.game.ui.toast('Press a movement key to stand.');
+      return;
+    }
     this.current = point;
     const g = this.game;
     g.state = 'interaction';
@@ -52,9 +58,15 @@ export class TownActions {
   draw(message = '') {
     const g = this.game, life = g.run, point = this.current;
     let text = '', actions = [];
-    if (stock[point.kind]) {
+    if (point.kind === 'blackjack') {
+      text = blackjackText(life);
+      actions = life.blackjack.phase === 'playing'
+        ? [{ id: 'blackjack:hit', label: 'Hit' }, { id: 'blackjack:stand', label: 'Stand' }]
+        : [{ id: 'blackjack:deal', label: 'Deal a hand · $5', disabled: life.bounty < 5 }];
+    } else if (stock[point.kind]) {
       text = point.kind === 'guns' ? `You have $${life.bounty}. Ammo is for your selected ${g.player.gun.def.name.toLowerCase()}. Use 1–3 or Q before you enter to select a gun.`
         : point.kind === 'clothes' ? `The trail coat changes your clothes. It gives no extra armor. You have $${life.bounty}.`
+          : point.kind === 'saloon' ? `A whiskey restores some Dead Eye focus. You have $${life.bounty}.`
           : `You have $${life.bounty}.`;
       actions = stock[point.kind].map((id) => {
         const item = CATALOGUE[id];
@@ -80,10 +92,8 @@ export class TownActions {
       const ready = Object.values(life.contracts).some((c) => c.status === 'proof');
       actions = [{ id: 'claim', label: 'Claim bounty payments', disabled: !ready }, { id: 'work', label: 'Town work for emergency ammo' }];
       if (Object.values(life.contracts).every((c) => c.status === 'paid')) text += '\nAll three bounties are paid. This region is clear. You can keep this life and explore.';
-    } else if (point.kind === 'saloon') {
-      text = 'The Last Drop is the town meeting place. Drinks and blackjack will open in a later build. Talk to Silas near the south end of the street for a bounty.';
     } else if (point.kind === 'stable') {
-      text = 'The stable is here for the next part of the frontier. Horses are not for sale in this build. Travel on foot for now.';
+      text = 'The stable hand keeps trail horses and tack here. The horses are still being trained for the open range.';
     } else text = sayings[point.id] ?? 'Stay safe out there. Return to town for supplies.';
     g.ui.showInteraction({ title: point.label ?? point.name, text: message ? `${message}\n\n${text}` : text, actions }, (id) => this.act(id));
   }
@@ -93,16 +103,21 @@ export class TownActions {
     const g = this.game;
     if (!this.current || g.state !== 'interaction') return;
     g.capturePlayer();
+    const beforeBounty = g.run.bounty;
     let result;
     if (id.startsWith('buy:') && stock[this.current.kind]?.includes(id.slice(4))) result = purchase(g.run, id.slice(4));
+    else if (id === 'blackjack:deal' && this.current.kind === 'blackjack') result = startBlackjack(g.run);
+    else if (id === 'blackjack:hit' && this.current.kind === 'blackjack') result = hitBlackjack(g.run);
+    else if (id === 'blackjack:stand' && this.current.kind === 'blackjack') result = standBlackjack(g.run);
     else if (id.startsWith('accept:') && this.current.kind === 'bounty') result = acceptContract(g.run, id.slice(7));
     else if (id === 'claim' && this.current.kind === 'sheriff') result = claimContracts(g.run);
     else if (id === 'work' && this.current.kind === 'sheriff') result = work(g.run);
     if (!result) return;
     if (result.ok) {
+      if (id === 'buy:drink') g.deadEye.meter = g.run.deadEye;
       g.player.refreshInventory(g.run);
       g.save();
-      g.audio.play('coin', { bus: 'ui', vol: 0.6 });
+      if (!id.startsWith('blackjack:') || g.run.bounty > beforeBounty) g.audio.play('coin', { bus: 'ui', vol: 0.6 });
     }
     this.draw(result.message);
   }

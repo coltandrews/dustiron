@@ -101,7 +101,7 @@ export class UI {
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
     box.replaceChildren();
-    for (const action of [...actions.filter((item) => item.id !== 'close'), { id: 'close', label: 'Back to town' }]) {
+    for (const action of [...actions.filter((item) => item.id !== 'close'), { id: 'close', label: 'Continue' }]) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `btn${action.id === 'close' ? ' interaction-close' : ''}`;

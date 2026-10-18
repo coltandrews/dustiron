@@ -5,6 +5,7 @@ const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
   grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', bounty: '#b4532e', cleared: '#5f713e', you: '#2f5d8a',
 };
+const TOWN_PLACES = ['Guns & Ammo', 'Doctor Finch', 'Sheriff', 'Maps & Trails', 'Clothier', 'The Last Drop', 'Livery Stable'];
 
 export class MapView {
   constructor() {
@@ -103,7 +104,8 @@ export class MapView {
 
     const p = game.player;
     if (p?.alive) {
-      const px = X(p.x), py = Y(p.z), dx = Math.sin(p.yaw), dz = Math.cos(p.yaw), r = 7;
+      const shown = life.interior?.outside ?? p;
+      const px = X(shown.x), py = Y(shown.z), dx = Math.sin(p.yaw), dz = Math.cos(p.yaw), r = 7;
       ctx.beginPath(); ctx.moveTo(px + dx * r * 1.4, py + dz * r * 1.4);
       ctx.lineTo(px - dz * r * 0.8 - dx * r * 0.7, py + dx * r * 0.8 - dz * r * 0.7);
       ctx.lineTo(px + dz * r * 0.8 - dx * r * 0.7, py - dx * r * 0.8 - dz * r * 0.7); ctx.closePath();
@@ -118,6 +120,17 @@ export class MapView {
     ctx.lineTo(size - pad - 20, pad + 11); ctx.lineTo(size - pad - 12, pad + 11); ctx.closePath(); ctx.fill();
     ctx.fillRect(pad + 10, size - pad - 15, 50 * k, 3);
     ctx.font = font(); ctx.textAlign = 'left'; ctx.fillText('50 m', pad + 16 + 50 * k, size - pad - 12);
+
+    // Store names live on the map, so the buildings do not need large signs.
+    const keyW = Math.min(210, span * 0.48), keyH = 106, keyX = pad + 8, keyY = pad + 8;
+    ctx.fillStyle = 'rgba(239,220,187,0.94)'; ctx.fillRect(keyX, keyY, keyW, keyH);
+    ctx.strokeStyle = C.soft; ctx.lineWidth = 1; ctx.strokeRect(keyX, keyY, keyW, keyH);
+    ctx.fillStyle = C.ink; ctx.font = font(700, 12); ctx.textAlign = 'left'; ctx.fillText('MERCY CROSSING', keyX + 8, keyY + 16);
+    ctx.font = font(600, 10);
+    TOWN_PLACES.forEach((name, index) => {
+      const column = index > 3 ? 1 : 0, row = column ? index - 4 : index;
+      ctx.fillText(name, keyX + 8 + column * keyW * 0.52, keyY + 34 + row * 17);
+    });
 
     const cells = Math.ceil(H * 2 / MAP_CELL) ** 2;
     const surveyed = Math.round(Object.keys(life.discovered).length / cells * 100);

@@ -64,6 +64,13 @@ function openAt(game, point) {
   assert.equal(game.townActions.current.id, point.id);
 }
 
+function enterStore(game, id) {
+  assert.equal(game.frontier.enter(id), true);
+  assert.equal(game.frontier.inside, true);
+  assert.equal(game.run.interior.id, id);
+  return game.frontier.rooms.get(id).points.find((point) => point.id === `${id}-keeper`);
+}
+
 function choose(game, id) {
   const action = game.ui.menu.actions.find((item) => item.id === id);
   assert.ok(action, `menu has no ${id} action`);
@@ -143,7 +150,7 @@ test('bounty, shopping, save, death, and a new life share one consistent record'
   assert.equal(game.enemies.some((enemy) => enemy.id === targetId), false);
   assert.equal(game.run.contracts[camp.id].status, 'proof');
 
-  openAt(game, game.frontier.sites.find((site) => site.id === 'sheriff'));
+  openAt(game, enterStore(game, 'sheriff'));
   choose(game, 'claim');
   assert.equal(game.run.bounty, camp.reward);
   const paid = game.run.bounty;
@@ -151,18 +158,20 @@ test('bounty, shopping, save, death, and a new life share one consistent record'
   assert.equal(game.run.bounty, paid);
   assert.equal(game.run.contracts[camp.id].status, 'paid');
   close(game);
+  game.frontier.exit();
 
-  openAt(game, game.frontier.sites.find((site) => site.id === 'guns'));
+  openAt(game, enterStore(game, 'guns'));
   choose(game, 'buy:shotgun');
   assert.equal(game.run.bounty, paid - CATALOGUE.shotgun.price);
   assert.equal(game.player.guns.length, 2);
   assert.equal(game.player.guns[0].ammo, 2);
   assert.equal(game.player.guns[0].reserve, 9);
   close(game);
+  game.frontier.exit();
   game.player.switchTo(1);
   const shotgun = game.player.gun;
   shotgun.ammo = 1; shotgun.reserve = 4;
-  openAt(game, game.frontier.sites.find((site) => site.id === 'doctor'));
+  openAt(game, enterStore(game, 'doctor'));
   choose(game, 'buy:heal');
   assert.equal(game.player.hp, 100);
   assert.equal(game.player.gunIndex, 1);
@@ -177,6 +186,7 @@ test('bounty, shopping, save, death, and a new life share one consistent record'
   assert.equal(shoppingSave.guns.shotgun.ammo, 1);
 
   const oldSeed = game.run.seed;
+  game.frontier.exit();
   place(game, 0, 40);
   game.player.damage(1000, 1, 0);
   assert.equal(game.state, 'dying');
@@ -220,4 +230,35 @@ test('clearing one camp does not end the world or count the camp twice', (t) => 
   assert.equal(game.run.camp, 1);
   game.tick(1 / 60, 1 / 60);
   assert.equal(game.run.camp, 1);
+});
+
+test('store doors, room saves, seats, and the walk-out exit keep one player state', (t) => {
+  const game = makeGame(t);
+  startLife(game, 0.56789);
+  const site = game.frontier.sites.find((item) => item.id === 'saloon');
+  place(game, site.x, site.z);
+  game.frontier.tick(1 / 60);
+  assert.equal(game.frontier.inside, true);
+  assert.equal(game.locationName, 'Mercy Crossing');
+  const room = game.frontier.rooms.get('saloon');
+  const blackjack = room.points.find((point) => point.id === 'blackjack');
+  place(game, blackjack.x, blackjack.z);
+  assert.equal(game.townActions.nearest().id, 'blackjack');
+  const seat = room.points.find((point) => point.kind === 'seat');
+  assert.equal(game.frontier.sit(seat), true);
+  assert.equal(game.frontier.seated, seat);
+  game.frontier.beforePlayer({ move: { x: 1, z: 0 } });
+  assert.equal(game.frontier.seated, null);
+  game.save();
+  const saved = loadSave();
+  assert.equal(saved.interior.id, 'saloon');
+  game.continueRun(saved);
+  assert.equal(game.frontier.inside, true);
+  assert.equal(game.frontier.locationLabel(), 'The Last Drop');
+  const restored = game.frontier.rooms.get('saloon');
+  place(game, restored.center.x, restored.center.z + 7.1);
+  game.frontier.tick(1);
+  assert.equal(game.frontier.inside, false);
+  assert.equal(game.run.interior, null);
+  assert.ok(Math.abs(game.player.x - site.outsideX) < 0.01);
 });
