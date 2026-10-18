@@ -247,8 +247,15 @@ test('store doors, room saves, seats, and the walk-out exit keep one player stat
   const seat = room.points.find((point) => point.kind === 'seat');
   assert.equal(game.frontier.sit(seat), true);
   assert.equal(game.frontier.seated, seat);
+  game.player.render(1, 1 / 60);
+  assert.ok(game.player.model.body.position.y < -0.9);
   game.frontier.beforePlayer({ move: { x: 1, z: 0 } });
   assert.equal(game.frontier.seated, null);
+  game.player.rollT = 0.1;
+  game.player.render(1, 1 / 60);
+  assert.ok(Math.abs(game.player.model.pivot.rotation.x) > 1);
+  assert.ok(game.player.model.body.position.y < -0.7);
+  game.player.rollT = -1;
   game.save();
   const saved = loadSave();
   assert.equal(saved.interior.id, 'saloon');

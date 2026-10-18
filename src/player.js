@@ -297,8 +297,8 @@ export class Player {
     if (this.game.frontier?.seated) {
       m.legs[0].rotation.x = -1.25;
       m.legs[1].rotation.x = -1.25;
-      m.body.position.y = 0.48;
-    } else m.body.position.y = 0;
+      m.body.position.y -= 0.2;
+    }
     showGun(m, this.game.inTown() ? null : this.gun.def.key);
     if (this.game.inTown()) m.arm.rotation.x = 1.1;
   }
