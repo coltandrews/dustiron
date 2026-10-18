@@ -3,7 +3,7 @@
 const $ = (id) => document.getElementById(id);
 
 const interactionLabels = {
-  blackjack: 'The Last Drop · Table game',
+  blackjack: 'The Last Drop · $5 table',
   bounty: 'Bounty lead',
   clothes: 'Mercantile counter',
   doctor: 'Doctor and remedies',
@@ -118,6 +118,7 @@ export class UI {
   showInteraction({ title, text, actions = [], mode = 'resident' }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
+    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Choose your play' : 'Your move';
     this.el.interactionTitle.textContent = title;
     this.el.interactionEyebrow.textContent = interactionLabels[mode] ?? interactionLabels.resident;
     this.el.interactionMark.textContent = title.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'DI';
@@ -133,7 +134,7 @@ export class UI {
     for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `btn${action.id === 'close' ? ' interaction-close' : ''}`;
+      button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
       const key = document.createElement('span');
       key.className = 'choice-key';
       key.textContent = action.id === 'close' ? '×' : String(index + 1);
@@ -159,22 +160,23 @@ export class UI {
       return;
     }
 
+    const board = document.createElement('div');
+    board.className = 'blackjack-board';
+    const messages = [];
+    let hands = 0;
     const lines = text.split('\n');
     for (const line of lines) {
       const hand = line.match(/^(Dealer|You):\s*(.*?)\s+\(([^)]+)\)$/);
       if (!hand) {
         if (!line.trim()) continue;
-        const message = document.createElement('p');
-        message.className = 'table-message';
-        message.textContent = line;
-        box.appendChild(message);
+        if (!messages.includes(line.trim())) messages.push(line.trim());
         continue;
       }
       const row = document.createElement('div');
-      row.className = 'hand-row';
+      row.className = `hand-row ${hand[1] === 'Dealer' ? 'dealer-hand' : 'player-hand'}`;
       const owner = document.createElement('span');
       owner.className = 'hand-owner';
-      owner.textContent = hand[1];
+      owner.textContent = hand[1] === 'You' ? 'Your hand' : 'Dealer';
       const cards = document.createElement('span');
       cards.className = 'playing-cards';
       for (const [index, rank] of hand[2].trim().split(/\s+/).entries()) {
@@ -186,8 +188,17 @@ export class UI {
       const score = document.createElement('b');
       score.className = 'hand-score';
       score.textContent = hand[3];
+      score.title = `${owner.textContent} value`;
       row.append(owner, cards, score);
-      box.appendChild(row);
+      board.appendChild(row);
+      hands++;
+    }
+    if (hands) box.appendChild(board);
+    for (const text of messages) {
+      const message = document.createElement('p');
+      message.className = `table-message${hands ? ' table-callout' : ' table-intro'}`;
+      message.textContent = text;
+      box.appendChild(message);
     }
   }
 

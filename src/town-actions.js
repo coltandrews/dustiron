@@ -60,6 +60,7 @@ export class TownActions {
     let text = '', actions = [];
     if (point.kind === 'blackjack') {
       text = blackjackText(life);
+      if (message && !text.includes(message)) text = `${message}\n${text}`;
       actions = life.blackjack.phase === 'playing'
         ? [{ id: 'blackjack:hit', label: 'Hit' }, { id: 'blackjack:stand', label: 'Stand' }]
         : [{ id: 'blackjack:deal', label: 'Deal a hand · $5', disabled: life.bounty < 5 }];
@@ -97,7 +98,7 @@ export class TownActions {
     } else text = sayings[point.id] ?? 'Stay safe out there. Return to town for supplies.';
     g.ui.showInteraction({
       title: point.label ?? point.name,
-      text: message ? `${message}\n\n${text}` : text,
+      text: point.kind === 'blackjack' || !message ? text : `${message}\n\n${text}`,
       actions,
       mode: point.kind,
     }, (id) => this.act(id));

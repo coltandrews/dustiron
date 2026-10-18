@@ -201,7 +201,7 @@ function saloonInterior(game, room) {
     s.cyl(0.04, 0.04, 0.14, 6, PAL.brass, room.center.x + i * 0.43, 1.42 + h, room.center.z - 5.0);
   }
   room.root.add(meshOf(s));
-  room.points.push({ id: 'blackjack', label: 'Play blackjack', kind: 'blackjack', x: room.center.x, z: room.center.z + 3.25 });
+  room.points.push({ id: 'blackjack', label: 'Blackjack', kind: 'blackjack', x: room.center.x, z: room.center.z + 3.25 });
 }
 
 function stableInterior(game, room) {

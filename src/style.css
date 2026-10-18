@@ -213,23 +213,45 @@ kbd {
 .dialog-menu .fine kbd { background: #c8aa77; color: #21130d; }
 #screen-interaction[data-mode="bounty"] .dialog-portrait, #screen-interaction[data-mode="sheriff"] .dialog-portrait { background: radial-gradient(circle at 42% 38%, #e8bb66, #9c3b25 66%, #4d1d14); }
 
-/* Blackjack uses the same controls on a felt table. */
-#screen-interaction[data-mode="blackjack"] { place-items: center; background: radial-gradient(circle, rgba(25, 13, 7, 0.35), rgba(5, 4, 3, 0.82)); }
-#screen-interaction[data-mode="blackjack"] .interaction-card { grid-template-columns: minmax(0, 1fr) minmax(250px, 310px); width: min(920px, calc(100vw - 44px)); background: radial-gradient(ellipse at 35% 45%, #245d48, #12352b 66%, #0c271f); border: 7px solid #301a10; box-shadow: inset 0 0 0 2px #b17a39, inset 0 0 60px rgba(3, 14, 10, 0.8), 0 20px 60px rgba(0, 0, 0, 0.75); }
-#screen-interaction[data-mode="blackjack"] .dialog-portrait { display: none; }
-#screen-interaction[data-mode="blackjack"] .dialog-copy { padding: 30px 34px; }
-#screen-interaction[data-mode="blackjack"] .dialog-copy .eyebrow { color: #e0bd6c; }
-#screen-interaction[data-mode="blackjack"] .dialog-rule { background: linear-gradient(90deg, #d4ad5b, transparent); }
-#screen-interaction[data-mode="blackjack"] .dialog-menu { background: rgba(3, 16, 12, 0.38); border-left-color: #b18445; }
-.table-message { margin: 0 0 15px; color: #f1d9a5; font-size: 17px; }
-.hand-row { display: grid; grid-template-columns: 62px 1fr 44px; align-items: center; gap: 12px; margin: 11px 0; }
-.hand-owner { color: #e4c883; font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.playing-cards { display: flex; flex-wrap: wrap; gap: 7px; }
-.playing-card { display: grid; place-items: center; width: 38px; height: 52px; color: #1e1712; background: linear-gradient(135deg, #fff4d8, #d8c59d); border: 2px solid #f9e9c7; border-radius: 3px; font: 20px/1 var(--display); font-style: normal; box-shadow: 0 3px 0 #11100b, 0 5px 9px rgba(0,0,0,0.3); transform: rotate(-1.5deg); }
-.playing-card:nth-child(even) { transform: rotate(1.8deg); }
-.playing-card.red-card { color: #a62f20; }
-.playing-card.hidden-card { color: #d0a34f; background: repeating-linear-gradient(45deg, #4f241c 0 4px, #c69042 4px 6px); text-shadow: 0 1px #21130d; }
-.hand-score { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #f3dcaa; background: #14281f; border: 2px solid #c99a4a; font-size: 18px; }
+/* Blackjack is one compact felt table. */
+#screen-interaction[data-mode="blackjack"] { place-items: center; background: radial-gradient(ellipse at center, rgba(35, 21, 13, 0.28), rgba(5, 4, 3, 0.86)); }
+#screen-interaction[data-mode="blackjack"] .interaction-card {
+  display: block; width: min(760px, calc(100vw - 44px)); max-height: min(650px, calc(100vh - 44px)); overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 18%, #265a47, #123a2d 62%, #0a281f);
+  border: 9px solid #311b11; border-radius: 24px 24px 72px 72px;
+  box-shadow: inset 0 0 0 2px #ba8745, inset 0 -32px 70px rgba(2, 12, 9, 0.48), 0 22px 65px rgba(0, 0, 0, 0.78);
+}
+#screen-interaction[data-mode="blackjack"] .interaction-card::before {
+  inset: 7px; width: auto; height: auto; border: 1px solid rgba(229, 190, 112, 0.36); border-radius: 13px 13px 61px 61px;
+  background: none; box-shadow: none; pointer-events: none;
+}
+#screen-interaction[data-mode="blackjack"] .interaction-card::after, #screen-interaction[data-mode="blackjack"] .dialog-portrait { display: none; }
+#screen-interaction[data-mode="blackjack"] .dialog-copy { padding: 25px 34px 16px; text-align: center; overflow: visible; }
+#screen-interaction[data-mode="blackjack"] .dialog-copy .eyebrow { color: #d5b66e; font-size: 11px; }
+#screen-interaction[data-mode="blackjack"] .dialog-copy h2 { margin: 2px 0 7px; font-size: clamp(30px, 4vw, 40px); }
+#screen-interaction[data-mode="blackjack"] .dialog-rule { width: 110px; margin: 0 auto 18px; background: #c69a50; }
+#screen-interaction[data-mode="blackjack"] #interaction-text { max-width: none; }
+#screen-interaction[data-mode="blackjack"] .dialog-menu { padding: 16px 28px 25px; background: rgba(2, 14, 10, 0.42); border: 0; border-top: 1px solid rgba(202, 160, 84, 0.48); }
+#screen-interaction[data-mode="blackjack"] .choice-label { margin-bottom: 10px; color: #d6ba7a; text-align: center; }
+#screen-interaction[data-mode="blackjack"] .interaction-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 9px; }
+#screen-interaction[data-mode="blackjack"] .interaction-actions .btn { min-height: 46px; padding: 10px 12px; border-radius: 4px; clip-path: none; }
+#screen-interaction[data-mode="blackjack"] .interaction-actions .table-action { background: linear-gradient(#84502b, #4d2a19); border-color: #e0b968; }
+#screen-interaction[data-mode="blackjack"] .interaction-actions .interaction-close { margin-top: 0; }
+#screen-interaction[data-mode="blackjack"] .choice-key { border-radius: 50%; }
+#screen-interaction[data-mode="blackjack"] .dialog-menu .fine { margin-top: 10px; }
+.blackjack-board { overflow: hidden; border: 1px solid rgba(225, 192, 126, 0.45); border-radius: 10px; background: rgba(3, 20, 15, 0.36); box-shadow: inset 0 8px 22px rgba(0, 0, 0, 0.18); text-align: left; }
+.hand-row { display: grid; grid-template-columns: 82px minmax(0, 1fr) 44px; align-items: center; gap: 15px; min-height: 62px; margin: 0; padding: 13px 16px; }
+.hand-row + .hand-row { border-top: 1px solid rgba(226, 192, 123, 0.3); }
+.player-hand { background: rgba(210, 169, 89, 0.08); }
+.hand-owner { color: #ddc384; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.playing-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; }
+.playing-card { display: grid; place-items: center; width: 38px; height: 52px; color: #21170f; background: linear-gradient(145deg, #fff3d6, #d8c49d); border: 1px solid #fff1ce; border-radius: 4px; font: 20px/1 var(--display); font-style: normal; box-shadow: 0 3px 0 #17100b, 0 5px 8px rgba(0, 0, 0, 0.28); }
+.playing-card.red-card { color: #9e3426; }
+.playing-card.hidden-card { color: #e8bd67; background: repeating-linear-gradient(45deg, #4b251c 0 4px, #a97132 4px 6px); text-shadow: 0 1px #21130d; }
+.hand-score { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #f1dca9; background: #0d251c; border: 1px solid #d2a353; font-size: 17px; font-variant-numeric: tabular-nums; }
+.table-message { color: #f1dcad; font-size: 16px; text-align: center; }
+.table-callout { width: fit-content; max-width: calc(100% - 30px); margin: 12px auto 0; padding: 7px 14px; border-radius: 999px; background: rgba(5, 24, 18, 0.7); border: 1px solid rgba(211, 171, 93, 0.42); }
+.table-intro { max-width: 36ch; margin: 12px auto 8px; color: #e7d09f; }
 
 /* Survey map */
 #screen-map { background: radial-gradient(ellipse at center, rgba(46, 27, 16, 0.62), rgba(8, 6, 4, 0.93)); }
