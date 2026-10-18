@@ -1818,6 +1818,7 @@ const { PAL } = __m.models;
 const { rand } = __m.rng;
 const MAX_SOLID = 700;
 const MAX_GLOW = 320;
+const MAX_SMOKE = 96;
 const MAX_TRACERS = 40;
 
 const KINDS = {
@@ -1825,7 +1826,7 @@ const KINDS = {
   wood: { colors: [PAL.plank, PAL.woodDark, PAL.woodLight], size: [0.06, 0.14], speed: [2.5, 6], up: [1.5, 4], g: -18, drag: 0.6, life: [0.9, 1.5], bounce: 0.3, glow: false },
   blood: { colors: [0x8e1f1a, 0x6e1612, 0xa52a20], size: [0.06, 0.12], speed: [1.5, 4.5], up: [0.5, 2.5], g: -18, drag: 0.8, life: [0.7, 1.1], bounce: 0, stick: true, glow: false },
   sparks: { colors: [0xffd27a, 0xffe7b0, 0xffa94a], size: [0.035, 0.07], speed: [3, 8], up: [0.5, 3], g: -12, drag: 1, life: [0.15, 0.3], bounce: 0.4, glow: true },
-  smoke: { colors: [PAL.smoke, 0x857a70, 0x5a514a], size: [0.35, 0.7], speed: [0.3, 1.4], up: [0.6, 1.6], g: 0.6, drag: 1.4, life: [1.2, 2.4], bounce: 0, glow: false, grow: 0.9 },
+  smoke: { colors: [PAL.smoke, 0x857a70, 0x5a514a], size: [0.25, 0.45], speed: [0.3, 1.0], up: [0.5, 1.3], g: 0.5, drag: 1.4, life: [0.7, 1.3], bounce: 0, glow: false, grow: 0.6 },
   fire: { colors: [0xffa040, 0xff6a24, 0xffe08a], size: [0.3, 0.65], speed: [1, 5], up: [1.5, 4.5], g: 1.5, drag: 2.5, life: [0.3, 0.65], bounce: 0, glow: true },
   muzzle: { colors: [0xffe2a0, 0xffc060], size: [0.12, 0.24], speed: [2, 5], up: [0, 0.4], g: 0, drag: 8, life: [0.04, 0.08], bounce: 0, glow: true },
   casing: { colors: [PAL.brass], size: [0.05, 0.06], speed: [1.2, 2.4], up: [2, 3], g: -18, drag: 0.3, life: [1.2, 1.8], bounce: 0.35, glow: false },
@@ -1834,16 +1835,18 @@ const KINDS = {
 };
 
 class Pool {
-  constructor(scene, max, material) {
+  constructor(scene, max, material = null) {
     this.max = max;
-    this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, max);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.frustumCulled = false;
-    this.mesh.castShadow = false;
-    this.mesh.receiveShadow = false;
-    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1));
-    this.mesh.count = 0;
-    scene.add(this.mesh);
+    this.mesh = material ? new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, max) : null;
+    if (this.mesh) {
+      this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.mesh.frustumCulled = false;
+      this.mesh.castShadow = false;
+      this.mesh.receiveShadow = false;
+      this.mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+      this.mesh.count = 0;
+      scene.add(this.mesh);
+    }
     this.items = [];
     for (let i = 0; i < max; i++) {
       this.items.push({ alive: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rx: 0, ry: 0, rz: 0, vr: 0, size: 0, t: 0, life: 1, k: null, color: new THREE.Color() });
@@ -1863,6 +1866,19 @@ class Pool {
   }
 }
 
+function smokeTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const shade = ctx.createRadialGradient(32, 32, 3, 32, 32, 32);
+  shade.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+  shade.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+  shade.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(canvas);
+}
+
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler();
@@ -1874,6 +1890,14 @@ class FX {
     this.scene = scene;
     this.solid = new Pool(scene, MAX_SOLID, new THREE.MeshLambertMaterial({ flatShading: true }));
     this.glow = new Pool(scene, MAX_GLOW, new THREE.MeshBasicMaterial({ toneMapped: false }));
+    this.smoke = new Pool(scene, MAX_SMOKE);
+    const smokeMap = smokeTexture();
+    for (const p of this.smoke.items) {
+      p.sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeMap, transparent: true, opacity: 0, depthWrite: false }));
+      p.sprite.visible = false;
+      scene.add(p.sprite);
+    }
+    this.pools = [this.solid, this.glow, this.smoke];
     this.flash = flashLight;
     this.flashT = 0;
     this.flashMax = 0;
@@ -1894,7 +1918,7 @@ class FX {
 
   emit(kind, x, y, z, count, dirX = 0, dirZ = 0, cone = Math.PI, speedMul = 1) {
     const k = KINDS[kind];
-    const pool = k.glow ? this.glow : this.solid;
+    const pool = kind === 'smoke' ? this.smoke : k.glow ? this.glow : this.solid;
     const baseA = dirX || dirZ ? Math.atan2(dirX, dirZ) : 0;
     for (let i = 0; i < count; i++) {
       const p = pool.take();
@@ -1908,6 +1932,7 @@ class FX {
       p.size = rand(k.size[0], k.size[1]);
       p.t = 0; p.life = rand(k.life[0], k.life[1]);
       p.color.set(k.colors[(Math.random() * k.colors.length) | 0]);
+      if (p.sprite) { p.sprite.material.color.copy(p.color); p.sprite.visible = true; }
     }
   }
 
@@ -1932,7 +1957,7 @@ class FX {
 
   explosion(x, z) {
     this.emit('fire', x, 0.6, z, 34, 0, 0, Math.PI, 1.4);
-    this.emit('smoke', x, 0.8, z, 16, 0, 0, Math.PI, 2.2);
+    this.emit('smoke', x, 0.8, z, 12, 0, 0, Math.PI, 1.6);
     this.emit('sparks', x, 0.7, z, 22, 0, 0, Math.PI, 1.6);
     this.emit('dust', x, 0.2, z, 18, 0, 0, Math.PI, 2.4);
     this.light(x, 1.5, z, 90, 16);
@@ -1960,25 +1985,28 @@ class FX {
   }
 
   clear() {
-    for (const pool of [this.solid, this.glow]) { for (const p of pool.items) p.alive = false; pool.mesh.count = 0; }
+    for (const pool of this.pools) {
+      for (const p of pool.items) { p.alive = false; if (p.sprite) p.sprite.visible = false; }
+      if (pool.mesh) pool.mesh.count = 0;
+    }
     for (const tr of this.tracers) tr.mesh.visible = false;
     this.flash.intensity = 0;
   }
 
   update(dt) {
-    for (const pool of [this.solid, this.glow]) {
+    for (const pool of this.pools) {
       let n = 0;
       for (const p of pool.items) {
         if (!p.alive) continue;
         p.t += dt;
-        if (p.t >= p.life) { p.alive = false; continue; }
+        if (p.t >= p.life) { p.alive = false; if (p.sprite) p.sprite.visible = false; continue; }
         const k = p.k;
         const drag = Math.exp(-k.drag * dt);
         p.vx *= drag; p.vz *= drag; p.vy = p.vy * drag + k.g * dt;
         p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
         p.rx += p.vr * dt; p.rz += p.vr * 0.7 * dt;
         const ground = p.size * 0.5;
-        if (p.y < ground) {
+        if (!p.sprite && p.y < ground) {
           p.y = ground;
           if (k.stick) { p.vx = p.vy = p.vz = 0; p.vr = 0; }
           else if (k.bounce > 0 && p.vy < -1) { p.vy = -p.vy * k.bounce; p.vx *= 0.6; p.vz *= 0.6; p.vr *= 0.5; }
@@ -1988,14 +2016,22 @@ class FX {
         let s = p.size;
         if (k.grow) s *= 1 + f * k.grow * 2;
         if (f > 0.65) s *= 1 - (f - 0.65) / 0.35;
+        if (p.sprite) {
+          p.sprite.position.set(p.x, p.y, p.z);
+          p.sprite.scale.set(s, s, 1);
+          p.sprite.material.opacity = 0.45 * Math.min(1, f / 0.15) * (1 - f);
+          continue;
+        }
         _m.compose(_p.set(p.x, p.y, p.z), _q.setFromEuler(_e.set(p.rx, p.ry, p.rz)), _s.set(s, s, s));
         pool.mesh.setMatrixAt(n, _m);
         pool.mesh.setColorAt(n, p.color);
         n++;
       }
-      pool.mesh.count = n;
-      pool.mesh.instanceMatrix.needsUpdate = true;
-      if (pool.mesh.instanceColor) pool.mesh.instanceColor.needsUpdate = true;
+      if (pool.mesh) {
+        pool.mesh.count = n;
+        pool.mesh.instanceMatrix.needsUpdate = true;
+        if (pool.mesh.instanceColor) pool.mesh.instanceColor.needsUpdate = true;
+      }
     }
 
     for (const tr of this.tracers) {
