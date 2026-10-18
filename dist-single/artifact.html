@@ -13,6 +13,10 @@
   --rust: #b4532e;
   --brass: #dcaa4c;
   --blood: #b3291f;
+  --wood: #4a2818;
+  --wood-dark: #21130d;
+  --leather: #6d3c23;
+  --felt: #183e31;
   --muted: #a88e70;
   --display: 'Rye', 'Rockwell', Georgia, serif;
   --body: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', system-ui, sans-serif;
@@ -85,7 +89,7 @@ kbd {
 
 .hint { position: absolute; left: var(--edge-l); bottom: var(--edge-b); max-width: 52vw; padding: 8px 14px; border-radius: 6px; background: rgba(28, 19, 15, 0.7); font-size: 14px; opacity: 0; transition: opacity 0.6s; }
 .hint.show { opacity: 1; }
-.interaction-hint { position: absolute; left: 50%; bottom: max(135px, 18vh); transform: translateX(-50%); max-width: min(500px, 80vw); padding: 10px 18px; border: 1px solid var(--brass); border-radius: 4px; background: rgba(28, 19, 15, 0.92); color: var(--paper); font-size: 18px; text-align: center; }
+.interaction-hint { position: absolute; left: 50%; bottom: max(135px, 18vh); transform: translateX(-50%); max-width: min(500px, 80vw); padding: 10px 28px; border: 1px solid #f2c46c; background: linear-gradient(#5b351f, #301b12); color: var(--paper); font-size: 18px; font-weight: 700; letter-spacing: 0.04em; text-align: center; box-shadow: inset 0 0 0 2px #21130d, 0 5px 14px rgba(0, 0, 0, 0.45); clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%); }
 .toast { position: absolute; left: 50%; top: 26%; transform: translate(-50%, 8px); font: 30px/1.1 var(--display); color: var(--paper); text-align: center; opacity: 0; transition: opacity 0.25s, transform 0.25s; max-width: calc(100% - 32px); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -116,71 +120,151 @@ kbd {
 #hurt-dir.show { animation: fade 0.6s ease-out; }
 
 /* ---------- screens ---------- */
-.screen { position: absolute; inset: 0; display: grid; place-items: center; box-sizing: border-box; padding: var(--edge-t) var(--edge-r) var(--edge-b) var(--edge-l); background: rgba(20, 13, 9, 0.68); overflow-y: auto; z-index: 5; }
-.card { position: relative; box-sizing: border-box; width: min(600px, 100%); padding: 32px clamp(20px, 5vw, 44px); background: var(--paper); color: var(--ink); border-radius: 4px; box-shadow: 0 0 0 6px var(--paper), 0 0 0 8px var(--ink-2), 0 24px 60px rgba(0, 0, 0, 0.55); }
-.card.small { width: min(460px, 100%); text-align: center; }
-.card h1 { margin: 6px 0 12px; font: clamp(42px, 9vw, 72px)/0.95 var(--display); color: var(--ink); text-wrap: balance; }
+.screen { position: absolute; inset: 0; display: grid; place-items: center; box-sizing: border-box; padding: var(--edge-t) var(--edge-r) var(--edge-b) var(--edge-l); background: radial-gradient(circle at 50% 35%, rgba(38, 23, 15, 0.55), rgba(10, 7, 5, 0.9)); overflow-y: auto; z-index: 5; }
+.card { position: relative; box-sizing: border-box; width: min(600px, 100%); padding: 32px clamp(20px, 5vw, 44px); background: linear-gradient(135deg, var(--paper), #d2b782); color: var(--ink); box-shadow: 0 0 0 3px #301b12, 0 0 0 7px #8a5c2d, 0 24px 60px rgba(0, 0, 0, 0.65); }
+.card.small { width: min(480px, 100%); text-align: center; }
+.card h1 { margin: 6px 0 12px; font: clamp(42px, 9vw, 72px)/0.95 var(--display); text-wrap: balance; }
 .card h1 span { color: var(--rust); }
-.card h2 { margin: 4px 0 14px; font: clamp(26px, 6vw, 34px)/1.05 var(--display); text-wrap: balance; }
+.card h2 { margin: 4px 0 14px; font: clamp(26px, 6vw, 36px)/1.05 var(--display); text-wrap: balance; }
 .eyebrow { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rust); }
-.lede { margin: 0 0 20px; font-size: 17px; line-height: 1.45; max-width: 46ch; }
+.lede { margin: 0 0 20px; font-size: 17px; line-height: 1.45; max-width: 52ch; }
 .card.small .lede { margin-inline: auto; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .card.small .actions { justify-content: center; }
-.btn { appearance: none; border: 2px solid var(--ink); background: transparent; color: var(--ink); font: 600 17px/1 var(--body); letter-spacing: 0.04em; padding: 12px 20px; border-radius: 3px; cursor: pointer; transition: background 0.12s, color 0.12s, transform 0.08s; }
-.btn:hover { background: rgba(28, 19, 15, 0.08); }
-.btn:active { transform: translateY(1px); }
-.btn:focus-visible { outline: 3px solid var(--rust); outline-offset: 3px; }
-.btn:disabled { cursor: default; opacity: 0.45; transform: none; background: transparent; }
-.interaction-actions { flex-direction: column; }
-.interaction-actions .btn { text-align: left; line-height: 1.2; }
-.interaction-actions .interaction-close { margin-top: 8px; text-align: center; }
-#interaction-text { white-space: pre-line; }
-.btn.primary { background: var(--ink); color: var(--paper); }
-.btn.primary:hover { background: var(--rust); border-color: var(--rust); }
-.continue-info { margin: 10px 0 0; font-size: 14px; color: #6b5440; font-variant-numeric: tabular-nums; }
-.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin: 24px 0 0; padding-top: 18px; border-top: 1.5px dashed rgba(28, 19, 15, 0.35); }
-.controls div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
-.controls dt { white-space: nowrap; }
-.controls dd { margin: 0; font-weight: 600; text-align: right; }
-.controls kbd { background: var(--ink); color: var(--paper); box-shadow: none; }
+.btn { appearance: none; position: relative; border: 1px solid #d0a54f; background: linear-gradient(#5e3720, #382016); color: var(--paper); font: 700 17px/1 var(--body); letter-spacing: 0.045em; padding: 13px 22px; cursor: pointer; box-shadow: inset 0 0 0 2px #21130d, inset 0 1px 0 rgba(255, 229, 170, 0.24), 0 4px 0 #170d09, 0 7px 14px rgba(0, 0, 0, 0.28); clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 7px); transition: filter 0.12s, color 0.12s, transform 0.08s; }
+.btn:hover { color: #ffd47a; filter: brightness(1.15); }
+.btn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px #21130d, 0 1px 0 #170d09; }
+.btn:focus-visible { outline: 3px solid #ffe39c; outline-offset: 3px; }
+.btn:disabled { cursor: default; opacity: 0.42; filter: grayscale(0.8); transform: none; }
+.btn.primary { background: linear-gradient(#a84827, #6d2819); border-color: #f2c46c; }
+.continue-info { margin: 11px 0 0; font-size: 14px; color: #ead4ae; font-variant-numeric: tabular-nums; }
 .fine { margin: 14px 0 0; font-size: 14px; color: #6b5440; }
 .fine kbd { background: var(--ink); color: var(--paper); box-shadow: none; }
 .mobile-note { display: none; }
 
-.ledger { display: grid; gap: 2px; margin: 0 0 22px; text-align: left; font-variant-numeric: tabular-nums; }
-.ledger .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 2px; border-bottom: 1px dashed rgba(28, 19, 15, 0.3); font-size: 17px; }
-.ledger .row b { font-weight: 700; }
-.poster::before { content: ''; position: absolute; inset: 10px; border: 1.5px solid rgba(28, 19, 15, 0.45); pointer-events: none; }
-.poster.dead h2 { color: var(--blood); }
-
-/* Survey map */
-.card.map-card { width: min(720px, 100%); padding: 22px clamp(16px, 4vw, 32px); }
-.map-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 16px; margin-bottom: 12px; }
-.map-head h2 { margin: 2px 0 0; }
-.map-sub { margin: 0; font-size: 15px; font-weight: 600; color: #6b5440; font-variant-numeric: tabular-nums; }
-.map-wrap { display: grid; place-items: center; min-width: 0; }
-#map-canvas { display: block; max-width: 100%; box-shadow: 0 0 0 1.5px rgba(28, 19, 15, 0.35); }
-.map-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 14px 0 16px; padding: 0; font-size: 14px; font-weight: 600; }
-.map-legend li { display: flex; align-items: center; gap: 6px; }
-.map-legend i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink); }
-.map-legend .lg-you { border: 0; background: #2f5d8a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.map-legend .lg-town { background: var(--ink); }
-.map-legend .lg-seen { border: 1.5px dashed var(--rust); border-radius: 50%; }
-.map-legend .lg-camp { border: 0; background: var(--rust); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.map-legend .lg-unknown { background: #bca17b; }
-.map-card .actions { justify-content: center; }
-.map-card .fine { text-align: center; }
-
-/* Title backdrop */
-.screen.title { background: linear-gradient(#3b2333 0%, #8f4632 38%, #e28a4d 62%, #f2c27f 76%, #c88a52 76.2%, #9a6038 100%); }
+/* Title screen */
+.screen.title { place-items: stretch; background: linear-gradient(#302032 0%, #86402f 38%, #dd8148 62%, #edbd7b 76%, #b37647 76.2%, #714325 100%); }
+.screen.title::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(18, 9, 7, 0.58), transparent 58%), linear-gradient(0deg, rgba(18, 9, 7, 0.68), transparent 36%); box-shadow: inset 0 0 110px rgba(20, 9, 5, 0.65); }
 .dusk { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .sun { position: absolute; left: 68%; top: 48%; width: 22vmin; height: 22vmin; border-radius: 50%; background: #ffe0a0; box-shadow: 0 0 80px 30px rgba(255, 200, 120, 0.45); transform: translate(-50%, -50%); }
 .mesa { position: absolute; bottom: 23.8%; background: #5c2f26; }
 .mesa.m1 { left: -4%; width: 34%; height: 15%; clip-path: polygon(0 100%, 6% 22%, 18% 18%, 22% 0, 64% 0, 70% 30%, 88% 34%, 100% 100%); }
 .mesa.m2 { left: 52%; width: 30%; height: 9%; background: #6e382a; clip-path: polygon(0 100%, 12% 10%, 70% 0, 82% 40%, 100% 100%); }
 .mesa.m3 { left: 80%; width: 26%; height: 19%; background: #4d2620; clip-path: polygon(0 100%, 10% 30%, 30% 26%, 36% 0, 80% 4%, 92% 50%, 100% 100%); }
-.title-card { z-index: 1; }
+.title-card { z-index: 1; align-self: center; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 370px); grid-template-rows: auto auto; gap: 26px clamp(28px, 7vw, 90px); width: min(1180px, 100%); margin: auto; padding: clamp(18px, 4vw, 54px); background: none; color: var(--paper); box-shadow: none; }
+.title-brand { align-self: end; max-width: 650px; text-shadow: 0 3px 1px #2a140e, 0 6px 22px rgba(0, 0, 0, 0.6); }
+.title-brand .eyebrow { color: #ffce78; }
+.title-brand h1 { margin: 5px 0 8px; font-size: clamp(64px, 9vw, 126px); color: #f5dfb9; letter-spacing: -0.04em; filter: drop-shadow(3px 4px 0 #6b2519); }
+.title-brand h1 span { color: #df8a43; font-size: 0.7em; }
+.title-brand .lede { margin: 12px 0 0; font-size: clamp(16px, 1.8vw, 20px); color: #f4e4c7; }
+.title-star { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 12px; background: #c28a3a; border: 3px solid #3b2114; transform: rotate(45deg); box-shadow: inset 0 0 0 2px #f3c76c, 3px 4px 0 rgba(32, 15, 9, 0.65); }
+.title-star::after { content: '★'; color: #3b2114; font-size: 25px; transform: rotate(-45deg); }
+.title-rule { display: flex; align-items: center; gap: 10px; width: min(510px, 100%); color: #e9b85d; }
+.title-rule i { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, currentColor); }
+.title-rule i:last-child { transform: scaleX(-1); }
+.title-rule b { font: 13px/1 var(--display); }
+.title-menu { position: relative; align-self: center; padding: 25px 22px 27px; background: repeating-linear-gradient(2deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 28px), linear-gradient(100deg, #5a331e, #301b12 50%, #4a2919); border: 3px solid #1b0f0a; box-shadow: inset 0 0 0 2px #9b6730, inset 0 0 28px #1d100b, 8px 12px 28px rgba(0, 0, 0, 0.52); transform: rotate(-0.5deg); }
+.title-menu::before, .title-menu::after { content: ''; position: absolute; top: 10px; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f2c36b, #6e431f 65%); box-shadow: 0 calc(100% + 188px) 0 #8a5828; }
+.title-menu::before { left: 10px; } .title-menu::after { right: 10px; }
+.menu-label, .guide-label, .choice-label { margin: 0 0 12px; color: #d7a650; font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+.title-menu .actions { flex-direction: column; }
+.title-menu .btn { width: 100%; min-height: 54px; text-align: left; font-size: 19px; }
+.title-menu .btn::before { content: '◆'; margin-right: 12px; color: #d8a34a; }
+.title-menu .btn:hover::before, .title-menu .btn:focus-visible::before { content: '▶'; color: #ffe39c; }
+.title-guide { grid-column: 1 / -1; padding: 14px 18px 12px; background: rgba(25, 14, 10, 0.82); border-top: 2px solid #ad7538; border-bottom: 2px solid #4d2a19; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.title-guide .guide-label { float: left; margin: 2px 22px 0 0; color: #f0bf69; }
+.controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px 20px; margin: 0; }
+.controls div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.controls dt { white-space: nowrap; }
+.controls dd { margin: 0; color: #ead8b9; font-weight: 600; text-align: right; }
+.controls kbd { background: #d9bd8b; color: #24150e; box-shadow: inset 0 -2px 0 #6e4a2c; }
+.title-guide .fine { clear: both; margin: 8px 0 0; color: #ad9776; }
+
+/* Pause screen */
+#screen-pause { background: radial-gradient(circle, rgba(40, 26, 17, 0.65), rgba(8, 6, 5, 0.92)); }
+.pause-card { padding: 38px 42px 34px; color: var(--paper); background: repeating-linear-gradient(1deg, transparent 0 31px, rgba(255,255,255,0.035) 32px), linear-gradient(100deg, #56311e, #2a1810 55%, #432518); border: 3px solid #170d09; box-shadow: inset 0 0 0 2px #a16d34, inset 0 0 38px #160c08, 0 24px 60px rgba(0, 0, 0, 0.72); transform: rotate(-0.35deg); }
+.pause-card .eyebrow { color: #d6a44e; }
+.pause-card h2 { color: #f3deb9; font-size: 46px; text-shadow: 0 3px 0 #170d09; }
+.pause-card .lede { color: #cfbfa3; }
+.pause-card .actions { flex-direction: column; }
+.pause-card .btn { width: 100%; text-align: left; }
+.pause-card .btn::before { content: '◆'; margin-right: 13px; color: #d4a34f; }
+.pause-card .btn:hover::before, .pause-card .btn:focus-visible::before { content: '▶'; }
+.pause-card .fine { color: #9e896b; }
+.pause-card .fine kbd { color: #25160f; background: #c9ad7d; }
+.pause-seal { position: absolute; top: -28px; left: 50%; display: grid; place-items: center; width: 54px; height: 54px; background: #bd8335; border: 3px solid #24150e; transform: translateX(-50%) rotate(45deg); box-shadow: inset 0 0 0 2px #efd080; }
+.pause-seal span { font: 15px/1 var(--display); color: #2c190f; transform: rotate(-45deg); }
+
+/* Conversation and trade panel */
+.interaction-screen { place-items: end center; padding-bottom: max(22px, env(safe-area-inset-bottom, 0px)); background: linear-gradient(0deg, rgba(7, 5, 4, 0.88), rgba(7, 5, 4, 0.3) 58%, transparent 83%); overflow: hidden; }
+.interaction-card { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) minmax(260px, 340px); width: min(1180px, calc(100vw - 44px)); max-height: min(420px, calc(100vh - 46px)); color: var(--paper); background: repeating-linear-gradient(1deg, transparent 0 33px, rgba(255,255,255,0.022) 34px), linear-gradient(105deg, #4d2a19, #21130d 58%, #3c2116); border: 3px solid #160d09; box-shadow: inset 0 0 0 2px #9b6733, inset 0 0 38px #130b08, 0 18px 50px rgba(0, 0, 0, 0.72); }
+.interaction-card::before, .interaction-card::after { content: ''; position: absolute; top: 10px; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f0ca77, #765026 65%); box-shadow: 0 calc(min(396px, calc(100vh - 70px))) 0 #795027; z-index: 3; }
+.interaction-card::before { left: 10px; } .interaction-card::after { right: 10px; }
+.dialog-portrait { align-self: center; justify-self: center; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; color: #2b190f; background: radial-gradient(circle at 42% 38%, #f1ca76, #a2692b 60%, #5a351c); border: 4px solid #24140d; box-shadow: 0 0 0 2px #d5a650, inset 0 0 0 5px rgba(44, 25, 14, 0.36), 0 8px 18px rgba(0,0,0,0.48); }
+.dialog-portrait span { font: 25px/1 var(--display); text-shadow: 0 1px #f8dda0; }
+.dialog-copy { min-width: 0; overflow-y: auto; padding: 26px 30px 25px 0; }
+.dialog-copy .eyebrow { color: #dba84e; }
+.dialog-copy h2 { margin: 3px 0 8px; color: #f5e2bd; font: clamp(26px, 3vw, 38px)/1.05 var(--display); text-shadow: 0 2px #120a07; }
+.dialog-rule { width: min(420px, 80%); height: 2px; margin-bottom: 14px; background: linear-gradient(90deg, #b87834, transparent); }
+#interaction-text { margin: 0; color: #ead9bc; white-space: pre-line; }
+.dialog-menu { min-width: 0; padding: 24px 24px 20px; background: rgba(14, 9, 6, 0.48); border-left: 1px solid #92602f; overflow-y: auto; }
+.dialog-menu .choice-label { color: #d9a64d; }
+.interaction-actions { flex-direction: column; flex-wrap: nowrap; }
+.interaction-actions .btn { display: grid; grid-template-columns: 30px 1fr; align-items: center; width: 100%; padding: 10px 12px; text-align: left; line-height: 1.2; }
+.choice-key { display: grid; place-items: center; width: 21px; height: 21px; color: #2a180f; background: #d8ae62; border: 1px solid #f5d991; font-size: 12px; box-shadow: 0 2px 0 #160d09; }
+.interaction-actions .interaction-close { margin-top: 7px; color: #cbb99c; background: linear-gradient(#3e2a1d, #261811); border-color: #78562f; }
+.dialog-menu .fine { margin-top: 12px; color: #9f8968; text-align: center; }
+.dialog-menu .fine kbd { background: #c8aa77; color: #21130d; }
+#screen-interaction[data-mode="bounty"] .dialog-portrait, #screen-interaction[data-mode="sheriff"] .dialog-portrait { background: radial-gradient(circle at 42% 38%, #e8bb66, #9c3b25 66%, #4d1d14); }
+
+/* Blackjack uses the same controls on a felt table. */
+#screen-interaction[data-mode="blackjack"] { place-items: center; background: radial-gradient(circle, rgba(25, 13, 7, 0.35), rgba(5, 4, 3, 0.82)); }
+#screen-interaction[data-mode="blackjack"] .interaction-card { grid-template-columns: minmax(0, 1fr) minmax(250px, 310px); width: min(920px, calc(100vw - 44px)); background: radial-gradient(ellipse at 35% 45%, #245d48, #12352b 66%, #0c271f); border: 7px solid #301a10; box-shadow: inset 0 0 0 2px #b17a39, inset 0 0 60px rgba(3, 14, 10, 0.8), 0 20px 60px rgba(0, 0, 0, 0.75); }
+#screen-interaction[data-mode="blackjack"] .dialog-portrait { display: none; }
+#screen-interaction[data-mode="blackjack"] .dialog-copy { padding: 30px 34px; }
+#screen-interaction[data-mode="blackjack"] .dialog-copy .eyebrow { color: #e0bd6c; }
+#screen-interaction[data-mode="blackjack"] .dialog-rule { background: linear-gradient(90deg, #d4ad5b, transparent); }
+#screen-interaction[data-mode="blackjack"] .dialog-menu { background: rgba(3, 16, 12, 0.38); border-left-color: #b18445; }
+.table-message { margin: 0 0 15px; color: #f1d9a5; font-size: 17px; }
+.hand-row { display: grid; grid-template-columns: 62px 1fr 44px; align-items: center; gap: 12px; margin: 11px 0; }
+.hand-owner { color: #e4c883; font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.playing-cards { display: flex; flex-wrap: wrap; gap: 7px; }
+.playing-card { display: grid; place-items: center; width: 38px; height: 52px; color: #1e1712; background: linear-gradient(135deg, #fff4d8, #d8c59d); border: 2px solid #f9e9c7; border-radius: 3px; font: 20px/1 var(--display); font-style: normal; box-shadow: 0 3px 0 #11100b, 0 5px 9px rgba(0,0,0,0.3); transform: rotate(-1.5deg); }
+.playing-card:nth-child(even) { transform: rotate(1.8deg); }
+.playing-card.red-card { color: #a62f20; }
+.playing-card.hidden-card { color: #d0a34f; background: repeating-linear-gradient(45deg, #4f241c 0 4px, #c69042 4px 6px); text-shadow: 0 1px #21130d; }
+.hand-score { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #f3dcaa; background: #14281f; border: 2px solid #c99a4a; font-size: 18px; }
+
+/* Survey map */
+#screen-map { background: radial-gradient(ellipse at center, rgba(46, 27, 16, 0.62), rgba(8, 6, 4, 0.93)); }
+.card.map-card { width: min(760px, calc(100% - 28px)); margin-block: 26px; padding: 28px clamp(20px, 4vw, 38px); background: radial-gradient(circle at 28% 20%, rgba(255,255,255,0.22), transparent 24%), repeating-linear-gradient(5deg, rgba(80, 43, 21, 0.025) 0 2px, transparent 2px 22px), linear-gradient(110deg, #ead6ad, #c8a66f); box-shadow: 0 2px 0 #edd8ad, 0 0 0 2px #321d12, 10px 22px 55px rgba(0, 0, 0, 0.72); clip-path: polygon(1% 2%, 11% 0, 24% 1.5%, 38% 0, 52% 1%, 68% 0, 84% 1.5%, 99% 0, 98.5% 16%, 100% 31%, 98.5% 48%, 100% 66%, 98% 82%, 99% 100%, 83% 98.5%, 66% 100%, 49% 98.5%, 34% 100%, 18% 98.5%, 1% 100%, 2% 83%, 0 67%, 1.5% 49%, 0 33%, 1.5% 17%); }
+.map-roll { position: absolute; left: 4%; right: 4%; height: 18px; border-radius: 50%; background: linear-gradient(#9c7342, #dfc490 45%, #74502d); box-shadow: 0 4px 8px rgba(44, 24, 13, 0.45); }
+.map-roll.top { top: -8px; } .map-roll.bottom { bottom: -8px; transform: scaleY(-1); }
+.map-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 16px; margin-bottom: 12px; }
+.map-head h2 { margin: 2px 0 0; }
+.map-sub { margin: 0; color: #6b482c; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.map-wrap { display: grid; place-items: center; min-width: 0; padding: 5px; border: 1px solid rgba(54, 31, 17, 0.5); box-shadow: inset 0 0 14px rgba(74, 40, 20, 0.25); }
+#map-canvas { display: block; max-width: 100%; filter: sepia(0.16) contrast(1.04); }
+.map-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 14px 0 16px; padding: 0; font-size: 14px; font-weight: 700; }
+.map-legend li { display: flex; align-items: center; gap: 6px; }
+.map-legend i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink); }
+.map-legend .lg-you { border: 0; background: #2f5d8a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.map-legend .lg-town { background: var(--ink); }
+.map-legend .lg-seen { border: 1.5px dashed var(--rust); border-radius: 50%; }
+.map-legend .lg-camp { border: 0; background: var(--rust); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.map-legend .lg-unknown { background: #9f8057; }
+.map-card .actions { justify-content: center; }
+.map-card .fine { text-align: center; }
+
+/* Death poster */
+#screen-dead { background: radial-gradient(circle, rgba(90, 24, 16, 0.5), rgba(10, 5, 4, 0.94)); }
+.poster.dead { padding: 40px 44px 32px; background: radial-gradient(circle at 65% 12%, rgba(255,255,255,0.2), transparent 18%), linear-gradient(120deg, #ead2a2, #c69d61); box-shadow: 0 0 0 2px #2d190f, 8px 16px 45px rgba(0,0,0,0.72); clip-path: polygon(2% 0, 18% 2%, 35% 0, 50% 1.5%, 68% 0, 83% 2%, 100% 0, 98% 18%, 100% 36%, 98% 53%, 100% 72%, 98% 100%, 82% 98%, 65% 100%, 48% 98%, 31% 100%, 15% 98%, 0 100%, 2% 79%, 0 61%, 2% 42%, 0 20%); transform: rotate(-0.7deg); }
+.poster::before { content: ''; position: absolute; inset: 12px; border: 3px double rgba(47, 26, 15, 0.55); pointer-events: none; }
+.poster.dead h2 { color: #721d17; font-size: 42px; text-transform: uppercase; }
+.dead-stamp { position: absolute; top: 20px; right: 18px; padding: 2px 10px; color: rgba(121, 27, 20, 0.68); border: 4px double currentColor; font: 18px/1.2 var(--display); text-transform: uppercase; transform: rotate(12deg); }
+.ledger { display: grid; gap: 2px; margin: 0 0 22px; text-align: left; font-variant-numeric: tabular-nums; }
+.ledger .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 2px; border-bottom: 1px dashed rgba(28, 19, 15, 0.38); font-size: 17px; }
+.ledger .row b { font-weight: 700; }
 
 .loading { display: flex; align-items: center; gap: 14px; font: 26px/1 var(--display); color: var(--paper); }
 .loading i { width: 18px; height: 18px; border: 3px solid var(--brass); border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -190,8 +274,49 @@ kbd {
 @keyframes fade { 0% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+@media (max-width: 900px) {
+  .title-card { grid-template-columns: minmax(0, 1fr) minmax(270px, 320px); gap: 20px; padding: 26px 22px; }
+  .title-brand h1 { font-size: clamp(58px, 10vw, 86px); }
+  .title-brand .lede { font-size: 16px; }
+  .controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .interaction-card { grid-template-columns: 96px minmax(0, 1fr); max-height: calc(100vh - 36px); }
+  .dialog-portrait { width: 66px; height: 66px; }
+  .dialog-copy { padding: 22px 22px 18px 0; }
+  .dialog-menu { grid-column: 1 / -1; padding: 15px 18px 17px; border-top: 1px solid #92602f; border-left: 0; }
+  .interaction-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .interaction-actions .interaction-close { margin-top: 0; }
+  .dialog-menu .fine { margin-top: 9px; }
+  #screen-interaction[data-mode="blackjack"] .interaction-card { grid-template-columns: minmax(0, 1fr); }
+  #screen-interaction[data-mode="blackjack"] .dialog-menu { border-left: 0; border-top: 1px solid #b18445; }
+}
+
 @media (max-width: 640px) {
-  .controls { grid-template-columns: minmax(0, 1fr); }
+  .screen.title { place-items: start stretch; }
+  .title-card { grid-template-columns: minmax(0, 1fr); padding: 30px 14px; }
+  .title-brand { align-self: start; }
+  .title-brand h1 { font-size: clamp(50px, 16vw, 76px); }
+  .title-star { width: 34px; height: 34px; }
+  .title-star::after { font-size: 19px; }
+  .title-menu { width: min(330px, calc(100% - 48px)); justify-self: center; padding: 22px 18px; }
+  .title-guide { padding: 13px; }
+  .title-guide .guide-label { float: none; margin-bottom: 8px; }
+  .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); font-size: 13px; }
+  .title-guide .fine { display: none; }
+  .interaction-screen { padding-inline: 10px; padding-bottom: 10px; }
+  .interaction-card { grid-template-columns: 70px minmax(0, 1fr); width: 100%; max-height: calc(100vh - 20px); }
+  .dialog-portrait { width: 50px; height: 50px; }
+  .dialog-portrait span { font-size: 18px; }
+  .dialog-copy { padding: 17px 14px 14px 0; }
+  .dialog-copy h2 { font-size: 25px; }
+  .dialog-menu { padding: 12px; }
+  .interaction-actions { grid-template-columns: minmax(0, 1fr); }
+  #screen-interaction[data-mode="blackjack"] .interaction-card { width: 100%; }
+  #screen-interaction[data-mode="blackjack"] .dialog-copy { padding: 20px 16px; }
+  .hand-row { grid-template-columns: 52px 1fr 38px; gap: 7px; }
+  .playing-card { width: 31px; height: 43px; font-size: 16px; }
+  .hand-score { width: 34px; height: 34px; }
+  .pause-card { padding: 36px 22px 28px; }
+  .card.map-card { width: 100%; padding: 24px 14px; }
   .camp-name { font-size: 17px; }
   .hud-tc { top: calc(var(--edge-t) + 70px); }
   .hint { display: none; }
@@ -267,15 +392,24 @@ kbd {
   <section class="screen title" id="screen-title" hidden>
     <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
     <div class="card title-card">
-      <p class="eyebrow">One life on the frontier</p>
-      <h1>Dust <span>&amp;</span> Iron</h1>
-      <p class="lede">Start in town. Talk to residents, take bounties, and explore the land. Return for supplies and payment. Death removes your money, gear, and map. Your next life starts on new land.</p>
-      <div class="actions">
-        <button id="btn-start" class="btn primary" type="button">Start a new life</button>
-        <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
+      <div class="title-brand">
+        <div class="title-star" aria-hidden="true"><i></i></div>
+        <p class="eyebrow">One life on the frontier</p>
+        <h1>Dust <span>&amp;</span> Iron</h1>
+        <div class="title-rule" aria-hidden="true"><i></i><b>DI</b><i></i></div>
+        <p class="lede">Start in town. Talk to residents, take bounties, and explore the land. Return for supplies and payment. Death removes your money, gear, and map. Your next life starts on new land.</p>
       </div>
-      <p class="continue-info" id="continue-info" hidden></p>
-      <dl class="controls">
+      <div class="title-menu">
+        <p class="menu-label">Choose your trail</p>
+        <div class="actions">
+          <button id="btn-start" class="btn primary" type="button">Start a new life</button>
+          <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
+        </div>
+        <p class="continue-info" id="continue-info" hidden></p>
+      </div>
+      <div class="title-guide">
+        <p class="guide-label">Field guide</p>
+        <dl class="controls">
         <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
         <div><dt><kbd>Mouse</kbd></dt><dd>Aim</dd></div>
         <div><dt><kbd>Click</kbd></dt><dd>Shoot</dd></div>
@@ -289,15 +423,18 @@ kbd {
         <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
-      </dl>
-      <p class="fine">Town is safe. Ammunition is limited. The map reveals land as you travel. Watch enemy aim lines: when one turns red, roll.</p>
-      <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
+        </dl>
+        <p class="fine">Town is safe. Ammunition is limited. The map reveals land as you travel. Watch enemy aim lines: when one turns red, roll.</p>
+        <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
+      </div>
     </div>
   </section>
 
   <section class="screen" id="screen-pause" hidden>
-    <div class="card small">
-      <h2>Paused</h2>
+    <div class="card small pause-card">
+      <div class="pause-seal" aria-hidden="true"><span>DI</span></div>
+      <p class="eyebrow">Trail menu</p>
+      <h2>Game paused</h2>
       <p class="lede" id="save-status">Your life is saved. You can return to this position with your current supplies and progress.</p>
       <div class="actions">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
@@ -309,6 +446,7 @@ kbd {
 
   <section class="screen" id="screen-map" hidden>
     <div class="card map-card">
+      <div class="map-roll top" aria-hidden="true"></div>
       <div class="map-head">
         <div>
           <p class="eyebrow">Survey map</p>
@@ -328,22 +466,31 @@ kbd {
         <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
       </div>
       <p class="fine">Travel to reveal land. Buy a map to see roads. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
+      <div class="map-roll bottom" aria-hidden="true"></div>
     </div>
   </section>
 
-  <section class="screen" id="screen-interaction" hidden>
-    <div class="card small interaction-card" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
-      <p class="eyebrow">Town</p>
-      <h2 id="interaction-title"></h2>
-      <p class="lede" id="interaction-text"></p>
-      <div class="actions interaction-actions" id="interaction-actions"></div>
-      <p class="fine"><kbd>Esc</kbd> closes this conversation. The game is paused.</p>
+  <section class="screen interaction-screen" id="screen-interaction" hidden>
+    <div class="interaction-card" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
+      <div class="dialog-portrait" aria-hidden="true"><span id="interaction-mark">DI</span></div>
+      <div class="dialog-copy">
+        <p class="eyebrow" id="interaction-eyebrow">Town resident</p>
+        <h2 id="interaction-title"></h2>
+        <div class="dialog-rule" aria-hidden="true"></div>
+        <div class="lede" id="interaction-text"></div>
+      </div>
+      <div class="dialog-menu">
+        <p class="choice-label">Your move</p>
+        <div class="actions interaction-actions" id="interaction-actions"></div>
+        <p class="fine"><kbd>Esc</kbd> closes this screen</p>
+      </div>
     </div>
   </section>
 
   <section class="screen" id="screen-dead" hidden>
     <div class="card small poster dead">
-      <p class="eyebrow">Life over</p>
+      <div class="dead-stamp" aria-hidden="true">Dead</div>
+      <p class="eyebrow">Last ride</p>
       <h2 id="dead-title">Shot down</h2>
       <div class="ledger" id="dead-body"></div>
       <div class="actions">
@@ -1097,6 +1244,19 @@ __m.ui = (() => {
 
 const $ = (id) => document.getElementById(id);
 
+const interactionLabels = {
+  blackjack: 'The Last Drop · Table game',
+  bounty: 'Bounty lead',
+  clothes: 'Mercantile counter',
+  doctor: 'Doctor and remedies',
+  guns: 'Gunsmith counter',
+  maps: 'Survey office',
+  resident: 'Town resident',
+  saloon: 'Saloon bar',
+  sheriff: 'Sheriff office',
+  stable: 'Stable yard',
+};
+
 class UI {
   constructor() {
     this.el = {
@@ -1108,6 +1268,7 @@ class UI {
       screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
+      interactionEyebrow: $('interaction-eyebrow'), interactionMark: $('interaction-mark'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
@@ -1121,6 +1282,13 @@ class UI {
     this.hintT = 12;
     this.el.screens.interaction.addEventListener('keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
+      if (/^Digit[1-9]$/.test(event.code)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const choice = this.el.interactionActions.querySelectorAll('button')[Number(event.code.at(-1)) - 1];
+        choice?.click();
+        return;
+      }
       if (event.code !== 'Tab') return;
       event.preventDefault();
       event.stopPropagation();
@@ -1189,18 +1357,32 @@ class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [] }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'resident' }, onAction) {
+    const screen = this.el.screens.interaction;
+    screen.dataset.mode = mode;
     this.el.interactionTitle.textContent = title;
-    this.el.interactionText.textContent = text;
+    this.el.interactionEyebrow.textContent = interactionLabels[mode] ?? interactionLabels.resident;
+    this.el.interactionMark.textContent = title.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'DI';
+    this.renderInteractionText(text, mode);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
     box.replaceChildren();
-    for (const action of [...actions.filter((item) => item.id !== 'close'), { id: 'close', label: 'Continue' }]) {
+    const shopModes = ['guns', 'doctor', 'maps', 'clothes', 'saloon'];
+    const menuActions = [...actions.filter((item) => item.id !== 'close'), {
+      id: 'close', label: mode === 'blackjack' ? 'Leave the table' : shopModes.includes(mode) ? 'Leave the counter' : 'End conversation',
+    }];
+    for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `btn${action.id === 'close' ? ' interaction-close' : ''}`;
-      button.textContent = action.label;
+      const key = document.createElement('span');
+      key.className = 'choice-key';
+      key.textContent = action.id === 'close' ? '×' : String(index + 1);
+      const label = document.createElement('span');
+      label.className = 'choice-text';
+      label.textContent = action.label;
+      button.append(key, label);
       button.dataset.action = action.id;
       button.disabled = Boolean(action.disabled);
       if (!button.disabled && action.id === focusedId) preferredFocus = button;
@@ -1209,6 +1391,46 @@ class UI {
     }
     this.show('interaction');
     (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
+  }
+
+  renderInteractionText(text, mode) {
+    const box = this.el.interactionText;
+    box.replaceChildren();
+    if (mode !== 'blackjack') {
+      box.textContent = text;
+      return;
+    }
+
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const hand = line.match(/^(Dealer|You):\s*(.*?)\s+\(([^)]+)\)$/);
+      if (!hand) {
+        if (!line.trim()) continue;
+        const message = document.createElement('p');
+        message.className = 'table-message';
+        message.textContent = line;
+        box.appendChild(message);
+        continue;
+      }
+      const row = document.createElement('div');
+      row.className = 'hand-row';
+      const owner = document.createElement('span');
+      owner.className = 'hand-owner';
+      owner.textContent = hand[1];
+      const cards = document.createElement('span');
+      cards.className = 'playing-cards';
+      for (const [index, rank] of hand[2].trim().split(/\s+/).entries()) {
+        const card = document.createElement('i');
+        card.className = `playing-card${rank === '?' ? ' hidden-card' : index % 3 === 1 ? ' red-card' : ''}`;
+        card.textContent = rank;
+        cards.appendChild(card);
+      }
+      const score = document.createElement('b');
+      score.className = 'hand-score';
+      score.textContent = hand[3];
+      row.append(owner, cards, score);
+      box.appendChild(row);
+    }
   }
 
   showDead(stats) {
@@ -5059,7 +5281,12 @@ class TownActions {
     } else if (point.kind === 'stable') {
       text = 'The stable hand keeps trail horses and tack here. The horses are still being trained for the open range.';
     } else text = sayings[point.id] ?? 'Stay safe out there. Return to town for supplies.';
-    g.ui.showInteraction({ title: point.label ?? point.name, text: message ? `${message}\n\n${text}` : text, actions }, (id) => this.act(id));
+    g.ui.showInteraction({
+      title: point.label ?? point.name,
+      text: message ? `${message}\n\n${text}` : text,
+      actions,
+      mode: point.kind,
+    }, (id) => this.act(id));
   }
 
   act(id) {

@@ -95,7 +95,12 @@ export class TownActions {
     } else if (point.kind === 'stable') {
       text = 'The stable hand keeps trail horses and tack here. The horses are still being trained for the open range.';
     } else text = sayings[point.id] ?? 'Stay safe out there. Return to town for supplies.';
-    g.ui.showInteraction({ title: point.label ?? point.name, text: message ? `${message}\n\n${text}` : text, actions }, (id) => this.act(id));
+    g.ui.showInteraction({
+      title: point.label ?? point.name,
+      text: message ? `${message}\n\n${text}` : text,
+      actions,
+      mode: point.kind,
+    }, (id) => this.act(id));
   }
 
   act(id) {

@@ -2,6 +2,19 @@
 
 const $ = (id) => document.getElementById(id);
 
+const interactionLabels = {
+  blackjack: 'The Last Drop · Table game',
+  bounty: 'Bounty lead',
+  clothes: 'Mercantile counter',
+  doctor: 'Doctor and remedies',
+  guns: 'Gunsmith counter',
+  maps: 'Survey office',
+  resident: 'Town resident',
+  saloon: 'Saloon bar',
+  sheriff: 'Sheriff office',
+  stable: 'Stable yard',
+};
+
 export class UI {
   constructor() {
     this.el = {
@@ -13,6 +26,7 @@ export class UI {
       screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
+      interactionEyebrow: $('interaction-eyebrow'), interactionMark: $('interaction-mark'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
@@ -26,6 +40,13 @@ export class UI {
     this.hintT = 12;
     this.el.screens.interaction.addEventListener('keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
+      if (/^Digit[1-9]$/.test(event.code)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const choice = this.el.interactionActions.querySelectorAll('button')[Number(event.code.at(-1)) - 1];
+        choice?.click();
+        return;
+      }
       if (event.code !== 'Tab') return;
       event.preventDefault();
       event.stopPropagation();
@@ -94,18 +115,32 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [] }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'resident' }, onAction) {
+    const screen = this.el.screens.interaction;
+    screen.dataset.mode = mode;
     this.el.interactionTitle.textContent = title;
-    this.el.interactionText.textContent = text;
+    this.el.interactionEyebrow.textContent = interactionLabels[mode] ?? interactionLabels.resident;
+    this.el.interactionMark.textContent = title.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'DI';
+    this.renderInteractionText(text, mode);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
     box.replaceChildren();
-    for (const action of [...actions.filter((item) => item.id !== 'close'), { id: 'close', label: 'Continue' }]) {
+    const shopModes = ['guns', 'doctor', 'maps', 'clothes', 'saloon'];
+    const menuActions = [...actions.filter((item) => item.id !== 'close'), {
+      id: 'close', label: mode === 'blackjack' ? 'Leave the table' : shopModes.includes(mode) ? 'Leave the counter' : 'End conversation',
+    }];
+    for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `btn${action.id === 'close' ? ' interaction-close' : ''}`;
-      button.textContent = action.label;
+      const key = document.createElement('span');
+      key.className = 'choice-key';
+      key.textContent = action.id === 'close' ? '×' : String(index + 1);
+      const label = document.createElement('span');
+      label.className = 'choice-text';
+      label.textContent = action.label;
+      button.append(key, label);
       button.dataset.action = action.id;
       button.disabled = Boolean(action.disabled);
       if (!button.disabled && action.id === focusedId) preferredFocus = button;
@@ -114,6 +149,46 @@ export class UI {
     }
     this.show('interaction');
     (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
+  }
+
+  renderInteractionText(text, mode) {
+    const box = this.el.interactionText;
+    box.replaceChildren();
+    if (mode !== 'blackjack') {
+      box.textContent = text;
+      return;
+    }
+
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const hand = line.match(/^(Dealer|You):\s*(.*?)\s+\(([^)]+)\)$/);
+      if (!hand) {
+        if (!line.trim()) continue;
+        const message = document.createElement('p');
+        message.className = 'table-message';
+        message.textContent = line;
+        box.appendChild(message);
+        continue;
+      }
+      const row = document.createElement('div');
+      row.className = 'hand-row';
+      const owner = document.createElement('span');
+      owner.className = 'hand-owner';
+      owner.textContent = hand[1];
+      const cards = document.createElement('span');
+      cards.className = 'playing-cards';
+      for (const [index, rank] of hand[2].trim().split(/\s+/).entries()) {
+        const card = document.createElement('i');
+        card.className = `playing-card${rank === '?' ? ' hidden-card' : index % 3 === 1 ? ' red-card' : ''}`;
+        card.textContent = rank;
+        cards.appendChild(card);
+      }
+      const score = document.createElement('b');
+      score.className = 'hand-score';
+      score.textContent = hand[3];
+      row.append(owner, cards, score);
+      box.appendChild(row);
+    }
   }
 
   showDead(stats) {
