@@ -142,8 +142,14 @@ function mapsInterior(game, room) {
     s.cyl(0.2, 0.2, 2.4, 10, PAL.canvas, room.center.x + x, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
     s.cyl(0.24, 0.24, 0.06, 10, PAL.woodDark, room.center.x + x - 1.2, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
   }
-  s.box(5.6, 0.08, 3.8, PAL.canvas, room.center.x - 3.6, 0.25, room.center.z + 1.5, 0, 0.3);
-  for (let i = 0; i < 5; i++) s.box(0.035, 0.04, 3.4, PAL.wood, room.center.x - 5.4 + i * 0.9, 0.3, room.center.z + 1.5, 0, 0.3);
+  const tableX = room.center.x - 3.6, tableZ = room.center.z + 1.5;
+  s.box(6.1, 0.2, 4.25, PAL.woodDark, tableX, 0.92, tableZ, 0, 0.3);
+  s.box(5.75, 0.11, 3.9, PAL.canvas, tableX, 1.08, tableZ, 0, 0.3);
+  for (const dx of [-2.55, 2.55]) for (const dz of [-1.65, 1.65]) s.cyl(0.11, 0.16, 0.9, 7, PAL.wood, tableX + dx, 0.46, tableZ + dz);
+  for (let i = -2; i <= 2; i++) s.box(0.045, 0.035, 3.25, i ? PAL.wood : PAL.red, tableX + i * 0.92, 1.15, tableZ, 0, 0.3);
+  for (const dz of [-1.45, 1.45]) s.cyl(0.12, 0.12, 5.35, 10, PAL.woodLight, tableX - Math.sin(0.3) * dz, 1.18, tableZ + Math.cos(0.3) * dz, 0, 0, Math.PI / 2 + 0.3);
+  s.cyl(0.32, 0.32, 0.08, 14, PAL.brass, tableX + 1.6, 1.22, tableZ - 0.7);
+  s.cone(0.22, 0.32, 4, PAL.red, tableX + 1.6, 1.28, tableZ - 0.7, 0, Math.PI / 4);
   wallLantern(s, room.center.x + 3.6, 3.45, room.center.z - 6.6);
   s.cyl(0.52, 0.52, 0.18, 12, PAL.brass, room.center.x + 5.6, 1.3, room.center.z - 3.1, Math.PI / 2);
   s.cyl(0.06, 0.06, 2.4, 8, PAL.iron, room.center.x + 5.6, 1.3, room.center.z - 2.0, Math.PI / 2);
