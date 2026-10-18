@@ -51,7 +51,6 @@ async function boot() {
     resume: () => game.pause(false),
     closeMap: () => game.closeMap(),
     quitToTitle: () => game.quitToTitle(),
-    nextCamp: () => { audio.unlock(); game.loadCamp(); },
   });
   ui.setContinue(loadSave());
   ui.show('title');
@@ -59,12 +58,12 @@ async function boot() {
   addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
-    else if (game.state === 'cleared' && (e.code === 'KeyE' || e.code === 'Enter')) game.loadCamp();
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
     else if (e.code === 'KeyN') audio.setMuted(!audio.muted);
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));
+  addEventListener('pagehide', () => game.save());
 
   const step = 1 / T.sim.hz;
   let acc = 0;

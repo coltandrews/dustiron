@@ -9,6 +9,9 @@ export const T = {
     fov: 35,
     pitchDeg: 55,
     distance: 28,
+    minDistance: 20,
+    maxDistance: 48,
+    zoomStep: 2,
     followHalfLife: 0.06,
     lookAhead: 3,
     lookAheadFactor: 0.3,
@@ -31,7 +34,7 @@ export const T = {
     regenStep: 25,
     gunHeight: 1.0,
     hitRadius: 0.42,
-    healBetweenCamps: 50,
+    bandageHeal: 35,
   },
 
   dodge: { duration: 0.35, distance: 4.5, iframes: 0.25, cooldown: 0.6, buffer: 0.15 },
@@ -60,5 +63,5 @@ export const T = {
 
   explosion: { radius: 4, damage: 80, impulse: 26, chainDelay: 0.15, trauma: 0.7 },
 
-  run: { saveInterval: 2, clearDelay: 1.4, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
+  run: { saveInterval: 2, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
 };

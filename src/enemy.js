@@ -33,8 +33,9 @@ const _yellow = new THREE.Color(0xffd35a);
 const _red = new THREE.Color(0xff3322);
 
 export class Bandit {
-  constructor(game, type, x, z, campIndex) {
+  constructor(game, type, x, z, campIndex, encounter, target) {
     this.game = game;
+    this.encounter = encounter;
     this.type = type;
     this.def = BANDIT_TYPES[type];
     this.maxHp = this.def.hp;
@@ -85,7 +86,8 @@ export class Bandit {
     this.collider = cap.collider;
     this.bodyY = cap.y;
 
-    this.model = addRollPivot(makeCharacter(LOOKS[this.def.look]));
+    const look = LOOKS[this.def.look];
+    this.model = addRollPivot(makeCharacter(target ? { ...look, hat: 0x9d302b, band: 0xe4bf6c } : look));
     showGun(this.model, this.def.gun);
     this.model.root.position.set(x, 0, z);
     game.levelGroup.add(this.model.root);
@@ -102,7 +104,7 @@ export class Bandit {
 
   perceive() {
     const P = this.game.player;
-    if (!P.alive) { this.canSee = false; return; }
+    if (!P.alive || this.game.inTown()) { this.canSee = false; return; }
     const dx = P.x - this.x, dz = P.z - this.z;
     const d = Math.hypot(dx, dz);
     let see = false;
@@ -191,7 +193,7 @@ export class Bandit {
     if (dist < arrive) { this.desire(0, 0, 0); return true; }
     this.repathT -= dt;
     if (!this.path || this.repathT <= 0 || Math.hypot(tx - this.pathTX, tz - this.pathTZ) > 1) {
-      this.path = this.game.nav.findPath(this.x, this.z, tx, tz);
+      this.path = this.encounter.nav.findPath(this.x, this.z, tx, tz);
       this.pathIdx = 0;
       this.pathTX = tx; this.pathTZ = tz;
       this.repathT = rand(0.7, 1.1);
@@ -216,7 +218,7 @@ export class Bandit {
   integrate(dt) {
     // Separation from other bandits.
     let sx = 0, sz = 0;
-    for (const o of this.game.enemies) {
+    for (const o of this.encounter.enemies) {
       if (o === this || !o.alive) continue;
       const dx = this.x - o.x, dz = this.z - o.z;
       const d = Math.hypot(dx, dz);
@@ -233,9 +235,10 @@ export class Bandit {
     cc.computeColliderMovement(this.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
     const mv = cc.computedMovement();
     this.x += mv.x; this.z += mv.z;
-    const lim = this.game.arenaHalf - 0.6;
-    this.x = Math.max(-lim, Math.min(lim, this.x));
-    this.z = Math.max(-lim, Math.min(lim, this.z));
+    const { x, z } = this.encounter;
+    const lim = this.encounter.nav.half - 1;
+    this.x = Math.max(x - lim, Math.min(x + lim, this.x));
+    this.z = Math.max(z - lim, Math.min(z + lim, this.z));
     this.body.setNextKinematicTranslation({ x: this.x, y: this.bodyY, z: this.z });
     this.moveSpeed = Math.hypot(mv.x, mv.z) / dt;
   }
@@ -254,11 +257,12 @@ export class Bandit {
 
   hasShot() {
     const P = this.game.player;
-    return P.alive && this.game.physics.los(this.x, this.z, P.x, P.z);
+    return P.alive && !this.game.inTown() && this.game.physics.los(this.x, this.z, P.x, P.z);
   }
 
   fire() {
     const g = this.game, P = g.player, def = this.def;
+    if (g.inTown()) { this.finishEngage(); return; }
     const mz = this.muzzle();
     const spread = (def.spreadDeg / this.accuracy) * DEG;
     for (let i = 0; i < def.pellets; i++) {
@@ -311,7 +315,7 @@ export class Bandit {
     if (this.hp <= 0) { this.die(dirX, dirZ, 3 + knock * 1.5); return { killed: true, crit }; }
     if (!this.knows) { this.knows = true; this.engageAfterAlert(); this.game.shout(this); }
     this.game.audio.at('enemyHurt', this.x, this.z, { vol: 0.6 });
-    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction() <= 0.5 && this.type !== 'rusher') {
+    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction(this.encounter) <= 0.5 && this.type !== 'rusher') {
       this.fleeing = true;
       this.releaseToken();
       this.cover = null;
@@ -539,7 +543,7 @@ export class Bandit {
     if (Math.random() < 0.5) opts.reverse();
     for (const [ox, oz] of opts) {
       const x = this.x + ox, z = this.z + oz;
-      if (!this.game.nav.isFree(x, z)) continue;
+      if (!this.encounter.nav.isFree(x, z)) continue;
       if (P.alive && this.game.physics.los(x, z, P.x, P.z)) { this.peekX = x; this.peekZ = z; return; }
     }
     this.peekX = this.x + opts[0][0]; this.peekZ = this.z + opts[0][1];
@@ -554,9 +558,7 @@ export class Bandit {
       for (const s of [sign, -sign]) {
         const a = bearing + s * off * DEG;
         const x = P.x + Math.sin(a) * dist, z = P.z + Math.cos(a) * dist;
-        const lim = this.game.arenaHalf - 1.5;
-        if (Math.abs(x) > lim || Math.abs(z) > lim) continue;
-        if (!this.game.nav.isFree(x, z)) continue;
+        if (!this.encounter.nav.isFree(x, z)) continue;
         if (!this.game.physics.los(x, z, P.x, P.z)) continue;
         this.peekX = x; this.peekZ = z;
         return true;

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dust &amp; Iron</title>
-<meta name="description" content="A top-down western shooter. Clear bandit camps for bounty. One life.">
+<meta name="description" content="A western frontier with one life. Take bounties, explore the trail, and return to town.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
@@ -40,13 +40,14 @@
       </div>
     </div>
     <div class="hud-tc">
-      <div class="camp-no" id="camp-no">Camp 1</div>
-      <div class="camp-name" id="camp-name">Coyote Wash</div>
-      <div class="outlaws" id="outlaws">4 outlaws left</div>
+      <div class="camp-no" id="camp-no">Safe town</div>
+      <div class="camp-name" id="camp-name">Town</div>
+      <div class="outlaws" id="outlaws">Weapons holstered</div>
     </div>
     <div class="hud-tr">
-      <span class="bounty-label">Bounty</span>
+      <span class="bounty-label">Money</span>
       <span class="bounty" id="bounty">$0</span>
+      <span class="bandages" id="bandages">1 bandage · H</span>
     </div>
     <div class="hud-br">
       <div class="slots" id="slots"></div>
@@ -54,9 +55,11 @@
         <div class="ammo cylinder" id="ammo"></div>
         <div class="weapon-name" id="weapon-name">Revolver</div>
       </div>
+      <div class="reserve-ammo" id="reserve-ammo">6 loaded · 24 spare</div>
       <div class="reload-hint" id="reload-hint" hidden>Press <kbd>R</kbd> to reload</div>
     </div>
-    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</div>
+    <div class="interaction-hint" id="interaction-hint" hidden></div>
+    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>E</kbd> talk · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</div>
     <div class="toast" id="toast"></div>
   </div>
 
@@ -72,12 +75,12 @@
   <section class="screen title" id="screen-title" hidden>
     <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
     <div class="card title-card">
-      <p class="eyebrow">A bounty run through outlaw country</p>
+      <p class="eyebrow">One life on the frontier</p>
       <h1>Dust <span>&amp;</span> Iron</h1>
-      <p class="lede">Clear bandit camps one after another and collect the bounty. You get one life: die and the run is over.</p>
+      <p class="lede">Start in town. Talk to residents, take bounties, and explore the land. Return for supplies and payment. Death removes your money, gear, and map. Your next life starts on new land.</p>
       <div class="actions">
-        <button id="btn-start" class="btn primary" type="button">Ride out</button>
-        <button id="btn-continue" class="btn" type="button" hidden>Continue run</button>
+        <button id="btn-start" class="btn primary" type="button">Start a new life</button>
+        <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
       </div>
       <p class="continue-info" id="continue-info" hidden></p>
       <dl class="controls">
@@ -89,10 +92,13 @@
         <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
         <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
         <div><dt><kbd>M</kbd></dt><dd>Map</dd></div>
+        <div><dt><kbd>E</kbd></dt><dd>Talk / use</dd></div>
+        <div><dt><kbd>H</kbd></dt><dd>Use bandage</dd></div>
+        <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
       </dl>
-      <p class="fine">Shots at bandits who haven't seen you deal double damage. Watch for aim lines: when one turns red, roll.</p>
+      <p class="fine">Town is safe. Ammunition is limited. The map reveals land as you travel. Watch enemy aim lines: when one turns red, roll.</p>
       <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
     </div>
   </section>
@@ -100,7 +106,7 @@
   <section class="screen" id="screen-pause" hidden>
     <div class="card small">
       <h2>Paused</h2>
-      <p class="lede">Your run is saved. Closing the tab keeps your place at the start of this camp's fight.</p>
+      <p class="lede" id="save-status">Your life is saved. You can return to this position with your current supplies and progress.</p>
       <div class="actions">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
@@ -114,47 +120,44 @@
       <div class="map-head">
         <div>
           <p class="eyebrow">Survey map</p>
-          <h2 id="map-title">Camp</h2>
+          <h2 id="map-title">Frontier map</h2>
         </div>
         <p class="map-sub" id="map-sub"></p>
       </div>
-      <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the camp"></canvas></div>
+      <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the frontier"></canvas></div>
       <ul class="map-legend">
         <li><i class="lg-you"></i>You</li>
-        <li><i class="lg-outlaw"></i>Outlaw in sight</li>
-        <li><i class="lg-seen"></i>Last seen</li>
-        <li><i class="lg-cover"></i>Cover</li>
-        <li><i class="lg-tnt"></i>Explosive barrel</li>
-        <li><i class="lg-fire"></i>Campfire</li>
+        <li><i class="lg-town"></i>Town</li>
+        <li><i class="lg-camp"></i>Known camp</li>
+        <li><i class="lg-seen"></i>Bounty search area</li>
+        <li><i class="lg-unknown"></i>Unexplored land</li>
       </ul>
       <div class="actions">
-        <button id="btn-map-close" class="btn primary" type="button">Back to the fight</button>
+        <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
       </div>
-      <p class="fine"><kbd>M</kbd> or <kbd>Esc</kbd> closes the map. The fight is paused while it's open.</p>
+      <p class="fine">Travel to reveal land. Buy a map to see roads. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
     </div>
   </section>
 
-  <section class="screen" id="screen-cleared" hidden>
-    <div class="card small poster">
-      <p class="eyebrow">Bounty collected</p>
-      <h2 id="cleared-title">Camp cleared</h2>
-      <div class="ledger" id="cleared-body"></div>
-      <div class="actions">
-        <button id="btn-next" class="btn primary" type="button">Ride to the next camp</button>
-      </div>
-      <p class="fine">or press <kbd>E</kbd></p>
+  <section class="screen" id="screen-interaction" hidden>
+    <div class="card small interaction-card" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
+      <p class="eyebrow">Town</p>
+      <h2 id="interaction-title"></h2>
+      <p class="lede" id="interaction-text"></p>
+      <div class="actions interaction-actions" id="interaction-actions"></div>
+      <p class="fine"><kbd>Esc</kbd> closes this conversation. The game is paused.</p>
     </div>
   </section>
 
   <section class="screen" id="screen-dead" hidden>
     <div class="card small poster dead">
-      <p class="eyebrow">Run over</p>
+      <p class="eyebrow">Life over</p>
       <h2 id="dead-title">Shot down</h2>
       <div class="ledger" id="dead-body"></div>
       <div class="actions">
-        <button id="btn-restart" class="btn primary" type="button">Start a new run</button>
+        <button id="btn-restart" class="btn primary" type="button">Start a new life</button>
       </div>
-      <p class="fine">or press <kbd>R</kbd></p>
+      <p class="fine">Money, gear, jobs, and discoveries are gone. Start on new land. Press <kbd>R</kbd> to begin.</p>
     </div>
   </section>
 

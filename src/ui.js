@@ -8,12 +8,14 @@ export class UI {
       app: $('app'), hud: $('hud'), reticle: $('reticle'), hit: $('ret-hit'), ring: $('ret-ring'), reload: $('ret-reload'),
       hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
       campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
-      weaponName: $('weapon-name'), ammo: $('ammo'), slots: $('slots'), reloadHint: $('reload-hint'),
-      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'),
-      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
+      weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
+      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'),
+      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
-      clearedTitle: $('cleared-title'), clearedBody: $('cleared-body'), deadBody: $('dead-body'), deadTitle: $('dead-title'),
+      interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
+      deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
+      saveStatus: $('save-status'),
     };
     this.ammoKey = '';
     this.cylAngle = 0;
@@ -22,6 +24,17 @@ export class UI {
     this.hurtT = 0;
     this.toastT = 0;
     this.hintT = 12;
+    this.el.screens.interaction.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
+      if (event.code !== 'Tab') return;
+      event.preventDefault();
+      event.stopPropagation();
+      const buttons = [...this.el.interactionActions.querySelectorAll('button:not(:disabled)')];
+      if (!buttons.length) return;
+      const step = event.shiftKey ? -1 : 1;
+      const index = buttons.indexOf(document.activeElement);
+      buttons[(index + step + buttons.length) % buttons.length].focus();
+    });
   }
 
   bind(handlers) {
@@ -30,14 +43,13 @@ export class UI {
     on('btn-continue', handlers.continueRun);
     on('btn-resume', handlers.resume);
     on('btn-quit', handlers.quitToTitle);
-    on('btn-next', handlers.nextCamp);
     on('btn-restart', handlers.newRun);
     on('btn-map-close', handlers.closeMap);
   }
 
   show(name) {
     for (const [k, el] of Object.entries(this.el.screens)) el.hidden = k !== name;
-    const playing = name === null || name === 'cleared' || name === 'dead';
+    const playing = name === null || name === 'interaction' || name === 'dead';
     this.el.hud.hidden = !playing;
     this.el.app.classList.toggle('in-menu', name !== null);
   }
@@ -50,7 +62,12 @@ export class UI {
   setContinue(save) {
     this.el.continueBtn.hidden = !save;
     this.el.continueInfo.hidden = !save;
-    if (save) this.el.continueInfo.textContent = `Camp ${save.camp + 1} · $${save.bounty} bounty · ${Math.round(save.hp)} HP`;
+    if (save) this.el.continueInfo.textContent = `$${save.bounty} · ${Math.round(save.hp)} HP · ${save.camp} camps cleared`;
+  }
+
+  setSaveStatus(ok) {
+    this.el.saveStatus.textContent = ok ? 'Your life is saved. You can return to this position with your current supplies and progress.'
+      : 'Save failed. Keep this tab open. Browser storage is blocked, full, or changed in another tab.';
   }
 
   toast(text, seconds = 2.2) {
@@ -77,16 +94,26 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showCleared(info) {
-    this.el.clearedTitle.textContent = `${info.name} cleared`;
-    const rows = [
-      ['Bounty collected', `$${info.earned}`],
-      ['Run total', `$${info.total}`],
-      ['Healed', `+${info.healed} HP`],
-    ];
-    if (info.unlock) rows.push(['New weapon', info.unlock]);
-    this.el.clearedBody.innerHTML = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
-    this.show('cleared');
+  showInteraction({ title, text, actions = [] }, onAction) {
+    this.el.interactionTitle.textContent = title;
+    this.el.interactionText.textContent = text;
+    const box = this.el.interactionActions;
+    const focusedId = document.activeElement?.dataset.action;
+    let preferredFocus = null;
+    box.replaceChildren();
+    for (const action of [...actions.filter((item) => item.id !== 'close'), { id: 'close', label: 'Back to town' }]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `btn${action.id === 'close' ? ' interaction-close' : ''}`;
+      button.textContent = action.label;
+      button.dataset.action = action.id;
+      button.disabled = Boolean(action.disabled);
+      if (!button.disabled && action.id === focusedId) preferredFocus = button;
+      button.addEventListener('click', (event) => { event.stopPropagation(); onAction(action.id); });
+      box.appendChild(button);
+    }
+    this.show('interaction');
+    (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
   }
 
   showDead(stats) {
@@ -95,11 +122,11 @@ export class UI {
     const rows = [
       ['Camps cleared', stats.camp],
       ['Outlaws downed', stats.kills],
-      ['Bounty earned', `$${stats.bounty}`],
+      ['Money at death', `$${stats.bounty}`],
       ['Accuracy', `${acc}%`],
       ['Time on the trail', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
     ];
-    this.el.deadTitle.textContent = stats.camp === 0 ? 'Shot down at the first camp' : `Shot down after ${stats.camp} camp${stats.camp > 1 ? 's' : ''}`;
+    this.el.deadTitle.textContent = 'Your life has ended';
     this.el.deadBody.innerHTML = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
     this.show('dead');
   }
@@ -143,16 +170,20 @@ export class UI {
     e.deBar.classList.toggle('active', de.active);
     e.deBar.classList.toggle('ready', de.meter >= 0.999 && !de.active);
 
-    const alive = game.enemies.filter((b) => b.alive).length;
-    e.campNo.textContent = `Camp ${game.run.camp + 1}`;
-    e.campName.textContent = game.campName;
-    e.outlaws.textContent = alive === 1 ? '1 outlaw left' : `${alive} outlaws left`;
+    const inTown = game.inTown();
+    e.campNo.textContent = inTown ? 'Safe town' : 'The frontier';
+    e.campName.textContent = game.locationName;
+    e.outlaws.textContent = inTown ? 'Weapons holstered' : 'Return to town for payment';
     e.bounty.textContent = `$${game.run.bounty}`;
+    e.bandages.textContent = `${game.run.bandages} bandage${game.run.bandages === 1 ? '' : 's'} · H`;
+    e.interactionHint.textContent = game.interactionHint || '';
+    e.interactionHint.hidden = !game.interactionHint || game.state !== 'playing';
 
     // Weapon, ammo, slots.
     const gun = p.gun;
     this.buildAmmo(gun);
     e.weaponName.textContent = gun.def.name;
+    e.reserve.textContent = `${gun.ammo} loaded · ${gun.reserve} spare`;
     const pips = e.ammo.children;
     if (gun.ammo !== this.lastAmmo) {
       if (gun.def.layout === 'cylinder' && this.lastAmmo > gun.ammo) this.cylAngle += 60 * (this.lastAmmo - gun.ammo);
@@ -161,6 +192,7 @@ export class UI {
       e.ammo.style.setProperty('--cyl', this.cylAngle + 'deg');
     }
     e.reloadHint.hidden = !(gun.ammo === 0 && !gun.reloading);
+    e.reloadHint.textContent = gun.reserve ? 'Press R to reload' : 'No spare rounds. Buy more in town.';
     const slotsKey = p.guns.map((g) => g.def.key).join() + p.gunIndex;
     if (slotsKey !== this.slotsKey) {
       this.slotsKey = slotsKey;
@@ -177,6 +209,7 @@ export class UI {
     e.reload.style.strokeDashoffset = `${circ * (1 - gun.reloadProgress)}`;
     e.reload.style.opacity = gun.reloading ? 1 : 0;
     e.reticle.classList.toggle('empty', gun.ammo === 0);
+    e.reticle.hidden = inTown;
 
     // Damage vignette.
     this.hurtT = Math.max(0, this.hurtT - dt);

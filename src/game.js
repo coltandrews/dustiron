@@ -4,33 +4,25 @@ import * as THREE from 'three';
 import { T } from './tuning.js';
 import { Physics, GROUPS } from './physics.js';
 import { PhysObj } from './physics.js';
-import { NavGrid } from './nav.js';
 import { FX } from './fx.js';
 import { MAT, PAL } from './models.js';
-import { Prop, Debris, sharedGeometries } from './props.js';
-import { Bandit, BANDIT_TYPES, lineGeo } from './enemy.js';
+import { Debris, sharedGeometries } from './props.js';
+import { lineGeo } from './enemy.js';
 import { Player } from './player.js';
 import { Projectiles } from './projectiles.js';
-import { generateCamp, buildScenery, ARENA_HALF, PLAYER_SPAWN } from './level.js';
-import { UNLOCKS, WEAPONS } from './weapons.js';
+import { createLife, discover, recordTargetKill } from './life.js';
+import { loadSave as readSave, writeLife, endLife } from './storage.js';
+import { buildFrontier } from './frontier.js';
+import { buildEncounters, captureEncounters, rebuildCampNav } from './encounters.js';
+import { TownActions } from './town-actions.js';
 import { randomSeed } from './rng.js';
 import { MapView } from './map.js';
 
-const SAVE_KEY = 'dustiron.run.v1';
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
 const scorchMat = new THREE.MeshLambertMaterial({ color: 0x3a2a20, transparent: true, opacity: 0.55, depthWrite: false });
 
 export function loadSave() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw);
-    return s && typeof s.seed === 'number' && Array.isArray(s.unlocked) ? s : null;
-  } catch { return null; }
-}
-
-function deleteSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+  return readSave();
 }
 
 export class Game {
@@ -45,7 +37,12 @@ export class Game {
     this.mapView = new MapView();
     this.spotT = 0;
     this.groups = GROUPS;
-    this.arenaHalf = ARENA_HALF;
+    this.arenaHalf = 210;
+    this.encounters = [];
+    this.frontier = null;
+    this.townActions = new TownActions(this);
+    this.interactionHint = '';
+    this.locationName = 'Mercy Crossing';
     this.state = 'title';
     this.time = 0;
     this.realTime = 0;
@@ -60,7 +57,6 @@ export class Game {
     this.run = null;
     this.hitStopT = 0;
     this.slowmo = { scale: 1, t: 0, target: 1 };
-    this.clearT = -1;
     this.deathT = -1;
     this.saveT = 0;
     this.navT = 0;
@@ -91,65 +87,66 @@ export class Game {
   // ---------- run lifecycle ----------
 
   newRun() {
-    deleteSave();
-    this.run = {
-      seed: randomSeed(), camp: 0, bounty: 0, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
-      hp: T.player.hp, unlocked: ['revolver'], weapon: 0, deadEye: 0, version: 1,
-    };
-    this.loadCamp();
+    this.run = createLife(randomSeed());
+    writeLife(this.run, undefined, true);
+    this.saveFailed = false;
+    this.loadWorld();
   }
 
   continueRun(save) {
     this.run = { ...save };
-    this.loadCamp();
+    this.loadWorld();
   }
 
-  loadCamp() {
+  loadWorld() {
     this.unload();
     const run = this.run;
     this.levelGroup = new THREE.Group();
     this.scene.add(this.levelGroup);
     this.physics = new Physics();
     this.enemyController = this.physics.characterController();
-    this.time = 0;
-
-    buildScenery(this, run.seed + run.camp);
-    const layout = generateCamp(run.seed, run.camp);
-    this.campName = layout.name;
+    this.time = run.simTime ?? 0;
+    this.arenaHalf = run.world.half;
+    this.tokens.holders.clear();
+    this.frontier = buildFrontier(this, run.world);
     this.debris = new Debris(this);
     this.projectiles = new Projectiles(this);
-    this.props = layout.props.map((spec) => new Prop(this, spec.kind, spec));
-    this.player = new Player(this, PLAYER_SPAWN.x, PLAYER_SPAWN.z, run);
-    this.enemies = layout.enemies.map((e) => new Bandit(this, e.type, e.x, e.z, run.camp));
-    this.campStartBounty = run.bounty;
+    this.player = new Player(this, run.player.x, run.player.z, run);
+    for (const key of ['yaw', 'sinceHit', 'rollT', 'rollCooldown', 'rollX', 'rollZ']) {
+      if (Number.isFinite(run.player[key])) this.player[key] = run.player[key];
+    }
+    this.player.prevYaw = this.player.yaw;
+    this.encounters = buildEncounters(this);
+    this.props = this.encounters.flatMap((c) => c.props);
+    this.enemies = this.encounters.flatMap((c) => c.enemies);
+    for (const shot of run.projectiles ?? []) this.projectiles.spawn(shot.x, shot.z, shot.dx, shot.dz, shot.speed, shot.dmg, shot.left);
     this.corpses = [];
-
-    this.nav = new NavGrid(ARENA_HALF, 0.5, 0.45);
-    this.nav.setStatic(this.props.filter((p) => !p.dynamic).map((p) => p.footprint()));
     this.rebuildNav();
 
     this.deadEye.meter = run.deadEye ?? 0;
     this.deadEye.active = false;
-    this.tokens.holders.clear();
     this.flanker = null;
     this.hitStopT = 0;
     this.slowmo = { scale: 1, t: 0, target: 1 };
-    this.clearT = -1;
     this.deathT = -1;
-    this.camp = { x: PLAYER_SPAWN.x, z: PLAYER_SPAWN.z, t: 0 };
+    this.camp = { x: this.player.x, z: this.player.z, t: 0 };
     this.fx.clear();
     Object.assign(this.intent, { firePressed: false, reload: false, dodgeUntil: -1, switchTo: null, aim: null });
-    this.rig.snap(PLAYER_SPAWN.x, PLAYER_SPAWN.z - 3);
+    this.input.clear();
+    this.rig.snap(this.player.x, this.player.z - 3);
     this.state = 'playing';
     this.ui.show(null);
-    const n = this.enemies.length;
-    this.ui.toast(`Camp ${run.camp + 1} · ${this.campName} · ${n} outlaws`, 3);
+    this.ui.toast(run.migrated ? 'Your old life is now in Mercy Crossing. Your money and guns are kept.' : 'One life. Talk to the townspeople with E. Open your map with M.', 6);
+    delete run.migrated;
     this.audio.setAmbience(0.13);
     this.save();
   }
 
   unload() {
     if (!this.levelGroup) return;
+    this.frontier?.dispose();
+    this.frontier = null;
+    this.encounters = [];
     const shared = sharedGeometries();
     shared.add(lineGeo);
     shared.add(scorchGeo);
@@ -174,8 +171,42 @@ export class Game {
 
   save() {
     if (!this.run || !this.player || !this.player.alive) return;
-    const data = { ...this.run, hp: this.player.hp, weapon: this.player.gunIndex, deadEye: this.deadEye.meter };
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch { /* storage unavailable */ }
+    this.capturePlayer();
+    captureEncounters(this);
+    this.run.simTime = this.time;
+    this.run.projectiles = this.projectiles.items.filter((p) => p.active).map(({ x, z, dx, dz, speed, dmg, left }) => ({ x, z, dx, dz, speed, dmg, left }));
+    const saved = writeLife(this.run);
+    this.ui.setSaveStatus(saved);
+    if (!saved && !this.saveFailed) {
+      this.saveFailed = true;
+      this.ui.toast('Save failed. Keep this tab open. Check browser storage.', 8);
+    }
+    if (saved) this.saveFailed = false;
+  }
+
+  capturePlayer() {
+    const p = this.player, run = this.run;
+    run.hp = p.hp; run.weapon = p.gunIndex; run.deadEye = this.deadEye.meter;
+    run.player = {};
+    for (const key of ['x', 'z', 'yaw', 'sinceHit', 'rollT', 'rollCooldown', 'rollX', 'rollZ']) run.player[key] = p[key];
+    for (const gun of p.guns) {
+      run.guns[gun.def.key] = {};
+      for (const key of ['ammo', 'reserve', 'cooldown', 'bloom', 'reloading', 'reloadT', 'reloadTotal']) run.guns[gun.def.key][key] = gun[key];
+    }
+  }
+
+  inTown() {
+    return !!this.player && Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius;
+  }
+
+  useBandage() {
+    if (!this.player.alive || this.player.hp >= T.player.hp) return;
+    if (!this.run.bandages) { this.ui.toast('No bandages. Visit the doctor in town.'); return; }
+    this.run.bandages--;
+    const healed = Math.min(T.player.hp - this.player.hp, T.player.bandageHeal);
+    this.player.hp += healed;
+    this.ui.toast(`Bandage used · +${Math.round(healed)} health`);
+    this.save();
   }
 
   quitToTitle() {
@@ -218,28 +249,10 @@ export class Game {
     }
   }
 
-  onCampCleared() {
-    const run = this.run, p = this.player;
-    const bonus = 25 * (run.camp + 1);
-    run.bounty += bonus;
-    const earned = run.bounty - this.campStartBounty;
-    const unlockKey = UNLOCKS[run.camp + 1];
-    let unlock = null;
-    if (unlockKey && !run.unlocked.includes(unlockKey)) { run.unlocked.push(unlockKey); unlock = `${WEAPONS[unlockKey].name} (press ${run.unlocked.length})`; }
-    const healed = Math.round(Math.min(T.player.healBetweenCamps, T.player.hp - p.hp));
-    run.hp = Math.min(T.player.hp, p.hp + healed);
-    run.weapon = p.gunIndex;
-    run.deadEye = this.deadEye.meter;
-    run.camp++;
-    this.state = 'cleared';
-    this.setDeadEye(false);
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(run)); } catch { /* storage unavailable */ }
-    this.audio.play('coin', { bus: 'ui', vol: 0.9 });
-    this.ui.showCleared({ name: this.campName, earned, total: run.bounty, healed, unlock });
-  }
-
   onPlayerDied() {
-    deleteSave(); // Death is permanent: nothing to come back to.
+    // Write death before effects or menus. A reload must not revive this life.
+    this.capturePlayer();
+    if (!endLife(this.run)) this.ui.toast('The life has ended. Browser storage could not save this change.', 8);
     this.state = 'dying';
     this.deathT = 1.8;
     this.slowmo = { scale: T.run.deathSlowmo, t: 1.2, target: T.run.deathSlowmo };
@@ -256,16 +269,19 @@ export class Game {
   onEnemyKilled(e, crit) {
     const run = this.run;
     run.kills++;
-    const b = BANDIT_TYPES[e.type].bounty;
-    run.bounty += b;
+    const proof = recordTargetKill(run, e.id);
     this.deadEye.add(T.deadEye.fillKill);
     this.hitStop(T.hitStop.kill);
     this.addTrauma(0.15);
-    this.ui.toast(crit ? `Sneak shot · +$${b}` : `+$${b}`, 1.2);
-    if (this.enemies.every((x) => !x.alive) && this.player.alive) {
+    this.ui.toast(proof ? 'Target down. Proof collected. Return to the sheriff.' : (crit ? 'Sneak shot' : 'Outlaw down'), 3);
+    const camp = e.encounter;
+    if (camp.enemies.every((x) => !x.alive) && !run.camps[camp.id].cleared) {
+      run.camps[camp.id].cleared = true;
+      run.camp++;
       this.slowmo = { scale: 0.3, t: T.run.killSlowmoTime, target: 0.3 };
-      this.clearT = T.run.clearDelay;
+      this.ui.toast(`${camp.name} is clear. Return to town when you are ready.`, 5);
     }
+    this.save();
   }
 
   spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall) {
@@ -350,15 +366,15 @@ export class Game {
     return false;
   }
 
-  aliveFraction() {
-    if (!this.enemies.length) return 0;
-    return this.enemies.filter((e) => e.alive).length / this.enemies.length;
+  aliveFraction(camp) {
+    const total = this.run.camps[camp.id].enemies?.length || camp.enemies.length;
+    return total ? camp.enemies.filter((e) => e.alive).length / total : 0;
   }
 
   playerCamping() { return this.camp.t; }
 
   rebuildNav() {
-    this.nav.rebuild(this.props.filter((p) => p.alive && p.dynamic).map((p) => p.footprint()));
+    rebuildCampNav(this.encounters);
     this.navDirty = false;
     this.navT = 0.5;
   }
@@ -377,6 +393,10 @@ export class Game {
   /** Reads input into intents. Runs once per frame before simulation ticks. */
   updateIntent() {
     const inp = this.input, it = this.intent;
+    if (this.state === 'interaction') {
+      if (inp.pressed('pause')) this.townActions.close();
+      return;
+    }
     if (this.state === 'map' && (inp.pressed('map') || inp.pressed('pause'))) { this.closeMap(); return; }
     if (this.state === 'playing' && inp.pressed('map')) { this.openMap(); return; }
     if (inp.pressed('pause') && (this.state === 'playing' || this.state === 'paused')) this.pause(this.state === 'playing');
@@ -384,6 +404,8 @@ export class Game {
       it.fireHeld = false;
       return;
     }
+    if (this.state === 'playing' && inp.pressed('interact') && this.townActions.nearest()) { this.townActions.open(); return; }
+    if (this.state === 'playing' && inp.pressed('bandage')) this.useBandage();
     it.move = inp.moveAxis();
     this.rig.place(0);
     const aim = this.rig.projectCursor(inp.mouse.ndcX, inp.mouse.ndcY);
@@ -399,12 +421,12 @@ export class Game {
       if (inp.pressed('weapon3')) it.switchTo = 2;
       if (inp.pressed('nextWeapon')) it.switchTo = (p.gunIndex + 1) % p.guns.length;
       const w = inp.takeWheel();
-      if (w) it.switchTo = (p.gunIndex + (w > 0 ? 1 : -1) + p.guns.length) % p.guns.length;
+      if (w) this.rig.zoom(w);
     }
 
     // Dead Eye is held, and drains in real time.
     const de = this.deadEye;
-    const want = inp.held('deadEye') && this.state === 'playing' && p && p.alive;
+    const want = inp.held('deadEye') && this.state === 'playing' && p && p.alive && !this.inTown();
     if (want && !de.active && de.meter >= T.deadEye.minToStart) this.setDeadEye(true);
     if (de.active && !want) this.setDeadEye(false);
   }
@@ -425,11 +447,19 @@ export class Game {
 
     const p = this.player;
     p.tick(dt, gunDt, this.intent);
+    this.frontier.tick(dt);
     if (p.alive) {
+      discover(this.run, p.x, p.z);
       if (Math.hypot(p.x - this.camp.x, p.z - this.camp.z) > 2) { this.camp.x = p.x; this.camp.z = p.z; this.camp.t = 0; }
       else this.camp.t += dt;
     }
-    for (const e of this.enemies) e.tick(dt);
+    for (const e of this.enemies) {
+      if (Math.hypot(e.x - p.x, e.z - p.z) < 65) e.tick(dt);
+      else {
+        if (this.flanker === e) this.flanker = null;
+        if (e.token) { e.releaseToken(); e.hideAimLine(); e.setState('search'); }
+      }
+    }
     this.spotT -= dt;
     if (this.spotT <= 0) { this.spotT = 0.2; this.updateSpotting(); }
     this.projectiles.tick(dt);
@@ -457,10 +487,6 @@ export class Game {
       if (de.meter <= 0) { de.meter = 0; this.setDeadEye(false); }
     }
 
-    if (this.clearT > 0 && this.state === 'playing') {
-      this.clearT -= dt;
-      if (this.clearT <= 0) this.onCampCleared();
-    }
     if (this.deathT > 0) {
       this.deathT -= dt;
       if (this.deathT <= 0) { this.state = 'dead'; this.ui.showDead(this.run); this.audio.setAmbience(0.05); }
@@ -472,8 +498,13 @@ export class Game {
 
     const p = this.player;
     if (p) {
-      p.render(alpha, dt);
-      for (const e of this.enemies) e.render(alpha, dt);
+      const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
+      this.locationName = this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
+      this.interactionHint = this.townActions.hint();
+      this.frontier.render(alpha);
+      const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
+      p.render(alpha, simDt);
+      for (const e of this.enemies) e.render(alpha, simDt);
       for (const pr of this.props) pr.render(alpha, dt, this.realTime);
       this.debris.render(alpha);
       for (const c of this.corpses) c.render(alpha);
@@ -483,7 +514,7 @@ export class Game {
       this.render.focusShadow(this.rig.target.x, this.rig.target.z);
       this.audio.setListener(this.rig.target.x, this.rig.target.z);
       const fxScale = (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
-      if (this.state !== 'paused') this.fx.update(dt * fxScale);
+      if (this.state === 'playing' || this.state === 'dying') this.fx.update(dt * fxScale);
       this.ui.update(this, dt);
     } else {
       // Title backdrop: slow drift over empty desert.

@@ -4,10 +4,11 @@
 const SQRT2 = Math.SQRT2;
 
 export class NavGrid {
-  constructor(half = 22, cell = 0.5, inflate = 0.45) {
+  constructor(half = 22, cell = 0.5, inflate = 0.45, origin = { x: 0, z: 0 }) {
     this.half = half;
     this.cell = cell;
     this.inflate = inflate;
+    this.origin = origin;
     this.n = Math.round((half * 2) / cell);
     const size = this.n * this.n;
     this.staticBlocked = new Uint8Array(size);
@@ -19,23 +20,23 @@ export class NavGrid {
     this.heap = [];
   }
 
-  toCell(v) { return Math.floor((v + this.half) / this.cell); }
-  center(c) { return -this.half + (c + 0.5) * this.cell; }
+  toCell(v, origin = 0) { return Math.floor((v - origin + this.half) / this.cell); }
+  center(c, origin = 0) { return origin - this.half + (c + 0.5) * this.cell; }
   inside(cx, cz) { return cx >= 0 && cz >= 0 && cx < this.n && cz < this.n; }
 
   isFree(x, z) {
-    const cx = this.toCell(x), cz = this.toCell(z);
+    const cx = this.toCell(x, this.origin.x), cz = this.toCell(z, this.origin.z);
     return this.inside(cx, cz) && !this.blocked[cz * this.n + cx];
   }
 
   stamp(arr, fp, inflate = this.inflate) {
     const reach = fp.r !== undefined ? fp.r + inflate : Math.hypot(fp.hx, fp.hz) + inflate;
-    const x0 = Math.max(0, this.toCell(fp.x - reach)), x1 = Math.min(this.n - 1, this.toCell(fp.x + reach));
-    const z0 = Math.max(0, this.toCell(fp.z - reach)), z1 = Math.min(this.n - 1, this.toCell(fp.z + reach));
+    const x0 = Math.max(0, this.toCell(fp.x - reach, this.origin.x)), x1 = Math.min(this.n - 1, this.toCell(fp.x + reach, this.origin.x));
+    const z0 = Math.max(0, this.toCell(fp.z - reach, this.origin.z)), z1 = Math.min(this.n - 1, this.toCell(fp.z + reach, this.origin.z));
     const c = fp.ry !== undefined ? Math.cos(fp.ry) : 1, s = fp.ry !== undefined ? Math.sin(fp.ry) : 0;
     for (let cz = z0; cz <= z1; cz++) {
       for (let cx = x0; cx <= x1; cx++) {
-        const dx = this.center(cx) - fp.x, dz = this.center(cz) - fp.z;
+        const dx = this.center(cx, this.origin.x) - fp.x, dz = this.center(cz, this.origin.z) - fp.z;
         let hit;
         if (fp.r !== undefined) hit = dx * dx + dz * dz <= (fp.r + inflate) ** 2;
         else {
@@ -124,8 +125,8 @@ export class NavGrid {
   /** @returns {{x:number,z:number}[] | null} waypoints after the start */
   findPath(sx, sz, tx, tz, maxIter = 5000) {
     const n = this.n;
-    const start = this.nearestFree(this.toCell(sx), this.toCell(sz), 4);
-    const goal = this.nearestFree(this.toCell(tx), this.toCell(tz), 8);
+    const start = this.nearestFree(this.toCell(sx, this.origin.x), this.toCell(sz, this.origin.z), 4);
+    const goal = this.nearestFree(this.toCell(tx, this.origin.x), this.toCell(tz, this.origin.z), 8);
     if (start < 0 || goal < 0) return null;
     if (start === goal) return [{ x: tx, z: tz }];
     const gx = goal % n, gz = (goal / n) | 0;
@@ -168,7 +169,7 @@ export class NavGrid {
     const cells = [];
     for (let i = goal; i !== -1; i = this.parent[i]) cells.push(i);
     cells.reverse();
-    const pts = cells.map((i) => ({ x: this.center(i % n), z: this.center((i / n) | 0) }));
+    const pts = cells.map((i) => ({ x: this.center(i % n, this.origin.x), z: this.center((i / n) | 0, this.origin.z) }));
     pts[pts.length - 1] = this.isFree(tx, tz) ? { x: tx, z: tz } : pts[pts.length - 1];
 
     // String-pull: keep only waypoints needed to stay on free cells.

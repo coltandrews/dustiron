@@ -26,7 +26,10 @@ export class Player {
     this.hp = run.hp;
     this.alive = true;
     this.sinceHit = 99;
-    this.guns = run.unlocked.map((k) => new Gun(WEAPONS[k]));
+    this.guns = run.unlocked.map((k) => {
+      const saved = run.guns[k];
+      return Object.assign(new Gun(WEAPONS[k], saved.ammo, saved.reserve), saved);
+    });
     this.gunIndex = Math.min(run.weapon ?? 0, this.guns.length - 1);
     this.rollT = -1;
     this.rollCooldown = 0;
@@ -42,7 +45,8 @@ export class Player {
     this.bodyY = cap.y;
     this.controller = game.physics.characterController();
 
-    this.model = addRollPivot(makeCharacter(LOOKS.player));
+    this.model = addRollPivot(makeCharacter(run.coat ? { ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a } : LOOKS.player));
+    this.coat = run.coat;
     showGun(this.model, this.gun.def.key);
     game.levelGroup.add(this.model.root);
   }
@@ -50,6 +54,24 @@ export class Player {
   get gun() { return this.guns[this.gunIndex]; }
   get rolling() { return this.rollT >= 0; }
   get invulnerable() { return this.rollT >= 0 && this.rollT < T.dodge.iframes; }
+
+  refreshInventory(run) {
+    for (const key of run.unlocked) {
+      let gun = this.guns.find((g) => g.def.key === key);
+      if (!gun) { gun = new Gun(WEAPONS[key]); this.guns.push(gun); }
+      Object.assign(gun, run.guns[key]);
+    }
+    this.hp = run.hp;
+    if (this.coat !== run.coat) {
+      this.game.levelGroup.remove(this.model.root);
+      this.model.root.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
+      this.model.material.dispose();
+      this.model = addRollPivot(makeCharacter({ ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a }));
+      this.game.levelGroup.add(this.model.root);
+      this.coat = run.coat;
+      showGun(this.model, this.gun.def.key);
+    }
+  }
 
   switchTo(i) {
     if (i < 0 || i >= this.guns.length || i === this.gunIndex || !this.alive) return;
@@ -135,7 +157,7 @@ export class Player {
     }
     if (intent.reload) { intent.reload = false; if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6 }); }
     this.emptyClickT -= gunDt;
-    if (!this.rolling && (intent.fireHeld || intent.firePressed)) {
+    if (!g.inTown() && !this.rolling && (intent.fireHeld || intent.firePressed)) {
       if (gun.canFire()) this.fire();
       else if (gun.ammo <= 0 && intent.firePressed && this.emptyClickT <= 0) {
         this.emptyClickT = 0.3;
@@ -162,6 +184,7 @@ export class Player {
 
   fire() {
     const g = this.game, gun = this.gun, def = gun.def;
+    if (g.inTown()) return;
     const spreadDeg = gun.fire();
     const aim = g.intent.aim;
     let dx = Math.sin(this.yaw), dz = Math.cos(this.yaw);
@@ -236,7 +259,7 @@ export class Player {
   }
 
   damage(amount, dirX, dirZ) {
-    if (!this.alive || this.invulnerable) return false;
+    if (!this.alive || this.invulnerable || this.game.inTown()) return false;
     const g = this.game;
     this.hp -= amount;
     this.sinceHit = 0;
@@ -268,8 +291,10 @@ export class Player {
     m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
     if (this.flash > 0) this.flash -= realDt;
     animateCharacter(m, {
-      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: true, flash: this.flash,
+      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: !this.game.inTown(), flash: this.flash,
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
+    showGun(m, this.game.inTown() ? null : this.gun.def.key);
+    if (this.game.inTown()) m.arm.rotation.x = 1.1;
   }
 }

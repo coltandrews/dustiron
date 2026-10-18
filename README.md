@@ -1,6 +1,8 @@
 # Dust & Iron
 
-A top-down western shooter prototype: clear bandit camps for bounty, one life per run. Built with Three.js (rendering), Rapier (physics) and plain JavaScript modules.
+A western game with one life, a safe town, and a continuous desert region. Built with Three.js, Rapier, and plain JavaScript modules.
+
+Play at [dustiron.vercel.app](https://dustiron.vercel.app/).
 
 ## Play
 
@@ -33,7 +35,10 @@ After editing anything in `src/`, rebuild the single-file version with `npm run 
 | Dodge roll | Space (brief invulnerability) |
 | Reload | R |
 | Dead Eye | Hold Shift (slow motion, needs meter) |
-| Switch weapon | 1 2 3, Q, or mouse wheel |
+| Switch weapon | 1 2 3 or Q |
+| Camera zoom | Mouse wheel |
+| Talk or use a shop | E or Enter |
+| Use a bandage | H |
 | Map | M or Tab (pauses the fight) |
 | Pause | Esc |
 | Mute | N |
@@ -41,18 +46,42 @@ After editing anything in `src/`, rebuild the single-file version with `npm run 
 
 ## How a run works
 
-- Each camp is generated from the run's seed: tents around a campfire, crate and barrel cover, wagons, fences, explosive barrels.
-- Clear every outlaw to collect the bounty. You heal 50 HP between camps.
-- Clearing camp 1 unlocks the shotgun; camp 2 unlocks the rifle. Camps get more bandits, including rushers and sharpshooters.
-- The map (M) shows the camp layout and only the outlaws you've had line of sight to. Bandits you've lost track of show as a fading "last seen" marker; muzzle flashes reveal shooters.
-- Death is permanent. The save is deleted the moment you die. Closing the tab keeps your run and restarts the current camp's fight with your current health.
+- Start in Mercy Crossing with a revolver, 24 spare rounds, one bandage, and no money.
+- Talk to Martha or Silas for bounties. Each job has a fixed target in one of three camps. Targets wear a red hat with a gold band.
+- Travel to a camp, collect proof from the target, and return to the sheriff for payment. You can leave a fight at any time. Each bounty pays once.
+- Buy guns, ammo, bandages, treatment, a coat, and a map in town. Ammo is finite. Camp completion gives no free healing or guns.
+- Town is safe. Guns are put away there. If you have too little ammo and money, the sheriff offers town work for 12 revolver rounds.
+- Travel reveals land. Bought maps show roads and camp landmarks. Bounties show search areas. Unknown enemies are not shown on the world map.
+- Camps stay clear for this life. The current region is 420 m across. Camp difficulty comes from its location.
+- Saves keep your position, health, supplies, jobs, map, enemy deaths, damaged cover, and bullets in flight. Reloading does not restore supplies or reset camps.
+- Death ends the life at once. The next life has a new land layout and no earned money, gear, jobs, or map progress. Saves use browser storage on this device.
+- A living save from the original prototype moves to town once, with its money, guns, and health. The old record is kept until death. It cannot restore a dead life.
+
+## Current scope
+
+This is the first town and frontier build. Shops use menus at their doors. The saloon and stable have buildings, but drinks, blackjack, horses, interiors, a larger streamed world, and town crime are later work.
+
+## Checks
+
+```sh
+npm test
+npm run build
+npm run single
+```
+
+Tests cover life resets, map discovery, transactions, single bounty payments, saved combat state, finite reloads, and camp navigation. Use Chrome to check movement, aiming, menus, and visual changes.
 
 ## Code map
 
 ```
 src/
   main.js         boot and the fixed 60 Hz loop (time scale, interpolation)
-  game.js         run state, camps, saving, Dead Eye, hit-stop, explosions
+  game.js         life loop, saving, Dead Eye, hit-stop, explosions
+  life.js         seeded world data, inventory, jobs, map discovery, purchases
+  storage.js      versioned browser saves, death records, old-save migration
+  frontier.js     town buildings, walking civilians, roads, and desert
+  encounters.js   camp placement, local path grids, and combat snapshots
+  town-actions.js talks, shops, and bounty menus
   tuning.js       every feel number in one place
   input.js        keyboard and mouse state
   camera.js       angled follow camera, look-ahead, trauma shake
@@ -71,6 +100,6 @@ src/
   fx.js           pooled particles, tracers, light flashes
   audio.js        synthesized sound effects (no audio files)
   ui.js           HUD, reticle, cards
-  map.js          survey map (M): props, you, outlaws you've spotted
+  map.js          world map (M): explored land, roads, landmarks, and jobs
 tools/bundle.mjs  builds dist-single/ without npm
 ```

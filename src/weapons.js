@@ -18,12 +18,11 @@ export const WEAPONS = {
   },
 };
 
-export const UNLOCKS = { 1: 'shotgun', 2: 'rifle' }; // after clearing camp N
-
 export class Gun {
-  constructor(def, ammo = def.mag) {
+  constructor(def, ammo = def.mag, reserve = 0) {
     this.def = def;
     this.ammo = ammo;
+    this.reserve = reserve;
     this.cooldown = 0;
     this.bloom = 0;
     this.reloading = false;
@@ -43,7 +42,9 @@ export class Gun {
       this.reloadT += dt;
       if (this.reloadT >= this.reloadTotal) {
         this.reloading = false;
-        this.ammo = this.def.mag;
+        const rounds = Math.min(this.def.mag - this.ammo, this.reserve);
+        this.ammo += rounds;
+        this.reserve -= rounds;
         return true;
       }
     }
@@ -51,10 +52,10 @@ export class Gun {
   }
 
   startReload() {
-    if (this.reloading || this.ammo >= this.def.mag) return false;
+    if (this.reloading || this.ammo >= this.def.mag || this.reserve <= 0) return false;
     this.reloading = true;
     this.reloadT = 0;
-    this.reloadTotal = Math.min(this.def.reloadFull, this.def.reloadPerRound * (this.def.mag - this.ammo));
+    this.reloadTotal = Math.min(this.def.reloadFull, this.def.reloadPerRound * Math.min(this.def.mag - this.ammo, this.reserve));
     return true;
   }
 

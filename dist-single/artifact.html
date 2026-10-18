@@ -64,6 +64,8 @@ kbd {
 .hud-tr { position: absolute; top: var(--edge-t); right: var(--edge-r); text-align: right; display: grid; }
 .bounty-label { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-2); }
 .bounty { font: 30px/1 var(--display); color: var(--brass); }
+.bandages { margin-top: 8px; font-size: 14px; color: var(--paper-2); }
+.reserve-ammo { font-size: 15px; color: var(--paper-2); }
 
 .hud-br { position: absolute; right: var(--edge-r); bottom: var(--edge-b); display: grid; justify-items: end; gap: 8px; }
 .weapon-row { display: flex; align-items: center; gap: 14px; }
@@ -81,8 +83,9 @@ kbd {
 .ammo.row i { width: 9px; height: 26px; border-radius: 4px 4px 2px 2px; background: linear-gradient(var(--brass) 0 38%, var(--rust) 38%); box-shadow: inset 0 0 0 1px rgba(28, 19, 15, 0.5); }
 .ammo.row i.spent { background: rgba(28, 19, 15, 0.7); box-shadow: inset 0 0 0 1.5px rgba(239, 220, 187, 0.35); }
 
-.hint { position: absolute; left: 50%; bottom: var(--edge-b); transform: translateX(-50%); padding: 8px 14px; border-radius: 6px; background: rgba(28, 19, 15, 0.7); font-size: 14px; white-space: nowrap; opacity: 0; transition: opacity 0.6s; }
+.hint { position: absolute; left: var(--edge-l); bottom: var(--edge-b); max-width: 52vw; padding: 8px 14px; border-radius: 6px; background: rgba(28, 19, 15, 0.7); font-size: 14px; opacity: 0; transition: opacity 0.6s; }
 .hint.show { opacity: 1; }
+.interaction-hint { position: absolute; left: 50%; bottom: max(135px, 18vh); transform: translateX(-50%); max-width: min(500px, 80vw); padding: 10px 18px; border: 1px solid var(--brass); border-radius: 4px; background: rgba(28, 19, 15, 0.92); color: var(--paper); font-size: 18px; text-align: center; }
 .toast { position: absolute; left: 50%; top: 26%; transform: translate(-50%, 8px); font: 30px/1.1 var(--display); color: var(--paper); text-align: center; opacity: 0; transition: opacity 0.25s, transform 0.25s; max-width: calc(100% - 32px); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -113,8 +116,8 @@ kbd {
 #hurt-dir.show { animation: fade 0.6s ease-out; }
 
 /* ---------- screens ---------- */
-.screen { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--edge-t) var(--edge-r) var(--edge-b) var(--edge-l); background: rgba(20, 13, 9, 0.68); overflow-y: auto; z-index: 5; }
-.card { position: relative; width: min(600px, 100%); padding: 32px clamp(20px, 5vw, 44px); background: var(--paper); color: var(--ink); border-radius: 4px; box-shadow: 0 0 0 6px var(--paper), 0 0 0 8px var(--ink-2), 0 24px 60px rgba(0, 0, 0, 0.55); }
+.screen { position: absolute; inset: 0; display: grid; place-items: center; box-sizing: border-box; padding: var(--edge-t) var(--edge-r) var(--edge-b) var(--edge-l); background: rgba(20, 13, 9, 0.68); overflow-y: auto; z-index: 5; }
+.card { position: relative; box-sizing: border-box; width: min(600px, 100%); padding: 32px clamp(20px, 5vw, 44px); background: var(--paper); color: var(--ink); border-radius: 4px; box-shadow: 0 0 0 6px var(--paper), 0 0 0 8px var(--ink-2), 0 24px 60px rgba(0, 0, 0, 0.55); }
 .card.small { width: min(460px, 100%); text-align: center; }
 .card h1 { margin: 6px 0 12px; font: clamp(42px, 9vw, 72px)/0.95 var(--display); color: var(--ink); text-wrap: balance; }
 .card h1 span { color: var(--rust); }
@@ -128,6 +131,11 @@ kbd {
 .btn:hover { background: rgba(28, 19, 15, 0.08); }
 .btn:active { transform: translateY(1px); }
 .btn:focus-visible { outline: 3px solid var(--rust); outline-offset: 3px; }
+.btn:disabled { cursor: default; opacity: 0.45; transform: none; background: transparent; }
+.interaction-actions { flex-direction: column; }
+.interaction-actions .btn { text-align: left; line-height: 1.2; }
+.interaction-actions .interaction-close { margin-top: 8px; text-align: center; }
+#interaction-text { white-space: pre-line; }
 .btn.primary { background: var(--ink); color: var(--paper); }
 .btn.primary:hover { background: var(--rust); border-color: var(--rust); }
 .continue-info { margin: 10px 0 0; font-size: 14px; color: #6b5440; font-variant-numeric: tabular-nums; }
@@ -157,11 +165,10 @@ kbd {
 .map-legend li { display: flex; align-items: center; gap: 6px; }
 .map-legend i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink); }
 .map-legend .lg-you { border: 0; background: #2f5d8a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.map-legend .lg-outlaw { background: var(--blood); border-radius: 50%; }
-.map-legend .lg-seen { border: 1.5px dashed var(--blood); border-radius: 50%; }
-.map-legend .lg-cover { background: #d9bf92; }
-.map-legend .lg-tnt { width: 14px; height: 14px; border: 0; background: #f2a23c; clip-path: polygon(50% 0, 61% 30%, 93% 25%, 70% 50%, 93% 75%, 61% 70%, 50% 100%, 39% 70%, 7% 75%, 30% 50%, 7% 25%, 39% 30%); }
-.map-legend .lg-fire { background: #e8762e; border-radius: 50%; }
+.map-legend .lg-town { background: var(--ink); }
+.map-legend .lg-seen { border: 1.5px dashed var(--rust); border-radius: 50%; }
+.map-legend .lg-camp { border: 0; background: var(--rust); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.map-legend .lg-unknown { background: #bca17b; }
 .map-card .actions { justify-content: center; }
 .map-card .fine { text-align: center; }
 
@@ -225,13 +232,14 @@ kbd {
       </div>
     </div>
     <div class="hud-tc">
-      <div class="camp-no" id="camp-no">Camp 1</div>
-      <div class="camp-name" id="camp-name">Coyote Wash</div>
-      <div class="outlaws" id="outlaws">4 outlaws left</div>
+      <div class="camp-no" id="camp-no">Safe town</div>
+      <div class="camp-name" id="camp-name">Town</div>
+      <div class="outlaws" id="outlaws">Weapons holstered</div>
     </div>
     <div class="hud-tr">
-      <span class="bounty-label">Bounty</span>
+      <span class="bounty-label">Money</span>
       <span class="bounty" id="bounty">$0</span>
+      <span class="bandages" id="bandages">1 bandage · H</span>
     </div>
     <div class="hud-br">
       <div class="slots" id="slots"></div>
@@ -239,9 +247,11 @@ kbd {
         <div class="ammo cylinder" id="ammo"></div>
         <div class="weapon-name" id="weapon-name">Revolver</div>
       </div>
+      <div class="reserve-ammo" id="reserve-ammo">6 loaded · 24 spare</div>
       <div class="reload-hint" id="reload-hint" hidden>Press <kbd>R</kbd> to reload</div>
     </div>
-    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</div>
+    <div class="interaction-hint" id="interaction-hint" hidden></div>
+    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>E</kbd> talk · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</div>
     <div class="toast" id="toast"></div>
   </div>
 
@@ -257,12 +267,12 @@ kbd {
   <section class="screen title" id="screen-title" hidden>
     <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
     <div class="card title-card">
-      <p class="eyebrow">A bounty run through outlaw country</p>
+      <p class="eyebrow">One life on the frontier</p>
       <h1>Dust <span>&amp;</span> Iron</h1>
-      <p class="lede">Clear bandit camps one after another and collect the bounty. You get one life: die and the run is over.</p>
+      <p class="lede">Start in town. Talk to residents, take bounties, and explore the land. Return for supplies and payment. Death removes your money, gear, and map. Your next life starts on new land.</p>
       <div class="actions">
-        <button id="btn-start" class="btn primary" type="button">Ride out</button>
-        <button id="btn-continue" class="btn" type="button" hidden>Continue run</button>
+        <button id="btn-start" class="btn primary" type="button">Start a new life</button>
+        <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
       </div>
       <p class="continue-info" id="continue-info" hidden></p>
       <dl class="controls">
@@ -274,10 +284,13 @@ kbd {
         <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
         <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
         <div><dt><kbd>M</kbd></dt><dd>Map</dd></div>
+        <div><dt><kbd>E</kbd></dt><dd>Talk / use</dd></div>
+        <div><dt><kbd>H</kbd></dt><dd>Use bandage</dd></div>
+        <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
       </dl>
-      <p class="fine">Shots at bandits who haven't seen you deal double damage. Watch for aim lines: when one turns red, roll.</p>
+      <p class="fine">Town is safe. Ammunition is limited. The map reveals land as you travel. Watch enemy aim lines: when one turns red, roll.</p>
       <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
     </div>
   </section>
@@ -285,7 +298,7 @@ kbd {
   <section class="screen" id="screen-pause" hidden>
     <div class="card small">
       <h2>Paused</h2>
-      <p class="lede">Your run is saved. Closing the tab keeps your place at the start of this camp's fight.</p>
+      <p class="lede" id="save-status">Your life is saved. You can return to this position with your current supplies and progress.</p>
       <div class="actions">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
@@ -299,47 +312,44 @@ kbd {
       <div class="map-head">
         <div>
           <p class="eyebrow">Survey map</p>
-          <h2 id="map-title">Camp</h2>
+          <h2 id="map-title">Frontier map</h2>
         </div>
         <p class="map-sub" id="map-sub"></p>
       </div>
-      <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the camp"></canvas></div>
+      <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the frontier"></canvas></div>
       <ul class="map-legend">
         <li><i class="lg-you"></i>You</li>
-        <li><i class="lg-outlaw"></i>Outlaw in sight</li>
-        <li><i class="lg-seen"></i>Last seen</li>
-        <li><i class="lg-cover"></i>Cover</li>
-        <li><i class="lg-tnt"></i>Explosive barrel</li>
-        <li><i class="lg-fire"></i>Campfire</li>
+        <li><i class="lg-town"></i>Town</li>
+        <li><i class="lg-camp"></i>Known camp</li>
+        <li><i class="lg-seen"></i>Bounty search area</li>
+        <li><i class="lg-unknown"></i>Unexplored land</li>
       </ul>
       <div class="actions">
-        <button id="btn-map-close" class="btn primary" type="button">Back to the fight</button>
+        <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
       </div>
-      <p class="fine"><kbd>M</kbd> or <kbd>Esc</kbd> closes the map. The fight is paused while it's open.</p>
+      <p class="fine">Travel to reveal land. Buy a map to see roads. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
     </div>
   </section>
 
-  <section class="screen" id="screen-cleared" hidden>
-    <div class="card small poster">
-      <p class="eyebrow">Bounty collected</p>
-      <h2 id="cleared-title">Camp cleared</h2>
-      <div class="ledger" id="cleared-body"></div>
-      <div class="actions">
-        <button id="btn-next" class="btn primary" type="button">Ride to the next camp</button>
-      </div>
-      <p class="fine">or press <kbd>E</kbd></p>
+  <section class="screen" id="screen-interaction" hidden>
+    <div class="card small interaction-card" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
+      <p class="eyebrow">Town</p>
+      <h2 id="interaction-title"></h2>
+      <p class="lede" id="interaction-text"></p>
+      <div class="actions interaction-actions" id="interaction-actions"></div>
+      <p class="fine"><kbd>Esc</kbd> closes this conversation. The game is paused.</p>
     </div>
   </section>
 
   <section class="screen" id="screen-dead" hidden>
     <div class="card small poster dead">
-      <p class="eyebrow">Run over</p>
+      <p class="eyebrow">Life over</p>
       <h2 id="dead-title">Shot down</h2>
       <div class="ledger" id="dead-body"></div>
       <div class="actions">
-        <button id="btn-restart" class="btn primary" type="button">Start a new run</button>
+        <button id="btn-restart" class="btn primary" type="button">Start a new life</button>
       </div>
-      <p class="fine">or press <kbd>R</kbd></p>
+      <p class="fine">Money, gear, jobs, and discoveries are gone. Start on new land. Press <kbd>R</kbd> to begin.</p>
     </div>
   </section>
 
@@ -373,6 +383,9 @@ const T = {
     fov: 35,
     pitchDeg: 55,
     distance: 28,
+    minDistance: 20,
+    maxDistance: 48,
+    zoomStep: 2,
     followHalfLife: 0.06,
     lookAhead: 3,
     lookAheadFactor: 0.3,
@@ -395,7 +408,7 @@ const T = {
     regenStep: 25,
     gunHeight: 1.0,
     hitRadius: 0.42,
-    healBetweenCamps: 50,
+    bandageHeal: 35,
   },
 
   dodge: { duration: 0.35, distance: 4.5, iframes: 0.25, cooldown: 0.6, buffer: 0.15 },
@@ -424,7 +437,7 @@ const T = {
 
   explosion: { radius: 4, damage: 80, impulse: 26, chainDelay: 0.15, trauma: 0.7 },
 
-  run: { saveInterval: 2, clearDelay: 1.4, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
+  run: { saveInterval: 2, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
 };
 
 return { T };
@@ -685,6 +698,8 @@ class CameraRig {
     this.target = new THREE.Vector3();
     this.desired = new THREE.Vector3();
     this.trauma = 0;
+    this.distance = c.distance;
+    this.targetDistance = c.distance;
     this.time = 0;
     this.phase = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
     this.raycaster = new THREE.Raycaster();
@@ -696,7 +711,12 @@ class CameraRig {
   offset() {
     const c = T.camera;
     const p = c.pitchDeg * DEG;
-    return { y: Math.sin(p) * c.distance, z: Math.cos(p) * c.distance };
+    return { y: Math.sin(p) * this.distance, z: Math.cos(p) * this.distance };
+  }
+
+  zoom(steps) {
+    const c = T.camera;
+    this.targetDistance = Math.max(c.minDistance, Math.min(c.maxDistance, this.targetDistance + steps * c.zoomStep));
   }
 
   snap(x, z) {
@@ -733,6 +753,7 @@ class CameraRig {
     const c = T.camera;
     if (c.fov !== this.camera.fov) { this.camera.fov = c.fov; this.camera.updateProjectionMatrix(); }
     this.time += dt;
+    this.distance += (this.targetDistance - this.distance) * Math.min(1, dt * 10);
     this.desired.set(focus.x, 0, focus.z);
     if (aim) {
       let dx = (aim.x - focus.x) * c.lookAheadFactor, dz = (aim.z - focus.z) * c.lookAheadFactor;
@@ -774,6 +795,7 @@ const BINDINGS = {
   dodge: ['Space'],
   deadEye: ['ShiftLeft', 'ShiftRight'],
   reload: ['KeyR'],
+  bandage: ['KeyH'],
   interact: ['KeyE', 'Enter'],
   nextWeapon: ['KeyQ'],
   weapon1: ['Digit1'],
@@ -864,6 +886,7 @@ class Input {
     this.edges.clear();
     this.fireHeld = false;
     this.firePressed = false;
+    this.wheel = 0;
   }
 }
 
@@ -1080,12 +1103,14 @@ class UI {
       app: $('app'), hud: $('hud'), reticle: $('reticle'), hit: $('ret-hit'), ring: $('ret-ring'), reload: $('ret-reload'),
       hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
       campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
-      weaponName: $('weapon-name'), ammo: $('ammo'), slots: $('slots'), reloadHint: $('reload-hint'),
-      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'),
-      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
+      weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
+      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'),
+      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
-      clearedTitle: $('cleared-title'), clearedBody: $('cleared-body'), deadBody: $('dead-body'), deadTitle: $('dead-title'),
+      interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
+      deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
+      saveStatus: $('save-status'),
     };
     this.ammoKey = '';
     this.cylAngle = 0;
@@ -1094,6 +1119,17 @@ class UI {
     this.hurtT = 0;
     this.toastT = 0;
     this.hintT = 12;
+    this.el.screens.interaction.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
+      if (event.code !== 'Tab') return;
+      event.preventDefault();
+      event.stopPropagation();
+      const buttons = [...this.el.interactionActions.querySelectorAll('button:not(:disabled)')];
+      if (!buttons.length) return;
+      const step = event.shiftKey ? -1 : 1;
+      const index = buttons.indexOf(document.activeElement);
+      buttons[(index + step + buttons.length) % buttons.length].focus();
+    });
   }
 
   bind(handlers) {
@@ -1102,14 +1138,13 @@ class UI {
     on('btn-continue', handlers.continueRun);
     on('btn-resume', handlers.resume);
     on('btn-quit', handlers.quitToTitle);
-    on('btn-next', handlers.nextCamp);
     on('btn-restart', handlers.newRun);
     on('btn-map-close', handlers.closeMap);
   }
 
   show(name) {
     for (const [k, el] of Object.entries(this.el.screens)) el.hidden = k !== name;
-    const playing = name === null || name === 'cleared' || name === 'dead';
+    const playing = name === null || name === 'interaction' || name === 'dead';
     this.el.hud.hidden = !playing;
     this.el.app.classList.toggle('in-menu', name !== null);
   }
@@ -1122,7 +1157,12 @@ class UI {
   setContinue(save) {
     this.el.continueBtn.hidden = !save;
     this.el.continueInfo.hidden = !save;
-    if (save) this.el.continueInfo.textContent = `Camp ${save.camp + 1} · $${save.bounty} bounty · ${Math.round(save.hp)} HP`;
+    if (save) this.el.continueInfo.textContent = `$${save.bounty} · ${Math.round(save.hp)} HP · ${save.camp} camps cleared`;
+  }
+
+  setSaveStatus(ok) {
+    this.el.saveStatus.textContent = ok ? 'Your life is saved. You can return to this position with your current supplies and progress.'
+      : 'Save failed. Keep this tab open. Browser storage is blocked, full, or changed in another tab.';
   }
 
   toast(text, seconds = 2.2) {
@@ -1149,16 +1189,26 @@ class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showCleared(info) {
-    this.el.clearedTitle.textContent = `${info.name} cleared`;
-    const rows = [
-      ['Bounty collected', `$${info.earned}`],
-      ['Run total', `$${info.total}`],
-      ['Healed', `+${info.healed} HP`],
-    ];
-    if (info.unlock) rows.push(['New weapon', info.unlock]);
-    this.el.clearedBody.innerHTML = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
-    this.show('cleared');
+  showInteraction({ title, text, actions = [] }, onAction) {
+    this.el.interactionTitle.textContent = title;
+    this.el.interactionText.textContent = text;
+    const box = this.el.interactionActions;
+    const focusedId = document.activeElement?.dataset.action;
+    let preferredFocus = null;
+    box.replaceChildren();
+    for (const action of [...actions.filter((item) => item.id !== 'close'), { id: 'close', label: 'Back to town' }]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `btn${action.id === 'close' ? ' interaction-close' : ''}`;
+      button.textContent = action.label;
+      button.dataset.action = action.id;
+      button.disabled = Boolean(action.disabled);
+      if (!button.disabled && action.id === focusedId) preferredFocus = button;
+      button.addEventListener('click', (event) => { event.stopPropagation(); onAction(action.id); });
+      box.appendChild(button);
+    }
+    this.show('interaction');
+    (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
   }
 
   showDead(stats) {
@@ -1167,11 +1217,11 @@ class UI {
     const rows = [
       ['Camps cleared', stats.camp],
       ['Outlaws downed', stats.kills],
-      ['Bounty earned', `$${stats.bounty}`],
+      ['Money at death', `$${stats.bounty}`],
       ['Accuracy', `${acc}%`],
       ['Time on the trail', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
     ];
-    this.el.deadTitle.textContent = stats.camp === 0 ? 'Shot down at the first camp' : `Shot down after ${stats.camp} camp${stats.camp > 1 ? 's' : ''}`;
+    this.el.deadTitle.textContent = 'Your life has ended';
     this.el.deadBody.innerHTML = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
     this.show('dead');
   }
@@ -1215,16 +1265,20 @@ class UI {
     e.deBar.classList.toggle('active', de.active);
     e.deBar.classList.toggle('ready', de.meter >= 0.999 && !de.active);
 
-    const alive = game.enemies.filter((b) => b.alive).length;
-    e.campNo.textContent = `Camp ${game.run.camp + 1}`;
-    e.campName.textContent = game.campName;
-    e.outlaws.textContent = alive === 1 ? '1 outlaw left' : `${alive} outlaws left`;
+    const inTown = game.inTown();
+    e.campNo.textContent = inTown ? 'Safe town' : 'The frontier';
+    e.campName.textContent = game.locationName;
+    e.outlaws.textContent = inTown ? 'Weapons holstered' : 'Return to town for payment';
     e.bounty.textContent = `$${game.run.bounty}`;
+    e.bandages.textContent = `${game.run.bandages} bandage${game.run.bandages === 1 ? '' : 's'} · H`;
+    e.interactionHint.textContent = game.interactionHint || '';
+    e.interactionHint.hidden = !game.interactionHint || game.state !== 'playing';
 
     // Weapon, ammo, slots.
     const gun = p.gun;
     this.buildAmmo(gun);
     e.weaponName.textContent = gun.def.name;
+    e.reserve.textContent = `${gun.ammo} loaded · ${gun.reserve} spare`;
     const pips = e.ammo.children;
     if (gun.ammo !== this.lastAmmo) {
       if (gun.def.layout === 'cylinder' && this.lastAmmo > gun.ammo) this.cylAngle += 60 * (this.lastAmmo - gun.ammo);
@@ -1233,6 +1287,7 @@ class UI {
       e.ammo.style.setProperty('--cyl', this.cylAngle + 'deg');
     }
     e.reloadHint.hidden = !(gun.ammo === 0 && !gun.reloading);
+    e.reloadHint.textContent = gun.reserve ? 'Press R to reload' : 'No spare rounds. Buy more in town.';
     const slotsKey = p.guns.map((g) => g.def.key).join() + p.gunIndex;
     if (slotsKey !== this.slotsKey) {
       this.slotsKey = slotsKey;
@@ -1249,6 +1304,7 @@ class UI {
     e.reload.style.strokeDashoffset = `${circ * (1 - gun.reloadProgress)}`;
     e.reload.style.opacity = gun.reloading ? 1 : 0;
     e.reticle.classList.toggle('empty', gun.ammo === 0);
+    e.reticle.hidden = inTown;
 
     // Damage vignette.
     this.hurtT = Math.max(0, this.hurtT - dt);
@@ -1261,199 +1317,6 @@ class UI {
 }
 
 return { UI };
-})();
-
-// ---- src/nav.js ----
-__m.nav = (() => {
-// A 0.5 m navigation grid with A* and path smoothing. Static walls are baked
-// once per camp; movable props are re-stamped whenever something breaks or moves.
-
-const SQRT2 = Math.SQRT2;
-
-class NavGrid {
-  constructor(half = 22, cell = 0.5, inflate = 0.45) {
-    this.half = half;
-    this.cell = cell;
-    this.inflate = inflate;
-    this.n = Math.round((half * 2) / cell);
-    const size = this.n * this.n;
-    this.staticBlocked = new Uint8Array(size);
-    this.blocked = new Uint8Array(size);
-    this.g = new Float32Array(size);
-    this.f = new Float32Array(size);
-    this.parent = new Int32Array(size);
-    this.state = new Uint8Array(size); // 0 new, 1 open, 2 closed
-    this.heap = [];
-  }
-
-  toCell(v) { return Math.floor((v + this.half) / this.cell); }
-  center(c) { return -this.half + (c + 0.5) * this.cell; }
-  inside(cx, cz) { return cx >= 0 && cz >= 0 && cx < this.n && cz < this.n; }
-
-  isFree(x, z) {
-    const cx = this.toCell(x), cz = this.toCell(z);
-    return this.inside(cx, cz) && !this.blocked[cz * this.n + cx];
-  }
-
-  stamp(arr, fp, inflate = this.inflate) {
-    const reach = fp.r !== undefined ? fp.r + inflate : Math.hypot(fp.hx, fp.hz) + inflate;
-    const x0 = Math.max(0, this.toCell(fp.x - reach)), x1 = Math.min(this.n - 1, this.toCell(fp.x + reach));
-    const z0 = Math.max(0, this.toCell(fp.z - reach)), z1 = Math.min(this.n - 1, this.toCell(fp.z + reach));
-    const c = fp.ry !== undefined ? Math.cos(fp.ry) : 1, s = fp.ry !== undefined ? Math.sin(fp.ry) : 0;
-    for (let cz = z0; cz <= z1; cz++) {
-      for (let cx = x0; cx <= x1; cx++) {
-        const dx = this.center(cx) - fp.x, dz = this.center(cz) - fp.z;
-        let hit;
-        if (fp.r !== undefined) hit = dx * dx + dz * dz <= (fp.r + inflate) ** 2;
-        else {
-          const lx = dx * c - dz * s, lz = dx * s + dz * c;
-          hit = Math.abs(lx) <= fp.hx + inflate && Math.abs(lz) <= fp.hz + inflate;
-        }
-        if (hit) arr[cz * this.n + cx] = 1;
-      }
-    }
-  }
-
-  setStatic(footprints) {
-    this.staticBlocked.fill(0);
-    // The outer ring of cells is a wall.
-    const n = this.n;
-    for (let i = 0; i < n; i++) {
-      this.staticBlocked[i] = this.staticBlocked[(n - 1) * n + i] = 1;
-      this.staticBlocked[i * n] = this.staticBlocked[i * n + n - 1] = 1;
-    }
-    for (const fp of footprints) this.stamp(this.staticBlocked, fp);
-  }
-
-  rebuild(dynamicFootprints) {
-    this.blocked.set(this.staticBlocked);
-    for (const fp of dynamicFootprints) this.stamp(this.blocked, fp);
-  }
-
-  nearestFree(cx, cz, maxR = 8) {
-    const n = this.n;
-    if (this.inside(cx, cz) && !this.blocked[cz * n + cx]) return cz * n + cx;
-    for (let r = 1; r <= maxR; r++) {
-      for (let dz = -r; dz <= r; dz++) {
-        for (let dx = -r; dx <= r; dx++) {
-          if (Math.abs(dx) !== r && Math.abs(dz) !== r) continue;
-          const x = cx + dx, z = cz + dz;
-          if (this.inside(x, z) && !this.blocked[z * n + x]) return z * n + x;
-        }
-      }
-    }
-    return -1;
-  }
-
-  /** True if a straight walk between two points crosses no blocked cell. */
-  lineFree(x0, z0, x1, z1) {
-    const d = Math.hypot(x1 - x0, z1 - z0);
-    const steps = Math.ceil(d / (this.cell * 0.5));
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      if (!this.isFree(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t)) return false;
-    }
-    return true;
-  }
-
-  push(i) {
-    const h = this.heap, f = this.f;
-    h.push(i);
-    let k = h.length - 1;
-    while (k > 0) {
-      const p = (k - 1) >> 1;
-      if (f[h[p]] <= f[h[k]]) break;
-      [h[p], h[k]] = [h[k], h[p]];
-      k = p;
-    }
-  }
-
-  pop() {
-    const h = this.heap, f = this.f;
-    const top = h[0];
-    const last = h.pop();
-    if (h.length) {
-      h[0] = last;
-      let k = 0;
-      for (;;) {
-        const l = k * 2 + 1, r = l + 1;
-        let m = k;
-        if (l < h.length && f[h[l]] < f[h[m]]) m = l;
-        if (r < h.length && f[h[r]] < f[h[m]]) m = r;
-        if (m === k) break;
-        [h[m], h[k]] = [h[k], h[m]];
-        k = m;
-      }
-    }
-    return top;
-  }
-
-  /** @returns {{x:number,z:number}[] | null} waypoints after the start */
-  findPath(sx, sz, tx, tz, maxIter = 5000) {
-    const n = this.n;
-    const start = this.nearestFree(this.toCell(sx), this.toCell(sz), 4);
-    const goal = this.nearestFree(this.toCell(tx), this.toCell(tz), 8);
-    if (start < 0 || goal < 0) return null;
-    if (start === goal) return [{ x: tx, z: tz }];
-    const gx = goal % n, gz = (goal / n) | 0;
-    const H = (i) => { const dx = Math.abs((i % n) - gx), dz = Math.abs(((i / n) | 0) - gz); return (dx + dz + (SQRT2 - 2) * Math.min(dx, dz)); };
-
-    this.state.fill(0);
-    this.heap.length = 0;
-    this.g[start] = 0;
-    this.f[start] = H(start);
-    this.parent[start] = -1;
-    this.state[start] = 1;
-    this.push(start);
-    let found = false, iter = 0;
-    while (this.heap.length && iter++ < maxIter) {
-      const cur = this.pop();
-      if (this.state[cur] === 2) continue;
-      if (cur === goal) { found = true; break; }
-      this.state[cur] = 2;
-      const cx = cur % n, cz = (cur / n) | 0;
-      for (let dz = -1; dz <= 1; dz++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (!dx && !dz) continue;
-          const x = cx + dx, z = cz + dz;
-          if (!this.inside(x, z)) continue;
-          const ni = z * n + x;
-          if (this.blocked[ni] || this.state[ni] === 2) continue;
-          if (dx && dz && (this.blocked[cz * n + x] || this.blocked[z * n + cx])) continue; // no corner cutting
-          const g = this.g[cur] + (dx && dz ? SQRT2 : 1);
-          if (this.state[ni] === 1 && g >= this.g[ni]) continue;
-          this.g[ni] = g;
-          this.f[ni] = g + H(ni);
-          this.parent[ni] = cur;
-          this.state[ni] = 1;
-          this.push(ni);
-        }
-      }
-    }
-    if (!found) return null;
-
-    const cells = [];
-    for (let i = goal; i !== -1; i = this.parent[i]) cells.push(i);
-    cells.reverse();
-    const pts = cells.map((i) => ({ x: this.center(i % n), z: this.center((i / n) | 0) }));
-    pts[pts.length - 1] = this.isFree(tx, tz) ? { x: tx, z: tz } : pts[pts.length - 1];
-
-    // String-pull: keep only waypoints needed to stay on free cells.
-    const out = [];
-    let from = { x: sx, z: sz };
-    let i = 0;
-    while (i < pts.length) {
-      let j = pts.length - 1;
-      while (j > i && !this.lineFree(from.x, from.z, pts[j].x, pts[j].z)) j--;
-      out.push(pts[j]);
-      from = pts[j];
-      i = j + 1;
-    }
-    return out;
-  }
-}
-
-return { NavGrid };
 })();
 
 // ---- src/models.js ----
@@ -2475,11 +2338,11 @@ function chooseCover(game, bandit, opts) {
   const px = opts.fromX ?? P.x, pz = opts.fromZ ?? P.z;
   const [minD, maxD] = opts.range;
   const candidates = [];
-  for (const prop of game.props) {
+  for (const prop of bandit.encounter.props) {
     if (!prop.isCover()) continue;
     const propX = prop.x, propZ = prop.z;
     for (const pt of prop.coverPoints()) {
-      if (!game.nav.isFree(pt.x, pt.z)) continue;
+      if (!bandit.encounter.nav.isFree(pt.x, pt.z)) continue;
       if (game.coverClaimed(pt.x, pt.z, bandit)) continue;
       const dpx = px - pt.x, dpz = pz - pt.z;
       const dp = Math.hypot(dpx, dpz);
@@ -2545,8 +2408,9 @@ const _yellow = new THREE.Color(0xffd35a);
 const _red = new THREE.Color(0xff3322);
 
 class Bandit {
-  constructor(game, type, x, z, campIndex) {
+  constructor(game, type, x, z, campIndex, encounter, target) {
     this.game = game;
+    this.encounter = encounter;
     this.type = type;
     this.def = BANDIT_TYPES[type];
     this.maxHp = this.def.hp;
@@ -2597,7 +2461,8 @@ class Bandit {
     this.collider = cap.collider;
     this.bodyY = cap.y;
 
-    this.model = addRollPivot(makeCharacter(LOOKS[this.def.look]));
+    const look = LOOKS[this.def.look];
+    this.model = addRollPivot(makeCharacter(target ? { ...look, hat: 0x9d302b, band: 0xe4bf6c } : look));
     showGun(this.model, this.def.gun);
     this.model.root.position.set(x, 0, z);
     game.levelGroup.add(this.model.root);
@@ -2614,7 +2479,7 @@ class Bandit {
 
   perceive() {
     const P = this.game.player;
-    if (!P.alive) { this.canSee = false; return; }
+    if (!P.alive || this.game.inTown()) { this.canSee = false; return; }
     const dx = P.x - this.x, dz = P.z - this.z;
     const d = Math.hypot(dx, dz);
     let see = false;
@@ -2703,7 +2568,7 @@ class Bandit {
     if (dist < arrive) { this.desire(0, 0, 0); return true; }
     this.repathT -= dt;
     if (!this.path || this.repathT <= 0 || Math.hypot(tx - this.pathTX, tz - this.pathTZ) > 1) {
-      this.path = this.game.nav.findPath(this.x, this.z, tx, tz);
+      this.path = this.encounter.nav.findPath(this.x, this.z, tx, tz);
       this.pathIdx = 0;
       this.pathTX = tx; this.pathTZ = tz;
       this.repathT = rand(0.7, 1.1);
@@ -2728,7 +2593,7 @@ class Bandit {
   integrate(dt) {
     // Separation from other bandits.
     let sx = 0, sz = 0;
-    for (const o of this.game.enemies) {
+    for (const o of this.encounter.enemies) {
       if (o === this || !o.alive) continue;
       const dx = this.x - o.x, dz = this.z - o.z;
       const d = Math.hypot(dx, dz);
@@ -2745,9 +2610,10 @@ class Bandit {
     cc.computeColliderMovement(this.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
     const mv = cc.computedMovement();
     this.x += mv.x; this.z += mv.z;
-    const lim = this.game.arenaHalf - 0.6;
-    this.x = Math.max(-lim, Math.min(lim, this.x));
-    this.z = Math.max(-lim, Math.min(lim, this.z));
+    const { x, z } = this.encounter;
+    const lim = this.encounter.nav.half - 1;
+    this.x = Math.max(x - lim, Math.min(x + lim, this.x));
+    this.z = Math.max(z - lim, Math.min(z + lim, this.z));
     this.body.setNextKinematicTranslation({ x: this.x, y: this.bodyY, z: this.z });
     this.moveSpeed = Math.hypot(mv.x, mv.z) / dt;
   }
@@ -2766,11 +2632,12 @@ class Bandit {
 
   hasShot() {
     const P = this.game.player;
-    return P.alive && this.game.physics.los(this.x, this.z, P.x, P.z);
+    return P.alive && !this.game.inTown() && this.game.physics.los(this.x, this.z, P.x, P.z);
   }
 
   fire() {
     const g = this.game, P = g.player, def = this.def;
+    if (g.inTown()) { this.finishEngage(); return; }
     const mz = this.muzzle();
     const spread = (def.spreadDeg / this.accuracy) * DEG;
     for (let i = 0; i < def.pellets; i++) {
@@ -2823,7 +2690,7 @@ class Bandit {
     if (this.hp <= 0) { this.die(dirX, dirZ, 3 + knock * 1.5); return { killed: true, crit }; }
     if (!this.knows) { this.knows = true; this.engageAfterAlert(); this.game.shout(this); }
     this.game.audio.at('enemyHurt', this.x, this.z, { vol: 0.6 });
-    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction() <= 0.5 && this.type !== 'rusher') {
+    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction(this.encounter) <= 0.5 && this.type !== 'rusher') {
       this.fleeing = true;
       this.releaseToken();
       this.cover = null;
@@ -3051,7 +2918,7 @@ class Bandit {
     if (Math.random() < 0.5) opts.reverse();
     for (const [ox, oz] of opts) {
       const x = this.x + ox, z = this.z + oz;
-      if (!this.game.nav.isFree(x, z)) continue;
+      if (!this.encounter.nav.isFree(x, z)) continue;
       if (P.alive && this.game.physics.los(x, z, P.x, P.z)) { this.peekX = x; this.peekZ = z; return; }
     }
     this.peekX = this.x + opts[0][0]; this.peekZ = this.z + opts[0][1];
@@ -3066,9 +2933,7 @@ class Bandit {
       for (const s of [sign, -sign]) {
         const a = bearing + s * off * DEG;
         const x = P.x + Math.sin(a) * dist, z = P.z + Math.cos(a) * dist;
-        const lim = this.game.arenaHalf - 1.5;
-        if (Math.abs(x) > lim || Math.abs(z) > lim) continue;
-        if (!this.game.nav.isFree(x, z)) continue;
+        if (!this.encounter.nav.isFree(x, z)) continue;
         if (!this.game.physics.los(x, z, P.x, P.z)) continue;
         this.peekX = x; this.peekZ = z;
         return true;
@@ -3120,12 +2985,11 @@ const WEAPONS = {
   },
 };
 
-const UNLOCKS = { 1: 'shotgun', 2: 'rifle' }; // after clearing camp N
-
 class Gun {
-  constructor(def, ammo = def.mag) {
+  constructor(def, ammo = def.mag, reserve = 0) {
     this.def = def;
     this.ammo = ammo;
+    this.reserve = reserve;
     this.cooldown = 0;
     this.bloom = 0;
     this.reloading = false;
@@ -3145,7 +3009,9 @@ class Gun {
       this.reloadT += dt;
       if (this.reloadT >= this.reloadTotal) {
         this.reloading = false;
-        this.ammo = this.def.mag;
+        const rounds = Math.min(this.def.mag - this.ammo, this.reserve);
+        this.ammo += rounds;
+        this.reserve -= rounds;
         return true;
       }
     }
@@ -3153,10 +3019,10 @@ class Gun {
   }
 
   startReload() {
-    if (this.reloading || this.ammo >= this.def.mag) return false;
+    if (this.reloading || this.ammo >= this.def.mag || this.reserve <= 0) return false;
     this.reloading = true;
     this.reloadT = 0;
-    this.reloadTotal = Math.min(this.def.reloadFull, this.def.reloadPerRound * (this.def.mag - this.ammo));
+    this.reloadTotal = Math.min(this.def.reloadFull, this.def.reloadPerRound * Math.min(this.def.mag - this.ammo, this.reserve));
     return true;
   }
 
@@ -3172,7 +3038,7 @@ class Gun {
   }
 }
 
-return { WEAPONS, UNLOCKS, Gun };
+return { WEAPONS, Gun };
 })();
 
 // ---- src/player.js ----
@@ -3204,7 +3070,10 @@ class Player {
     this.hp = run.hp;
     this.alive = true;
     this.sinceHit = 99;
-    this.guns = run.unlocked.map((k) => new Gun(WEAPONS[k]));
+    this.guns = run.unlocked.map((k) => {
+      const saved = run.guns[k];
+      return Object.assign(new Gun(WEAPONS[k], saved.ammo, saved.reserve), saved);
+    });
     this.gunIndex = Math.min(run.weapon ?? 0, this.guns.length - 1);
     this.rollT = -1;
     this.rollCooldown = 0;
@@ -3220,7 +3089,8 @@ class Player {
     this.bodyY = cap.y;
     this.controller = game.physics.characterController();
 
-    this.model = addRollPivot(makeCharacter(LOOKS.player));
+    this.model = addRollPivot(makeCharacter(run.coat ? { ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a } : LOOKS.player));
+    this.coat = run.coat;
     showGun(this.model, this.gun.def.key);
     game.levelGroup.add(this.model.root);
   }
@@ -3228,6 +3098,24 @@ class Player {
   get gun() { return this.guns[this.gunIndex]; }
   get rolling() { return this.rollT >= 0; }
   get invulnerable() { return this.rollT >= 0 && this.rollT < T.dodge.iframes; }
+
+  refreshInventory(run) {
+    for (const key of run.unlocked) {
+      let gun = this.guns.find((g) => g.def.key === key);
+      if (!gun) { gun = new Gun(WEAPONS[key]); this.guns.push(gun); }
+      Object.assign(gun, run.guns[key]);
+    }
+    this.hp = run.hp;
+    if (this.coat !== run.coat) {
+      this.game.levelGroup.remove(this.model.root);
+      this.model.root.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
+      this.model.material.dispose();
+      this.model = addRollPivot(makeCharacter({ ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a }));
+      this.game.levelGroup.add(this.model.root);
+      this.coat = run.coat;
+      showGun(this.model, this.gun.def.key);
+    }
+  }
 
   switchTo(i) {
     if (i < 0 || i >= this.guns.length || i === this.gunIndex || !this.alive) return;
@@ -3313,7 +3201,7 @@ class Player {
     }
     if (intent.reload) { intent.reload = false; if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6 }); }
     this.emptyClickT -= gunDt;
-    if (!this.rolling && (intent.fireHeld || intent.firePressed)) {
+    if (!g.inTown() && !this.rolling && (intent.fireHeld || intent.firePressed)) {
       if (gun.canFire()) this.fire();
       else if (gun.ammo <= 0 && intent.firePressed && this.emptyClickT <= 0) {
         this.emptyClickT = 0.3;
@@ -3340,6 +3228,7 @@ class Player {
 
   fire() {
     const g = this.game, gun = this.gun, def = gun.def;
+    if (g.inTown()) return;
     const spreadDeg = gun.fire();
     const aim = g.intent.aim;
     let dx = Math.sin(this.yaw), dz = Math.cos(this.yaw);
@@ -3414,7 +3303,7 @@ class Player {
   }
 
   damage(amount, dirX, dirZ) {
-    if (!this.alive || this.invulnerable) return false;
+    if (!this.alive || this.invulnerable || this.game.inTown()) return false;
     const g = this.game;
     this.hp -= amount;
     this.sinceHit = 0;
@@ -3446,9 +3335,11 @@ class Player {
     m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
     if (this.flash > 0) this.flash -= realDt;
     animateCharacter(m, {
-      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: true, flash: this.flash,
+      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: !this.game.inTown(), flash: this.flash,
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
+    showGun(m, this.game.inTown() ? null : this.gun.def.key);
+    if (this.game.inTown()) m.arm.rotation.x = 1.1;
   }
 }
 
@@ -3544,6 +3435,725 @@ class Projectiles {
 }
 
 return { Projectiles };
+})();
+
+// ---- src/life.js ----
+__m.life = (() => {
+// Saved data and town transactions for one life. This module has no browser state.
+const { createRng } = __m.rng;
+const { WEAPONS } = __m.weapons;
+const WORLD_HALF = 210;
+const MAP_CELL = 12;
+const CATALOGUE = {
+  ammo: { name: '12 rounds for your selected gun', price: 6 },
+  bandage: { name: 'Bandage', price: 10 },
+  heal: { name: 'Full treatment', price: 15 },
+  shotgun: { name: 'Shotgun', price: 70 },
+  rifle: { name: 'Rifle', price: 130 },
+  map: { name: 'Road and landmark map', price: 25 },
+  coat: { name: 'Trail coat', price: 20 },
+};
+const CAMP_NAMES = ['Coyote Wash', 'Dry Gulch', 'Rattler Flats', 'Buzzard Mesa', 'Red Hollow', 'Cinder Draw'];
+const TARGET_NAMES = ['Silas Crow', 'Ada Flint', 'Jed Mercer', 'Ruth Voss', 'Cal Rusk', 'Mae Talbot'];
+const STAT_KEYS = ['camp', 'bounty', 'kills', 'shots', 'hits', 'time', 'damageTaken'];
+const CONTRACT_STATES = new Set(['offered', 'active', 'proof', 'paid']);
+const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const nonnegative = (value) => Number.isFinite(value) && value >= 0;
+const count = (value) => Number.isSafeInteger(value) && value >= 0;
+const position = (value) => object(value) && Number.isFinite(value.x) && Number.isFinite(value.z)
+  && Math.abs(value.x) <= WORLD_HALF && Math.abs(value.z) <= WORLD_HALF;
+const vector = (value) => object(value) && ['x', 'y', 'z'].every((key) => Number.isFinite(value[key]));
+
+function gunState(key) {
+  return { ammo: WEAPONS[key].mag, reserve: key === 'revolver' ? 24 : 12,
+    cooldown: 0, bloom: 0, reloading: false, reloadT: 0, reloadTotal: 0 };
+}
+
+function createLife(seed) {
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new RangeError('Invalid life seed');
+  const rng = createRng(seed), angle = rng.range(0, Math.PI * 2), names = rng.int(0, CAMP_NAMES.length - 1);
+  const camps = Array.from({ length: 3 }, (_, i) => {
+    const a = angle + i * Math.PI * 2 / 3 + rng.range(-0.15, 0.15), distance = rng.range(90 + i * 15, 120 + i * 20);
+    return { id: `camp-${i + 1}`, name: CAMP_NAMES[(names + i) % CAMP_NAMES.length],
+      x: Math.round(Math.cos(a) * distance), z: Math.round(Math.sin(a) * distance), difficulty: i,
+      targetId: `target-${i + 1}`, targetName: TARGET_NAMES[(names + i * 2) % TARGET_NAMES.length], reward: 90 + i * 40 };
+  });
+  const life = {
+    version: 2, status: 'alive', seed, camp: 0, bounty: 0, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
+    simTime: 0, projectiles: [],
+    hp: 100, unlocked: ['revolver'], weapon: 0, deadEye: 0, bandages: 1, hasMap: false, coat: false,
+    player: { x: 0, z: 12, yaw: 0, sinceHit: 99, rollT: -1, rollCooldown: 0, rollX: 0, rollZ: 1 },
+    guns: { revolver: gunState('revolver') }, discovered: {},
+    world: { seed, half: WORLD_HALF, town: { x: 0, z: 0, radius: 32 }, camps,
+      roads: camps.map(({ x, z }) => ({ from: { x: 0, z: 0 }, to: { x, z } })) },
+    contracts: Object.fromEntries(camps.map(({ id }) => [id, { status: 'offered', targetDead: false }])),
+    camps: Object.fromEntries(camps.map(({ id }) => [id, {}])),
+  };
+  reveal(life, 0, 0, life.world.town.radius + MAP_CELL);
+  return life;
+}
+
+function cellKey(x, z) {
+  return `${Math.floor((x + WORLD_HALF) / MAP_CELL)}:${Math.floor((z + WORLD_HALF) / MAP_CELL)}`;
+}
+
+function reveal(life, x, z, radius) {
+  let changed = false;
+  const edge = Math.ceil(WORLD_HALF * 2 / MAP_CELL) - 1;
+  const cx = Math.floor((x + WORLD_HALF) / MAP_CELL), cz = Math.floor((z + WORLD_HALF) / MAP_CELL);
+  const steps = Math.ceil(radius / MAP_CELL);
+  for (let iz = Math.max(0, cz - steps); iz <= Math.min(edge, cz + steps); iz++) {
+    for (let ix = Math.max(0, cx - steps); ix <= Math.min(edge, cx + steps); ix++) {
+      const px = -WORLD_HALF + (ix + 0.5) * MAP_CELL, pz = -WORLD_HALF + (iz + 0.5) * MAP_CELL;
+      if (Math.hypot(px - x, pz - z) > radius + MAP_CELL / 2) continue;
+      const key = `${ix}:${iz}`;
+      if (!life.discovered[key]) { life.discovered[key] = true; changed = true; }
+    }
+  }
+  return changed;
+}
+
+function discover(life, x, z) {
+  if (!Number.isFinite(x) || !Number.isFinite(z) || Math.abs(x) > WORLD_HALF || Math.abs(z) > WORLD_HALF) return false;
+  return reveal(life, x, z, 24);
+}
+
+function isDiscovered(life, x, z) {
+  if (!Number.isFinite(x) || !Number.isFinite(z) || Math.abs(x) > WORLD_HALF || Math.abs(z) > WORLD_HALF) return false;
+  // The last world edge belongs to the final cell.
+  return life.discovered[cellKey(Math.min(x, WORLD_HALF - 0.001), Math.min(z, WORLD_HALF - 0.001))] === true;
+}
+
+// Keep simulation counters and optional body state without accepting non-JSON values.
+function validJson(value, depth = 0) {
+  if (depth > 12) return false;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (!object(value) && !Array.isArray(value)) return false;
+  return Object.values(value).every((item) => validJson(item, depth + 1));
+}
+
+function validActors(actors, props) {
+  if (!Array.isArray(actors)) return false;
+  const ids = new Set();
+  return actors.every((actor) => {
+    if (!position(actor) || typeof actor.alive !== 'boolean' || (typeof actor.id !== 'string' && !count(actor.id)) || ids.has(actor.id)) return false;
+    ids.add(actor.id);
+    if (!(Number.isFinite(actor.hp) || (props && actor.hp === null))) return false;
+    if (actor.alive && actor.hp !== null && actor.hp <= 0) return false;
+    return actor.body === undefined || validBody(actor.body);
+  });
+}
+
+function validBody(body) {
+  if (!object(body) || !position(body.position) || !vector(body.position) || !vector(body.velocity) || !vector(body.angularVelocity)) return false;
+  const q = body.rotation;
+  return vector(q) && Number.isFinite(q.w) && Math.abs(Math.hypot(q.x, q.y, q.z, q.w) - 1) < 0.001;
+}
+
+function validProjectile(shot) {
+  return position(shot) && Number.isFinite(shot.dx) && Number.isFinite(shot.dz)
+    && Math.abs(Math.hypot(shot.dx, shot.dz) - 1) < 0.001
+    && Number.isFinite(shot.speed) && shot.speed > 0 && Number.isFinite(shot.dmg) && shot.dmg > 0
+    && Number.isFinite(shot.left) && shot.left > 0 && shot.left <= WORLD_HALF * 2;
+}
+
+/** Returns a separate validated record. Version 1 saves need an explicit migration. */
+function normalizeLife(value) {
+  if (!object(value) || value.version !== 2 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 0xffffffff || !validJson(value)) return null;
+  if (!['alive', 'dead'].includes(value.status) || !position(value.player)) return null;
+  if (!STAT_KEYS.every((key) => nonnegative(value[key])) || !count(value.bandages)) return null;
+  if (value.simTime !== undefined && !nonnegative(value.simTime)) return null;
+  if (value.projectiles !== undefined && (!Array.isArray(value.projectiles) || value.projectiles.length > 60 || !value.projectiles.every(validProjectile))) return null;
+  if (!Number.isFinite(value.hp) || value.hp < 0 || value.hp > 100 || (value.status === 'alive' && value.hp <= 0)) return null;
+  if (!Number.isFinite(value.deadEye) || value.deadEye < 0 || value.deadEye > 1) return null;
+  if (!Array.isArray(value.unlocked) || !value.unlocked.includes('revolver') || new Set(value.unlocked).size !== value.unlocked.length || !value.unlocked.every((key) => own(WEAPONS, key))) return null;
+  if (!count(value.weapon) || value.weapon >= value.unlocked.length || !object(value.guns)) return null;
+  if (!value.unlocked.every((key) => {
+    const gun = value.guns[key];
+    return object(gun) && count(gun.ammo) && gun.ammo <= WEAPONS[key].mag && count(gun.reserve)
+      && (gun.cooldown === undefined || Number.isFinite(gun.cooldown))
+      && ['bloom', 'reloadT', 'reloadTotal'].every((field) => gun[field] === undefined || nonnegative(gun[field]))
+      && (gun.reloading === undefined || typeof gun.reloading === 'boolean')
+      && (!gun.reloading || (gun.reloadTotal > 0 && gun.reloadT <= gun.reloadTotal && gun.reserve > 0 && gun.ammo < WEAPONS[key].mag));
+  })) return null;
+  if (typeof value.hasMap !== 'boolean' || typeof value.coat !== 'boolean' || !object(value.contracts) || !object(value.camps) || !object(value.discovered)) return null;
+  const life = createLife(value.seed);
+  for (const camp of life.world.camps) {
+    const contract = value.contracts[camp.id], snapshot = value.camps[camp.id];
+    if (!object(contract) || !CONTRACT_STATES.has(contract.status) || typeof contract.targetDead !== 'boolean') return null;
+    if (['proof', 'paid'].includes(contract.status) && !contract.targetDead) return null;
+    if (!object(snapshot)) return null;
+    if (Object.keys(snapshot).length && (typeof snapshot.cleared !== 'boolean' || !validActors(snapshot.enemies, false) || !validActors(snapshot.props, true))) return null;
+  }
+  const edge = Math.ceil(WORLD_HALF * 2 / MAP_CELL);
+  if (!Object.entries(value.discovered).every(([key, seen]) => {
+    const parts = key.split(':').map(Number);
+    return /^\d+:\d+$/.test(key) && parts.every((n) => count(n) && n < edge) && seen === true;
+  })) return null;
+  const saved = JSON.parse(JSON.stringify(value));
+  for (const key of [...STAT_KEYS, 'status', 'hp', 'unlocked', 'weapon', 'deadEye', 'bandages', 'hasMap', 'coat', 'player', 'guns', 'discovered']) life[key] = saved[key];
+  life.simTime = saved.simTime ?? 0;
+  life.projectiles = saved.projectiles ?? [];
+  for (const camp of life.world.camps) { life.contracts[camp.id] = saved.contracts[camp.id]; life.camps[camp.id] = saved.camps[camp.id]; }
+  return life;
+}
+
+function townError(life) {
+  if (life.status !== 'alive') return 'This life has ended.';
+  const { x, z, radius } = life.world.town;
+  return Math.hypot(life.player.x - x, life.player.z - z) > radius ? 'Return to town first.' : null;
+}
+const result = (ok, message) => ({ ok, message });
+
+function purchase(life, itemId) {
+  const error = townError(life);
+  if (error) return result(false, error);
+  if (!own(CATALOGUE, itemId)) return result(false, 'That item is not for sale.');
+  const item = CATALOGUE[itemId];
+  if ((own(WEAPONS, itemId) && life.unlocked.includes(itemId)) || (itemId === 'map' && life.hasMap) || (itemId === 'coat' && life.coat)) return result(false, 'You already own this.');
+  if (itemId === 'heal' && life.hp >= 100) return result(false, 'You are already at full health.');
+  if (life.bounty < item.price) return result(false, `You need $${item.price}.`);
+  life.bounty -= item.price;
+  if (itemId === 'ammo') life.guns[life.unlocked[life.weapon]].reserve += 12;
+  else if (itemId === 'bandage') life.bandages++;
+  else if (itemId === 'heal') life.hp = 100;
+  else if (itemId === 'map') life.hasMap = true;
+  else if (itemId === 'coat') life.coat = true;
+  else { life.unlocked.push(itemId); life.guns[itemId] = gunState(itemId); }
+  return result(true, `${item.name} purchased for $${item.price}.`);
+}
+
+function acceptContract(life, campId) {
+  const error = townError(life);
+  if (error) return result(false, error);
+  if (!own(life.contracts, campId) || life.contracts[campId].status !== 'offered') return result(false, 'This bounty is not available.');
+  const contract = life.contracts[campId];
+  contract.status = contract.targetDead ? 'proof' : 'active';
+  return result(true, contract.targetDead ? 'The target is dead. Claim your payment.' : 'Bounty accepted. Check your map.');
+}
+
+function recordTargetKill(life, targetId) {
+  if (life.status !== 'alive') return false;
+  const camp = life.world.camps.find((item) => item.targetId === targetId);
+  if (!camp || life.contracts[camp.id].targetDead) return false;
+  const contract = life.contracts[camp.id];
+  contract.targetDead = true;
+  if (contract.status === 'active') contract.status = 'proof';
+  return true;
+}
+
+function claimContracts(life) {
+  const error = townError(life);
+  if (error) return { ...result(false, error), count: 0, total: 0 };
+  let total = 0, count = 0;
+  for (const camp of life.world.camps) {
+    const contract = life.contracts[camp.id];
+    if (contract.status !== 'proof') continue;
+    contract.status = 'paid'; total += camp.reward; count++;
+  }
+  life.bounty += total;
+  return { ...result(count > 0, count ? `Collected $${total} for ${count} ${count === 1 ? 'bounty' : 'bounties'}.` : 'No bounty payment is ready.'), count, total };
+}
+
+function work(life) {
+  const error = townError(life);
+  if (error) return result(false, error);
+  const gun = life.guns.revolver;
+  if (life.bounty >= CATALOGUE.ammo.price || gun.ammo + gun.reserve > 6) return result(false, 'You have enough money or ammunition for another trip.');
+  gun.reserve += 12;
+  return result(true, 'Town work earned 12 revolver rounds.');
+}
+
+return { WORLD_HALF, MAP_CELL, CATALOGUE, createLife, discover, isDiscovered, normalizeLife, purchase, acceptContract, recordTargetKill, claimContracts, work };
+})();
+
+// ---- src/storage.js ----
+__m.storage = (() => {
+// One atomic record holds a life. A dead record prevents an old save from returning.
+const { createLife, normalizeLife } = __m.life;
+const { WEAPONS } = __m.weapons;
+const SAVE_KEY = 'dustiron.run.v2';
+const LEGACY_KEY = 'dustiron.run.v1';
+
+function loadSave(storage) {
+  try {
+    storage ??= globalThis.localStorage;
+    const raw = storage.getItem(SAVE_KEY);
+    if (raw) {
+      const life = normalizeLife(JSON.parse(raw));
+      return life?.status === 'alive' ? life : null;
+    }
+    const old = JSON.parse(storage.getItem(LEGACY_KEY));
+    if (!old || old.status === 'dead' || !Number.isInteger(old.seed) || !Array.isArray(old.unlocked) || !(old.hp > 0)) return null;
+    // Preserve a living prototype run once. New lives still start with nothing earned.
+    const life = createLife(old.seed);
+    for (const key of ['bounty', 'kills', 'shots', 'hits', 'time', 'damageTaken', 'hp', 'deadEye']) {
+      if (Number.isFinite(old[key]) && old[key] >= 0) life[key] = old[key];
+    }
+    life.hp = Math.min(100, life.hp);
+    life.deadEye = Math.min(1, life.deadEye);
+    for (const key of old.unlocked) {
+      if (!Object.prototype.hasOwnProperty.call(WEAPONS, key)) continue;
+      if (!life.unlocked.includes(key)) life.unlocked.push(key);
+      life.guns[key] = { ammo: WEAPONS[key].mag, reserve: WEAPONS[key].mag * 3 };
+    }
+    life.weapon = Math.max(0, life.unlocked.indexOf(old.unlocked[old.weapon]));
+    const checked = normalizeLife(life);
+    if (checked) checked.migrated = true;
+    return checked;
+  } catch { return null; }
+}
+
+function writeLife(life, storage, force = false) {
+  try {
+    storage ??= globalThis.localStorage;
+    const raw = storage.getItem(SAVE_KEY);
+    if (!force && raw) {
+      const current = JSON.parse(raw);
+      if (current.seed !== life.seed || (current.status === 'dead' && life.status !== 'dead')) return false;
+    }
+    storage.setItem(SAVE_KEY, JSON.stringify(life));
+    return true;
+  }
+  catch { return false; }
+}
+
+function endLife(life, storage) {
+  life.status = 'dead';
+  try {
+    storage ??= globalThis.localStorage;
+    const current = JSON.parse(storage.getItem(SAVE_KEY));
+    if (current && current.seed !== life.seed) return false;
+  } catch { /* Try to replace a damaged record with the death record. */ }
+  const stored = writeLife(life, storage);
+  try {
+    storage.removeItem(LEGACY_KEY);
+    if (!stored) storage.removeItem(SAVE_KEY);
+  } catch { /* The game reports a save error to the player. */ }
+  return stored;
+}
+
+return { SAVE_KEY, loadSave, writeLife, endLife };
+})();
+
+// ---- src/frontier.js ----
+__m.frontier = (() => {
+// The first frontier: a safe street, local services, civilians, and open desert.
+
+const { MAT, PAL, Shape, makeCharacter, meshOf } = __m.models;
+const { addRollPivot, animateCharacter, angleDelta, showGun, turnToward } = __m.character;
+const { createRng } = __m.rng;
+const { GROUPS } = __m.physics;
+const STORES = [
+  { id: 'guns', label: 'Guns & Ammo', kind: 'guns', side: -1, z: -18, color: 0x754333 },
+  { id: 'doctor', label: 'Doctor', kind: 'doctor', side: 1, z: -18, color: 0xd7c6a1 },
+  { id: 'sheriff', label: 'Sheriff', kind: 'sheriff', side: -1, z: -6, color: 0x76654a },
+  { id: 'maps', label: 'Maps & Trails', kind: 'maps', side: 1, z: -6, color: 0x526d67 },
+  { id: 'clothes', label: 'Clothier', kind: 'clothes', side: -1, z: 6, color: 0x8b6570 },
+  { id: 'saloon', label: 'The Last Drop', kind: 'saloon', side: 1, z: 6, color: 0x9c593d },
+  { id: 'stable', label: 'Livery Stable', kind: 'stable', side: -1, z: 18, color: 0x9c8357 },
+];
+
+function ground(group, half, seed) {
+  const geo = new THREE.PlaneGeometry(half * 2 + 30, half * 2 + 30, 80, 80).rotateX(-Math.PI / 2).toNonIndexed();
+  const pos = geo.attributes.position, colors = new Float32Array(pos.count * 3);
+  const base = new THREE.Color(PAL.sand), shade = new THREE.Color(PAL.sandDark), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const n = Math.sin(x * 0.09 + seed) * Math.cos(z * 0.07) * 0.15 + 0.18;
+    c.copy(base).lerp(shade, n);
+    for (let j = 0; j < 3; j++) { colors[(i + j) * 3] = c.r; colors[(i + j) * 3 + 1] = c.g; colors[(i + j) * 3 + 2] = c.b; }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  group.add(meshOf(geo, MAT.solid, false));
+}
+
+function road(shape, ax, az, bx, bz, width) {
+  const dx = bx - ax, dz = bz - az, length = Math.hypot(dx, dz);
+  shape.box(width, 0.025, length, 0xc79c68, (ax + bx) / 2, 0.005, (az + bz) / 2, 0, Math.atan2(dx, dz));
+}
+
+function sign(group, label, x, y, z, width, signs) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#31271f'; ctx.fillRect(0, 0, 512, 128);
+  ctx.strokeStyle = '#bf985b'; ctx.lineWidth = 8; ctx.strokeRect(6, 6, 500, 116);
+  ctx.fillStyle = '#f3dfb4'; ctx.font = 'bold 46px Georgia, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label.toUpperCase(), 256, 66, 468);
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({ map, toneMapped: false, depthWrite: false });
+  const sprite = new THREE.Sprite(material);
+  sprite.position.set(x, y, z); sprite.scale.set(width, width / 4, 1);
+  group.add(sprite); signs.push(sprite);
+}
+
+function building(game, spec, signs) {
+  const x = spec.side * 13, ry = -spec.side * Math.PI / 2;
+  const group = new THREE.Group(), s = new Shape();
+  const height = spec.kind === 'saloon' ? 5.4 : 4;
+  group.position.set(x, 0, spec.z); group.rotation.y = ry;
+  s.box(8.8, height, 7.2, spec.color, 0, height / 2, 0);
+  s.box(9.2, 0.24, 7.7, PAL.woodDark, 0, height + 0.12, 0);
+  // False front, pale trim, door, and four windows.
+  s.box(9.15, 1.1, 0.28, spec.color, 0, height + 0.45, 3.62);
+  s.box(9.4, 0.17, 0.5, PAL.canvas, 0, height + 1, 3.65);
+  for (let u = -4.2; u <= 4.2; u += 1.4) s.box(0.055, height, 0.06, PAL.woodDark, u, height / 2, 3.64);
+  s.box(1.3, 2.6, 0.14, PAL.woodDark, 0, 1.3, 3.68);
+  s.box(0.9, 1.55, 0.16, PAL.wood, 0, 1.15, 3.75);
+  s.box(0.07, 0.07, 0.18, PAL.brass, 0.31, 1.2, 3.87);
+  for (const u of [-3, -1.8, 1.8, 3]) {
+    s.box(1, 1.5, 0.15, PAL.canvas, u, 2.25, 3.72);
+    s.box(0.8, 1.25, 0.17, 0x4e6463, u, 2.25, 3.8);
+    s.box(0.055, 1.3, 0.19, PAL.woodLight, u, 2.25, 3.82);
+    s.box(0.9, 0.055, 0.19, PAL.woodLight, u, 2.25, 3.82);
+  }
+  s.box(9.3, 0.12, 2.1, PAL.plank, 0, 0.045, 4.65);
+  s.box(9.5, 0.17, 2.3, PAL.woodDark, 0, 3.15, 4.8, -0.06);
+  for (const u of [-4.2, 4.2]) s.box(0.18, 3.1, 0.18, PAL.woodLight, u, 1.55, 5.65);
+  // A bench and hitching rail leave the door clear.
+  s.box(1.55, 0.15, 0.55, PAL.wood, -2.8, 0.48, 4.6);
+  for (const u of [-3.4, -2.2]) s.box(0.1, 0.48, 0.4, PAL.woodDark, u, 0.24, 4.6);
+  for (const u of [-3.7, -1.7]) s.box(0.13, 0.9, 0.13, PAL.woodDark, u, 0.45, 6.3);
+  s.box(2.2, 0.12, 0.12, PAL.wood, -2.7, 0.8, 6.3);
+  group.add(meshOf(s)); game.levelGroup.add(group);
+  game.physics.fixedBox(x, height / 2, spec.z, 4.4, height / 2, 3.6, ry, GROUPS.world);
+  sign(game.levelGroup, spec.label, spec.side * 8.7, height + 1.3, spec.z, 6.8, signs);
+  return { id: spec.id, label: spec.label, kind: spec.kind, x: spec.side * 6.2, z: spec.z };
+}
+
+function desert(game, world, rng) {
+  const half = world.half ?? 210, camps = world.camps ?? [], s = new Shape();
+  const clear = (x, z, margin = 0) => Math.hypot(x, z) > 36 + margin &&
+    camps.every((c) => Math.hypot(x - c.x, z - c.z) > 34 + margin);
+  const besideRoad = (x, z, clearance = 4) => camps.every((c) => {
+    const length = c.x * c.x + c.z * c.z;
+    const t = Math.max(0, Math.min(1, (x * c.x + z * c.z) / length));
+    return Math.hypot(x - c.x * t, z - c.z * t) > clearance;
+  });
+  for (let i = 0; i < 750; i++) {
+    const x = rng.range(-half + 8, half - 8), z = rng.range(-half + 8, half - 8);
+    if (!clear(x, z) || !besideRoad(x, z)) continue;
+    const kind = rng.next();
+    if (kind < 0.16) {
+      const h = rng.range(1.3, 2.8), r = rng.range(0.18, 0.3);
+      s.cyl(r, r * 1.1, h, 6, PAL.cactus, x, h / 2, z);
+      s.cyl(r * 0.7, r * 0.7, h * 0.4, 5, PAL.cactusDark, x + 0.4, h * 0.58, z);
+      s.box(0.5, r * 1.5, r * 1.5, PAL.cactus, x + 0.2, h * 0.4, z);
+    } else if (kind < 0.45) {
+      const r = rng.range(0.25, 1.1);
+      s.rock(r, PAL.rock, x, r * 0.3, z, 0.65, 0.25, rng.int(1, 999), rng.range(0, 6));
+    } else {
+      for (let j = 0; j < 3; j++) s.cone(0.12, rng.range(0.3, 0.6), 3, 0x9a9059, x + j * 0.13, 0.2, z, 0, j * 2);
+    }
+  }
+  for (let i = 0; i < 28; i++) {
+    const x = rng.range(-half + 12, half - 12), z = rng.range(-half + 12, half - 12);
+    const r = rng.range(2, 4.5);
+    if (!clear(x, z, 8) || !besideRoad(x, z, r + 3.5)) continue;
+    s.rock(r, PAL.cliff, x, r * 0.65, z, 1.3, 0.22, rng.int(1, 999));
+    game.physics.fixedCylinder(x, r * 0.65, z, r * 0.65, r * 0.8, GROUPS.world);
+  }
+  // Rocks mark the edge; the low land inside remains fully walkable.
+  for (let i = 0; i < 96; i++) {
+    const side = i % 4, a = -half + (Math.floor(i / 4) / 23) * half * 2;
+    const x = side < 2 ? a : (side === 2 ? -half - 5 : half + 5);
+    const z = side >= 2 ? a : (side === 0 ? -half - 5 : half + 5);
+    s.rock(rng.range(7, 11), PAL.cliff, x, 3.5, z, rng.range(1, 1.6), 0.25, rng.int(1, 999));
+  }
+  game.levelGroup.add(meshOf(s));
+}
+
+function civilians(group, rng) {
+  const specs = [
+    ['martha', 'Martha Bell', 'bounty', [[-3.6, -10], [-3.6, 3], [-1, 3], [-1, -10]], 0x706c85],
+    ['silas', 'Silas Reed', 'bounty', [[3.6, 17], [3.6, 8], [1.8, 8], [1.8, 17]], 0x527d70],
+    ['clara', 'Clara Finch', 'resident', [[3.4, -22], [3.4, -12], [1.4, -12], [1.4, -22]], 0xb58e58],
+    ['elias', 'Elias Ward', 'resident', [[-3.4, 10], [-3.4, 23], [-1.2, 23], [-1.2, 10]], 0x87634f],
+    ['nora', 'Nora Pike', 'resident', [[-2, -2], [2, -2], [2, -5], [-2, -5]], 0x9e6971],
+  ];
+  return specs.map(([id, name, kind, route, shirt]) => {
+    const model = addRollPivot(makeCharacter({ shirt, vest: shirt, hat: 0xb79b70, band: PAL.woodDark, pants: 0x53514c }));
+    showGun(model, null); model.arm.rotation.x = 1.1; model.armPitch = 1.1;
+    const x = route[0][0], z = route[0][1];
+    model.root.position.set(x, 0, z); group.add(model.root);
+    return { id, name, kind, x, z, px: x, pz: z, yaw: 0, prevYaw: 0, route, next: 1,
+      wait: rng.range(0, 3), speed: rng.range(0.75, 1.1), model,
+      animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
+  });
+}
+
+/** World contains { half, seed, camps: [{ id, name, x, z }] }. */
+function buildFrontier(game, world) {
+  const half = world.half ?? 210, seed = world.seed ?? game.run.seed;
+  const rng = createRng(seed ^ 0x746f776e), group = game.levelGroup, signs = [];
+  ground(group, half, seed);
+  game.physics.fixedBox(0, -0.5, 0, half + 15, 0.5, half + 15, 0, GROUPS.ground);
+  for (const side of [-1, 1]) {
+    game.physics.fixedBox(side * (half + 0.5), 2, 0, 0.5, 2, half + 1, 0, GROUPS.world);
+    game.physics.fixedBox(0, 2, side * (half + 0.5), half + 1, 2, 0.5, 0, GROUPS.world);
+  }
+  const paths = new Shape();
+  paths.cyl(32, 32, 0.02, 32, 0xc9a275, 0, 0.005, 0);
+  road(paths, 0, -32, 0, 32, 11);
+  road(paths, -32, 0, 32, 0, 8);
+  for (const c of world.camps ?? []) {
+    const length = Math.hypot(c.x, c.z);
+    if (length <= 60) continue;
+    const x = c.x / length, z = c.z / length;
+    road(paths, x * 30, z * 30, c.x - x * 25, c.z - z * 25, 5);
+  }
+  group.add(meshOf(paths, MAT.solid, false));
+  desert(game, world, rng);
+  const sites = STORES.map((spec) => building(game, spec, signs));
+  const trim = new Shape();
+  for (const x of [-7, 7]) for (const z of [-25, -12, 0, 12, 25]) {
+    trim.box(0.13, 3, 0.13, PAL.woodDark, x, 1.5, z);
+    trim.box(0.4, 0.55, 0.4, PAL.iron, x, 3.1, z);
+    trim.box(0.28, 0.36, 0.42, 0xe3b65f, x, 3.1, z);
+    trim.cone(0.35, 0.25, 4, PAL.iron, x, 3.5, z, 0, Math.PI / 4);
+  }
+  // A shaded well and water trough give the south square a clear landmark.
+  trim.cyl(1, 1.1, 0.85, 10, PAL.rock, 10, 0.425, 20);
+  trim.cyl(0.75, 0.75, 0.04, 10, PAL.water, 10, 0.87, 20);
+  for (const x of [8.7, 11.3]) trim.box(0.16, 2.8, 0.16, PAL.woodDark, x, 1.4, 20);
+  trim.box(3.2, 0.2, 2.6, PAL.wood, 10, 2.9, 20);
+  game.physics.fixedCylinder(10, 0.45, 20, 0.45, 1.1, GROUPS.world);
+  group.add(meshOf(trim));
+  const npcs = civilians(group, rng);
+  return {
+    sites, npcs,
+    tick(dt) {
+      for (const npc of npcs) {
+        npc.px = npc.x; npc.pz = npc.z; npc.prevYaw = npc.yaw;
+        const player = game.player, near = player && Math.hypot(player.x - npc.x, player.z - npc.z) < 2.3;
+        let speed = 0;
+        if (near) npc.yaw = turnToward(npc.yaw, Math.atan2(player.x - npc.x, player.z - npc.z), dt * 4);
+        else if (npc.wait > 0) npc.wait -= dt;
+        else {
+          const point = npc.route[npc.next], dx = point[0] - npc.x, dz = point[1] - npc.z;
+          const distance = Math.hypot(dx, dz), step = Math.min(distance, npc.speed * dt);
+          if (distance > 0.01) {
+            npc.x += dx / distance * step; npc.z += dz / distance * step;
+            npc.yaw = turnToward(npc.yaw, Math.atan2(dx, dz), dt * 4); speed = npc.speed;
+          }
+          if (distance <= npc.speed * dt + 0.01) { npc.next = (npc.next + 1) % npc.route.length; npc.wait = 2.5; }
+        }
+        npc.animation.speed = speed; npc.animation.dt = dt;
+        animateCharacter(npc.model, npc.animation);
+        npc.model.arm.rotation.x = 1.1;
+      }
+    },
+    render(alpha) {
+      for (const npc of npcs) {
+        npc.model.root.position.set(npc.px + (npc.x - npc.px) * alpha, 0, npc.pz + (npc.z - npc.pz) * alpha);
+        npc.model.root.rotation.y = npc.prevYaw + angleDelta(npc.prevYaw, npc.yaw) * alpha;
+      }
+    },
+    dispose() {
+      for (const sprite of signs) { sprite.material.map.dispose(); sprite.material.dispose(); group.remove(sprite); }
+    },
+  };
+}
+
+return { buildFrontier };
+})();
+
+// ---- src/nav.js ----
+__m.nav = (() => {
+// A 0.5 m navigation grid with A* and path smoothing. Static walls are baked
+// once per camp; movable props are re-stamped whenever something breaks or moves.
+
+const SQRT2 = Math.SQRT2;
+
+class NavGrid {
+  constructor(half = 22, cell = 0.5, inflate = 0.45, origin = { x: 0, z: 0 }) {
+    this.half = half;
+    this.cell = cell;
+    this.inflate = inflate;
+    this.origin = origin;
+    this.n = Math.round((half * 2) / cell);
+    const size = this.n * this.n;
+    this.staticBlocked = new Uint8Array(size);
+    this.blocked = new Uint8Array(size);
+    this.g = new Float32Array(size);
+    this.f = new Float32Array(size);
+    this.parent = new Int32Array(size);
+    this.state = new Uint8Array(size); // 0 new, 1 open, 2 closed
+    this.heap = [];
+  }
+
+  toCell(v, origin = 0) { return Math.floor((v - origin + this.half) / this.cell); }
+  center(c, origin = 0) { return origin - this.half + (c + 0.5) * this.cell; }
+  inside(cx, cz) { return cx >= 0 && cz >= 0 && cx < this.n && cz < this.n; }
+
+  isFree(x, z) {
+    const cx = this.toCell(x, this.origin.x), cz = this.toCell(z, this.origin.z);
+    return this.inside(cx, cz) && !this.blocked[cz * this.n + cx];
+  }
+
+  stamp(arr, fp, inflate = this.inflate) {
+    const reach = fp.r !== undefined ? fp.r + inflate : Math.hypot(fp.hx, fp.hz) + inflate;
+    const x0 = Math.max(0, this.toCell(fp.x - reach, this.origin.x)), x1 = Math.min(this.n - 1, this.toCell(fp.x + reach, this.origin.x));
+    const z0 = Math.max(0, this.toCell(fp.z - reach, this.origin.z)), z1 = Math.min(this.n - 1, this.toCell(fp.z + reach, this.origin.z));
+    const c = fp.ry !== undefined ? Math.cos(fp.ry) : 1, s = fp.ry !== undefined ? Math.sin(fp.ry) : 0;
+    for (let cz = z0; cz <= z1; cz++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const dx = this.center(cx, this.origin.x) - fp.x, dz = this.center(cz, this.origin.z) - fp.z;
+        let hit;
+        if (fp.r !== undefined) hit = dx * dx + dz * dz <= (fp.r + inflate) ** 2;
+        else {
+          const lx = dx * c - dz * s, lz = dx * s + dz * c;
+          hit = Math.abs(lx) <= fp.hx + inflate && Math.abs(lz) <= fp.hz + inflate;
+        }
+        if (hit) arr[cz * this.n + cx] = 1;
+      }
+    }
+  }
+
+  setStatic(footprints) {
+    this.staticBlocked.fill(0);
+    // The outer ring of cells is a wall.
+    const n = this.n;
+    for (let i = 0; i < n; i++) {
+      this.staticBlocked[i] = this.staticBlocked[(n - 1) * n + i] = 1;
+      this.staticBlocked[i * n] = this.staticBlocked[i * n + n - 1] = 1;
+    }
+    for (const fp of footprints) this.stamp(this.staticBlocked, fp);
+  }
+
+  rebuild(dynamicFootprints) {
+    this.blocked.set(this.staticBlocked);
+    for (const fp of dynamicFootprints) this.stamp(this.blocked, fp);
+  }
+
+  nearestFree(cx, cz, maxR = 8) {
+    const n = this.n;
+    if (this.inside(cx, cz) && !this.blocked[cz * n + cx]) return cz * n + cx;
+    for (let r = 1; r <= maxR; r++) {
+      for (let dz = -r; dz <= r; dz++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dz) !== r) continue;
+          const x = cx + dx, z = cz + dz;
+          if (this.inside(x, z) && !this.blocked[z * n + x]) return z * n + x;
+        }
+      }
+    }
+    return -1;
+  }
+
+  /** True if a straight walk between two points crosses no blocked cell. */
+  lineFree(x0, z0, x1, z1) {
+    const d = Math.hypot(x1 - x0, z1 - z0);
+    const steps = Math.ceil(d / (this.cell * 0.5));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      if (!this.isFree(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t)) return false;
+    }
+    return true;
+  }
+
+  push(i) {
+    const h = this.heap, f = this.f;
+    h.push(i);
+    let k = h.length - 1;
+    while (k > 0) {
+      const p = (k - 1) >> 1;
+      if (f[h[p]] <= f[h[k]]) break;
+      [h[p], h[k]] = [h[k], h[p]];
+      k = p;
+    }
+  }
+
+  pop() {
+    const h = this.heap, f = this.f;
+    const top = h[0];
+    const last = h.pop();
+    if (h.length) {
+      h[0] = last;
+      let k = 0;
+      for (;;) {
+        const l = k * 2 + 1, r = l + 1;
+        let m = k;
+        if (l < h.length && f[h[l]] < f[h[m]]) m = l;
+        if (r < h.length && f[h[r]] < f[h[m]]) m = r;
+        if (m === k) break;
+        [h[m], h[k]] = [h[k], h[m]];
+        k = m;
+      }
+    }
+    return top;
+  }
+
+  /** @returns {{x:number,z:number}[] | null} waypoints after the start */
+  findPath(sx, sz, tx, tz, maxIter = 5000) {
+    const n = this.n;
+    const start = this.nearestFree(this.toCell(sx, this.origin.x), this.toCell(sz, this.origin.z), 4);
+    const goal = this.nearestFree(this.toCell(tx, this.origin.x), this.toCell(tz, this.origin.z), 8);
+    if (start < 0 || goal < 0) return null;
+    if (start === goal) return [{ x: tx, z: tz }];
+    const gx = goal % n, gz = (goal / n) | 0;
+    const H = (i) => { const dx = Math.abs((i % n) - gx), dz = Math.abs(((i / n) | 0) - gz); return (dx + dz + (SQRT2 - 2) * Math.min(dx, dz)); };
+
+    this.state.fill(0);
+    this.heap.length = 0;
+    this.g[start] = 0;
+    this.f[start] = H(start);
+    this.parent[start] = -1;
+    this.state[start] = 1;
+    this.push(start);
+    let found = false, iter = 0;
+    while (this.heap.length && iter++ < maxIter) {
+      const cur = this.pop();
+      if (this.state[cur] === 2) continue;
+      if (cur === goal) { found = true; break; }
+      this.state[cur] = 2;
+      const cx = cur % n, cz = (cur / n) | 0;
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dz) continue;
+          const x = cx + dx, z = cz + dz;
+          if (!this.inside(x, z)) continue;
+          const ni = z * n + x;
+          if (this.blocked[ni] || this.state[ni] === 2) continue;
+          if (dx && dz && (this.blocked[cz * n + x] || this.blocked[z * n + cx])) continue; // no corner cutting
+          const g = this.g[cur] + (dx && dz ? SQRT2 : 1);
+          if (this.state[ni] === 1 && g >= this.g[ni]) continue;
+          this.g[ni] = g;
+          this.f[ni] = g + H(ni);
+          this.parent[ni] = cur;
+          this.state[ni] = 1;
+          this.push(ni);
+        }
+      }
+    }
+    if (!found) return null;
+
+    const cells = [];
+    for (let i = goal; i !== -1; i = this.parent[i]) cells.push(i);
+    cells.reverse();
+    const pts = cells.map((i) => ({ x: this.center(i % n, this.origin.x), z: this.center((i / n) | 0, this.origin.z) }));
+    pts[pts.length - 1] = this.isFree(tx, tz) ? { x: tx, z: tz } : pts[pts.length - 1];
+
+    // String-pull: keep only waypoints needed to stay on free cells.
+    const out = [];
+    let from = { x: sx, z: sz };
+    let i = 0;
+    while (i < pts.length) {
+      let j = pts.length - 1;
+      while (j > i && !this.lineFree(from.x, from.z, pts[j].x, pts[j].z)) j--;
+      out.push(pts[j]);
+      from = pts[j];
+      i = j + 1;
+    }
+    return out;
+  }
+}
+
+return { NavGrid };
 })();
 
 // ---- src/level.js ----
@@ -3766,19 +4376,228 @@ function buildScenery(game, seed) {
 return { ARENA_HALF, PLAYER_SPAWN, rosterFor, generateCamp, buildScenery };
 })();
 
-// ---- src/map.js ----
-__m.map = (() => {
-// Survey map of the current camp, drawn on a 2D canvas. M opens it and
-// pauses the fight. Outlaws only appear once you've had eyes on them.
+// ---- src/encounters.js ----
+__m.encounters = (() => {
+// Camp state stays separate from the scene. Each camp has a small local path grid.
+const { NavGrid } = __m.nav;
+const { generateCamp } = __m.level;
+const { Prop } = __m.props;
+const { Bandit } = __m.enemy;
+const ENEMY_FIELDS = ['hp', 'x', 'z', 'yaw', 'ammo', 'reloadT', 'cooldown', 'knows', 'canSee',
+  'lastSeenX', 'lastSeenZ', 'lastSeenT', 'state', 'stateT', 'aimT', 'aimYaw', 'burstLeft', 'burstT',
+  'homeX', 'homeZ', 'wanderX', 'wanderZ', 'wanderT', 'peekX', 'peekZ', 'fleeing', 'unseenT',
+  'stimX', 'stimZ', 'perceptT', 'spottedX', 'spottedZ', 'spottedT', 'vx', 'vz', 'kx', 'kz'];
 
-const C = {
-  paper: '#efdcbb', wash: '#e8d0a8', ink: '#1c130f', inkSoft: '#5b4434', grid: 'rgba(28,19,15,0.09)',
-  cover: '#d9bf92', wood: '#8c5a34', rust: '#b4532e', blood: '#b3291f', green: '#5f7d3d',
-  rock: '#b98563', fire: '#f2a23c', ember: '#e8762e', you: '#2f5d8a',
+function buildEncounters(game) {
+  return game.run.world.camps.map((camp, index) => {
+    const saved = game.run.camps[camp.id];
+    saved.cleared ??= false;
+    const layout = generateCamp(game.run.seed + index * 104729, camp.difficulty);
+    const encounter = { ...camp, enemies: [], props: [], nav: new NavGrid(32, 0.5, 0.45, camp) };
+    const oldProps = new Map((saved.props ?? []).map((p) => [p.id, p]));
+    layout.props.forEach((spec, i) => {
+      const id = `${camp.id}:prop:${i}`, old = oldProps.get(id);
+      if (old?.alive === false) return;
+      const p = new Prop(game, spec.kind, { ...spec, x: spec.x + camp.x, z: spec.z + camp.z });
+      p.id = id;
+      if (old) {
+        if (Number.isFinite(old.hp)) p.hp = old.hp;
+        p.fuse = old.fuse ?? -1;
+        if (p.body && old.body) {
+          p.body.setTranslation(old.body.position, true);
+          p.body.setRotation(old.body.rotation, true);
+          p.body.setLinvel(old.body.velocity, true);
+          p.body.setAngvel(old.body.angularVelocity, true);
+          p.physObj.capture();
+          p.physObj.prevP.copy(p.physObj.currP);
+          p.physObj.prevQ.copy(p.physObj.currQ);
+          p.physObj.render(1);
+        }
+      }
+      encounter.props.push(p);
+    });
+    const oldEnemies = new Map((saved.enemies ?? []).map((e) => [e.id, e]));
+    layout.enemies.forEach((spec, i) => {
+      const id = i === 0 ? camp.targetId : `${camp.id}:outlaw:${i}`, old = oldEnemies.get(id);
+      if (old?.alive === false) return;
+      const e = new Bandit(game, spec.type, spec.x + camp.x, spec.z + camp.z, camp.difficulty, encounter, i === 0);
+      e.id = id;
+      e.campId = camp.id;
+      if (i === 0) {
+        // The marked outlaw wears a red hat. Its identity stays fixed for this life.
+        e.model.root.userData.targetName = camp.targetName;
+      }
+      if (old) {
+        for (const key of ENEMY_FIELDS) if (old[key] !== undefined) e[key] = old[key];
+        e.px = e.x; e.pz = e.z; e.prevYaw = e.yaw;
+        e.body.setTranslation({ x: e.x, y: e.bodyY, z: e.z }, true);
+        // A cover point is tied to a live prop. Find a new point after loading.
+        if (['hold', 'peek', 'toCover', 'flank'].includes(e.state)) e.state = 'toCover';
+        if (e.state === 'aim' || e.state === 'burst') { e.token = true; game.tokens.holders.add(e); }
+      }
+      encounter.enemies.push(e);
+    });
+    encounter.nav.setStatic(encounter.props.filter((p) => !p.dynamic).map((p) => p.footprint()));
+    encounter.nav.rebuild(encounter.props.filter((p) => p.dynamic).map((p) => p.footprint()));
+    return encounter;
+  });
+}
+
+function captureEncounters(game) {
+  for (const camp of game.encounters) {
+    const saved = game.run.camps[camp.id];
+    const enemies = new Map((saved.enemies ?? []).map((e) => [e.id, e]));
+    const props = new Map((saved.props ?? []).map((p) => [p.id, p]));
+    for (const e of camp.enemies) {
+      const data = { id: e.id, alive: e.alive };
+      for (const key of ENEMY_FIELDS) data[key] = e[key];
+      enemies.set(e.id, data);
+    }
+    for (const p of camp.props) {
+      const data = { id: p.id, alive: p.alive, hp: Number.isFinite(p.hp) ? p.hp : null, fuse: p.fuse, x: p.x, z: p.z, ry: p.ry };
+      if (p.body) data.body = {
+        position: { ...p.body.translation() }, rotation: { ...p.body.rotation() },
+        velocity: { ...p.body.linvel() }, angularVelocity: { ...p.body.angvel() },
+      };
+      props.set(p.id, data);
+    }
+    saved.enemies = [...enemies.values()];
+    saved.props = [...props.values()];
+  }
+}
+
+function rebuildCampNav(encounters) {
+  for (const camp of encounters) {
+    camp.nav.setStatic(camp.props.filter((p) => p.alive && !p.dynamic).map((p) => p.footprint()));
+    camp.nav.rebuild(camp.props.filter((p) => p.alive && p.dynamic).map((p) => p.footprint()));
+  }
+}
+
+return { buildEncounters, captureEncounters, rebuildCampNav };
+})();
+
+// ---- src/town-actions.js ----
+__m.town_actions = (() => {
+// Town menus use the same saved life as combat. Each purchase is saved at once.
+const { CATALOGUE, purchase, acceptContract, claimContracts, work } = __m.life;
+const stock = {
+  guns: ['ammo', 'shotgun', 'rifle'], doctor: ['heal', 'bandage'], maps: ['map'], clothes: ['coat'],
+};
+const sayings = {
+  clara: 'The doctor sells bandages. Press H to use one on the trail. You have one life, so come back before it is too late.',
+  elias: 'Travel fills in your map. The map seller can mark roads and camp landmarks. Press M to see your map.',
+  nora: 'Martha and Silas know who is wanted. Look for the red hat at a camp. Take the proof to the sheriff for payment.',
 };
 
-const SEEN_NOW = 0.6;      // seconds: counts as "in sight"
-const SEEN_MEMORY = 25;    // seconds: last-known marker fades out after this
+class TownActions {
+  constructor(game) { this.game = game; this.current = null; }
+
+  nearest() {
+    const g = this.game;
+    if (!g.player?.alive || !g.inTown() || !g.frontier) return null;
+    let best = null, distance = 3;
+    for (const point of [...g.frontier.sites, ...g.frontier.npcs]) {
+      const d = Math.hypot(point.x - g.player.x, point.z - g.player.z);
+      if (d < distance) { best = point; distance = d; }
+    }
+    return best;
+  }
+
+  hint() {
+    const point = this.nearest();
+    return point ? `E · ${point.name ? 'Talk to ' + point.name : point.label}` : '';
+  }
+
+  open() {
+    const point = this.nearest();
+    if (!point) return;
+    this.current = point;
+    const g = this.game;
+    g.state = 'interaction';
+    g.setDeadEye(false);
+    g.input.clear();
+    g.intent.fireHeld = g.intent.firePressed = false;
+    g.save();
+    this.draw();
+  }
+
+  close() {
+    this.current = null;
+    this.game.state = 'playing';
+    this.game.input.clear();
+    this.game.ui.show(null);
+  }
+
+  draw(message = '') {
+    const g = this.game, life = g.run, point = this.current;
+    let text = '', actions = [];
+    if (stock[point.kind]) {
+      text = point.kind === 'guns' ? `You have $${life.bounty}. Ammo is for your selected ${g.player.gun.def.name.toLowerCase()}. Use 1–3 or Q before you enter to select a gun.`
+        : point.kind === 'clothes' ? `The trail coat changes your clothes. It gives no extra armor. You have $${life.bounty}.`
+          : `You have $${life.bounty}.`;
+      actions = stock[point.kind].map((id) => {
+        const item = CATALOGUE[id];
+        const owned = life.unlocked.includes(id) || (id === 'coat' && life.coat) || (id === 'map' && life.hasMap);
+        return { id: `buy:${id}`, label: `${item.name} · $${item.price}${owned ? ' · Owned' : ''}`,
+          disabled: owned || life.bounty < item.price || (id === 'heal' && life.hp >= 100) };
+      });
+    } else if (point.kind === 'bounty') {
+      const camps = point.id === 'martha' ? life.world.camps.slice(0, 2) : life.world.camps.slice(2);
+      text = 'These outlaws wear red hats with a gold band. Search the marked areas on your map. Kill the target, then take the proof to the sheriff.';
+      for (const camp of camps) {
+        const status = life.contracts[camp.id].status;
+        const direction = `${camp.z < 0 ? 'north' : 'south'}${camp.x < 0 ? 'west' : 'east'}`;
+        text += `\n${camp.targetName} — ${camp.name}, ${direction} of town. Wanted for wagon robbery. Reward: $${camp.reward}.`;
+        actions.push({ id: `accept:${camp.id}`, label: status === 'offered' ? `Accept: ${camp.targetName} · $${camp.reward}`
+          : `${camp.targetName} · ${status === 'active' ? 'In progress' : status === 'proof' ? 'Ready for payment' : 'Paid'}`, disabled: status !== 'offered' });
+      }
+    } else if (point.kind === 'sheriff') {
+      text = life.world.camps.map((camp) => {
+        const status = life.contracts[camp.id].status;
+        return `${camp.targetName}: ${status === 'offered' ? 'Ask the townspeople' : status === 'active' ? 'Find the target' : status === 'proof' ? 'Proof ready' : 'Paid'}`;
+      }).join('\n');
+      const ready = Object.values(life.contracts).some((c) => c.status === 'proof');
+      actions = [{ id: 'claim', label: 'Claim bounty payments', disabled: !ready }, { id: 'work', label: 'Town work for emergency ammo' }];
+      if (Object.values(life.contracts).every((c) => c.status === 'paid')) text += '\nAll three bounties are paid. This region is clear. You can keep this life and explore.';
+    } else if (point.kind === 'saloon') {
+      text = 'The Last Drop is the town meeting place. Drinks and blackjack will open in a later build. Talk to Silas near the south end of the street for a bounty.';
+    } else if (point.kind === 'stable') {
+      text = 'The stable is here for the next part of the frontier. Horses are not for sale in this build. Travel on foot for now.';
+    } else text = sayings[point.id] ?? 'Stay safe out there. Return to town for supplies.';
+    g.ui.showInteraction({ title: point.label ?? point.name, text: message ? `${message}\n\n${text}` : text, actions }, (id) => this.act(id));
+  }
+
+  act(id) {
+    if (id === 'close') { this.close(); return; }
+    const g = this.game;
+    if (!this.current || g.state !== 'interaction') return;
+    g.capturePlayer();
+    let result;
+    if (id.startsWith('buy:') && stock[this.current.kind]?.includes(id.slice(4))) result = purchase(g.run, id.slice(4));
+    else if (id.startsWith('accept:') && this.current.kind === 'bounty') result = acceptContract(g.run, id.slice(7));
+    else if (id === 'claim' && this.current.kind === 'sheriff') result = claimContracts(g.run);
+    else if (id === 'work' && this.current.kind === 'sheriff') result = work(g.run);
+    if (!result) return;
+    if (result.ok) {
+      g.player.refreshInventory(g.run);
+      g.save();
+      g.audio.play('coin', { bus: 'ui', vol: 0.6 });
+    }
+    this.draw(result.message);
+  }
+}
+
+return { TownActions };
+})();
+
+// ---- src/map.js ----
+__m.map = (() => {
+// The life map shows travelled land. Bought maps add roads; jobs add search areas.
+const { MAP_CELL, isDiscovered } = __m.life;
+const C = {
+  paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
+  grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', bounty: '#b4532e', cleared: '#5f713e', you: '#2f5d8a',
+};
 
 class MapView {
   constructor() {
@@ -3789,183 +4608,115 @@ class MapView {
   }
 
   draw(game) {
+    const life = game.run, world = life.world;
+    if (!world) return;
     const cv = this.canvas, ctx = this.ctx;
-    const wrap = cv.parentElement;
-    const size = Math.max(220, Math.floor(Math.min(wrap.clientWidth, innerHeight - 270)));
+    const size = Math.max(220, Math.floor(Math.min(cv.parentElement.clientWidth, innerHeight - 290)));
     const dpr = Math.min(devicePixelRatio || 1, 2);
     cv.style.width = cv.style.height = size + 'px';
     cv.width = cv.height = Math.round(size * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const H = world.half, pad = 14, span = size - pad * 2, k = span / (H * 2);
+    const X = (x) => pad + (x + H) * k, Y = (z) => pad + (z + H) * k;
+    const font = (weight = 600, px = 11) => `${weight} ${px}px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
+    const label = (text, x, z, color = C.ink, offset = 15) => {
+      ctx.font = font(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const width = ctx.measureText(text).width;
+      const px = Math.max(pad + width / 2 + 2, Math.min(size - pad - width / 2 - 2, X(x)));
+      const py = Math.max(pad + 8, Math.min(size - pad - 8, Y(z) + offset));
+      ctx.lineWidth = 3; ctx.strokeStyle = C.paper; ctx.strokeText(text, px, py);
+      ctx.fillStyle = color; ctx.fillText(text, px, py);
+    };
 
-    const H = game.arenaHalf;
-    const pad = 16;
-    const k = (size - pad * 2) / (H * 2);
-    const X = (x) => pad + (x + H) * k;
-    const Y = (z) => pad + (z + H) * k;
+    ctx.fillStyle = C.paper; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = C.unknown; ctx.fillRect(pad, pad, span, span);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pad, pad, span, span); ctx.clip();
 
-    // Ground, grid, border.
-    ctx.fillStyle = C.paper;
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = C.wash;
-    ctx.fillRect(X(-H), Y(-H), H * 2 * k, H * 2 * k);
-    ctx.strokeStyle = C.grid;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let v = -H + 4; v < H; v += 4) {
+    // Survey cells are saved with the life, so reloading does not reveal new land.
+    ctx.fillStyle = C.land;
+    for (const key of Object.keys(life.discovered)) {
+      const [cx, cz] = key.split(':').map(Number);
+      ctx.fillRect(X(-H + cx * MAP_CELL), Y(-H + cz * MAP_CELL), MAP_CELL * k + 0.5, MAP_CELL * k + 0.5);
+    }
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let v = -H; v <= H; v += 30) {
       ctx.moveTo(X(v), Y(-H)); ctx.lineTo(X(v), Y(H));
       ctx.moveTo(X(-H), Y(v)); ctx.lineTo(X(H), Y(v));
     }
     ctx.stroke();
 
-    // Cliff hachures on the north, west and east edges.
-    ctx.strokeStyle = C.inkSoft;
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    const tick = 7;
-    for (let v = -H; v <= H; v += 1.2) {
-      ctx.moveTo(X(v), Y(-H)); ctx.lineTo(X(v), Y(-H) - tick);
-      ctx.moveTo(X(-H), Y(v)); ctx.lineTo(X(-H) - tick, Y(v));
-      ctx.moveTo(X(H), Y(v)); ctx.lineTo(X(H) + tick, Y(v));
-    }
-    ctx.stroke();
-    ctx.strokeStyle = C.ink;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(X(-H), Y(-H), H * 2 * k, H * 2 * k);
-
-    // Props.
-    const rect = (x, z, hx, hz, ry, fill, stroke = C.ink, lw = 1.2) => {
-      ctx.save();
-      ctx.translate(X(x), Y(z));
-      ctx.rotate(-ry);
-      ctx.fillStyle = fill;
-      ctx.fillRect(-hx * k, -hz * k, hx * 2 * k, hz * 2 * k);
-      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.strokeRect(-hx * k, -hz * k, hx * 2 * k, hz * 2 * k); }
-      ctx.restore();
-    };
-    const circle = (x, z, r, fill, stroke = C.ink, lw = 1.2) => {
-      ctx.beginPath();
-      ctx.arc(X(x), Y(z), Math.max(1.5, r * k), 0, Math.PI * 2);
-      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
-    };
-
-    for (const p of game.props) {
-      if (!p.alive) continue;
-      const x = p.x, z = p.z;
-      switch (p.kind) {
-        case 'crate': rect(x, z, 0.55, 0.55, p.yaw(), C.cover); break;
-        case 'barrel': circle(x, z, 0.42, C.wood); break;
-        case 'tnt': {
-          // Starburst so explosives never read as an outlaw marker.
-          const r0 = Math.max(4, 0.75 * k), r1 = r0 * 0.5;
-          ctx.beginPath();
-          for (let i = 0; i < 16; i++) {
-            const a = (i / 16) * Math.PI * 2, r = i % 2 ? r1 : r0;
-            ctx[i ? 'lineTo' : 'moveTo'](X(x) + Math.cos(a) * r, Y(z) + Math.sin(a) * r);
-          }
-          ctx.closePath();
-          ctx.fillStyle = C.fire; ctx.fill();
-          ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.stroke();
-          break;
-        }
-        case 'fence': rect(x, z, 1.1, 0.07, p.ry, C.ink, null); break;
-        case 'wagon': rect(x, z, 1.05, 1.6, p.ry, C.cover, C.ink, 1.6); break;
-        case 'tent': {
-          rect(x, z, 1.25, 1.25, p.ry, '#f1e2c4', C.ink, 1.4);
-          ctx.save();
-          ctx.translate(X(x), Y(z)); ctx.rotate(-p.ry);
-          ctx.strokeStyle = C.inkSoft; ctx.lineWidth = 1;
-          const s = 1.25 * k;
-          ctx.beginPath(); ctx.moveTo(-s, -s); ctx.lineTo(s, s); ctx.moveTo(s, -s); ctx.lineTo(-s, s); ctx.stroke();
-          ctx.restore();
-          break;
-        }
-        case 'rock': circle(x, z, p.radius, C.rock, C.inkSoft, 1); break;
-        case 'cactus': circle(x, z, 0.32, C.green, null); break;
-        case 'campfire':
-          circle(x, z, 1.6, 'rgba(240,138,58,0.16)', null);
-          circle(x, z, 0.7, C.ember, C.ink, 1.2);
-          break;
+    // Roads are drawn only where travelled until the player buys a map.
+    ctx.strokeStyle = C.road; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
+    for (const road of world.roads) {
+      const dx = road.to.x - road.from.x, dz = road.to.z - road.from.z;
+      const steps = Math.ceil(Math.hypot(dx, dz) / 6);
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps, next = (i + 1) / steps;
+        const x = road.from.x + dx * t, z = road.from.z + dz * t;
+        const nx = road.from.x + dx * next, nz = road.from.z + dz * next;
+        if (!life.hasMap && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
+        ctx.moveTo(X(x), Y(z)); ctx.lineTo(X(nx), Y(nz));
       }
     }
+    ctx.stroke(); ctx.setLineDash([]);
 
-    // Fallen outlaws.
-    ctx.strokeStyle = C.inkSoft;
-    ctx.lineWidth = 1.6;
-    for (const e of game.enemies) {
-      if (e.alive || !e.corpse) continue;
-      const m = e.corpse.mesh.position, s = 4;
-      ctx.beginPath();
-      ctx.moveTo(X(m.x) - s, Y(m.z) - s); ctx.lineTo(X(m.x) + s, Y(m.z) + s);
-      ctx.moveTo(X(m.x) + s, Y(m.z) - s); ctx.lineTo(X(m.x) - s, Y(m.z) + s);
-      ctx.stroke();
+    let active = 0, proof = 0;
+    for (const camp of world.camps) {
+      const status = life.contracts[camp.id].status;
+      if (status === 'proof') proof++;
+      if (status !== 'active') continue;
+      active++;
+      // A lead gives a broad area, not the target's exact location.
+      const x = Math.round(camp.x / 50) * 50, z = Math.round(camp.z / 50) * 50;
+      ctx.beginPath(); ctx.arc(X(x), Y(z), 60 * k, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(180,83,46,0.10)'; ctx.fill();
+      ctx.strokeStyle = C.bounty; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+      label(camp.targetName, x, z, C.bounty, -60 * k - 8);
     }
 
-    // Outlaws you have spotted.
-    let inSight = 0, remembered = 0;
-    ctx.font = `700 ${Math.max(9, Math.round(k * 0.9))}px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (const e of game.enemies) {
-      if (!e.alive) continue;
-      const age = game.time - e.spottedT;
-      if (age < SEEN_NOW) {
-        inSight++;
-        circle(e.x, e.z, 0.95, null, C.paper, 3);
-        circle(e.x, e.z, 0.7, C.blood, C.ink, 1.4);
-        ctx.strokeStyle = C.blood; ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(X(e.x), Y(e.z));
-        ctx.lineTo(X(e.x + Math.sin(e.yaw) * 1.3), Y(e.z + Math.cos(e.yaw) * 1.3));
-        ctx.stroke();
-      } else if (age < SEEN_MEMORY) {
-        remembered++;
-        ctx.globalAlpha = Math.max(0.35, 1 - age / SEEN_MEMORY);
-        ctx.setLineDash([3, 3]);
-        circle(e.spottedX, e.spottedZ, 0.6, 'rgba(179,41,31,0.12)', C.blood, 1.4);
-        ctx.setLineDash([]);
-        ctx.fillStyle = C.blood;
-        ctx.fillText('?', X(e.spottedX), Y(e.spottedZ) + 0.5);
-        ctx.globalAlpha = 1;
-      }
+    // Camps appear after the player finds the land around them.
+    for (const camp of world.camps) {
+      if (!life.hasMap && !isDiscovered(life, camp.x, camp.z)) continue;
+      const cleared = life.camps[camp.id]?.cleared;
+      ctx.beginPath(); ctx.moveTo(X(camp.x), Y(camp.z) - 7);
+      ctx.lineTo(X(camp.x) - 7, Y(camp.z) + 5); ctx.lineTo(X(camp.x) + 7, Y(camp.z) + 5); ctx.closePath();
+      ctx.fillStyle = cleared ? C.cleared : C.bounty; ctx.fill();
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.stroke();
+      label(`${camp.name}${cleared ? ' · cleared' : ''}`, camp.x, camp.z);
     }
 
-    // You.
-    const P = game.player;
-    if (P && P.alive) {
-      const px = X(P.x), pz = Y(P.z), r = Math.max(7, k * 0.75);
-      const dx = Math.sin(P.yaw), dz = Math.cos(P.yaw);
-      ctx.beginPath();
-      ctx.moveTo(px + dx * r * 1.4, pz + dz * r * 1.4);
-      ctx.lineTo(px - dz * r * 0.8 - dx * r * 0.7, pz + dx * r * 0.8 - dz * r * 0.7);
-      ctx.lineTo(px + dz * r * 0.8 - dx * r * 0.7, pz - dx * r * 0.8 - dz * r * 0.7);
-      ctx.closePath();
-      ctx.fillStyle = C.you; ctx.fill();
-      ctx.strokeStyle = C.paper; ctx.lineWidth = 2; ctx.stroke();
-      ctx.font = `700 11px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
-      ctx.fillStyle = C.you;
-      ctx.fillText('YOU', px, pz + r * 2.1);
+    const town = world.town;
+    ctx.fillStyle = 'rgba(239,220,187,0.35)'; ctx.beginPath();
+    ctx.arc(X(town.x), Y(town.z), town.radius * k, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
+    ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
+    ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();
+    label('Town', town.x, town.z);
+
+    const p = game.player;
+    if (p?.alive) {
+      const px = X(p.x), py = Y(p.z), dx = Math.sin(p.yaw), dz = Math.cos(p.yaw), r = 7;
+      ctx.beginPath(); ctx.moveTo(px + dx * r * 1.4, py + dz * r * 1.4);
+      ctx.lineTo(px - dz * r * 0.8 - dx * r * 0.7, py + dx * r * 0.8 - dz * r * 0.7);
+      ctx.lineTo(px + dz * r * 0.8 - dx * r * 0.7, py - dx * r * 0.8 - dz * r * 0.7); ctx.closePath();
+      ctx.fillStyle = C.you; ctx.fill(); ctx.strokeStyle = C.paper; ctx.lineWidth = 2; ctx.stroke();
     }
+    ctx.restore();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(pad, pad, span, span);
 
-    // Compass and scale bar.
-    ctx.fillStyle = C.ink;
-    ctx.font = `16px 'Rye', Georgia, serif`;
-    ctx.fillText('N', X(H) - 14, Y(-H) + 22);
-    ctx.beginPath();
-    ctx.moveTo(X(H) - 14, Y(-H) + 6); ctx.lineTo(X(H) - 19, Y(-H) + 12); ctx.lineTo(X(H) - 9, Y(-H) + 12);
-    ctx.closePath(); ctx.fill();
-    const bx = X(-H) + 10, by = Y(H) - 12;
-    ctx.fillRect(bx, by, 5 * k, 3);
-    ctx.font = `600 11px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.fillText('5 m', bx + 5 * k + 6, by + 2);
+    ctx.textAlign = 'center'; ctx.fillStyle = C.ink; ctx.font = `16px 'Rye', Georgia, serif`;
+    ctx.fillText('N', size - pad - 16, pad + 25);
+    ctx.beginPath(); ctx.moveTo(size - pad - 16, pad + 5);
+    ctx.lineTo(size - pad - 20, pad + 11); ctx.lineTo(size - pad - 12, pad + 11); ctx.closePath(); ctx.fill();
+    ctx.fillRect(pad + 10, size - pad - 15, 50 * k, 3);
+    ctx.font = font(); ctx.textAlign = 'left'; ctx.fillText('50 m', pad + 16 + 50 * k, size - pad - 12);
 
-    const alive = game.enemies.filter((e) => e.alive).length;
-    const unknown = alive - inSight - remembered;
-    this.title.textContent = game.campName;
-    const parts = [`Camp ${game.run.camp + 1}`, alive === 1 ? '1 outlaw left' : `${alive} outlaws left`];
-    if (unknown > 0) parts.push(`${unknown} unaccounted for`);
-    this.sub.textContent = parts.join(' · ');
+    const cells = Math.ceil(H * 2 / MAP_CELL) ** 2;
+    const surveyed = Math.round(Object.keys(life.discovered).length / cells * 100);
+    this.title.textContent = 'Frontier map';
+    this.sub.textContent = `${surveyed}% explored · ${active} active ${active === 1 ? 'bounty' : 'bounties'}${proof ? ` · ${proof} ready to claim` : ''}`;
+    cv.setAttribute('aria-label', `Frontier map. ${surveyed}% explored. ${active} active ${active === 1 ? 'bounty' : 'bounties'}. Blue arrow: your location. Brown circles: bounty search areas.`);
   }
 }
 
@@ -3980,32 +4731,24 @@ __m.game = (() => {
 const { T } = __m.tuning;
 const { Physics, GROUPS } = __m.physics;
 const { PhysObj } = __m.physics;
-const { NavGrid } = __m.nav;
 const { FX } = __m.fx;
 const { MAT, PAL } = __m.models;
-const { Prop, Debris, sharedGeometries } = __m.props;
-const { Bandit, BANDIT_TYPES, lineGeo } = __m.enemy;
+const { Debris, sharedGeometries } = __m.props;
+const { lineGeo } = __m.enemy;
 const { Player } = __m.player;
 const { Projectiles } = __m.projectiles;
-const { generateCamp, buildScenery, ARENA_HALF, PLAYER_SPAWN } = __m.level;
-const { UNLOCKS, WEAPONS } = __m.weapons;
+const { createLife, discover, recordTargetKill } = __m.life;
+const { loadSave: readSave, writeLife, endLife } = __m.storage;
+const { buildFrontier } = __m.frontier;
+const { buildEncounters, captureEncounters, rebuildCampNav } = __m.encounters;
+const { TownActions } = __m.town_actions;
 const { randomSeed } = __m.rng;
 const { MapView } = __m.map;
-const SAVE_KEY = 'dustiron.run.v1';
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
 const scorchMat = new THREE.MeshLambertMaterial({ color: 0x3a2a20, transparent: true, opacity: 0.55, depthWrite: false });
 
 function loadSave() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw);
-    return s && typeof s.seed === 'number' && Array.isArray(s.unlocked) ? s : null;
-  } catch { return null; }
-}
-
-function deleteSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+  return readSave();
 }
 
 class Game {
@@ -4020,7 +4763,12 @@ class Game {
     this.mapView = new MapView();
     this.spotT = 0;
     this.groups = GROUPS;
-    this.arenaHalf = ARENA_HALF;
+    this.arenaHalf = 210;
+    this.encounters = [];
+    this.frontier = null;
+    this.townActions = new TownActions(this);
+    this.interactionHint = '';
+    this.locationName = 'Mercy Crossing';
     this.state = 'title';
     this.time = 0;
     this.realTime = 0;
@@ -4035,7 +4783,6 @@ class Game {
     this.run = null;
     this.hitStopT = 0;
     this.slowmo = { scale: 1, t: 0, target: 1 };
-    this.clearT = -1;
     this.deathT = -1;
     this.saveT = 0;
     this.navT = 0;
@@ -4066,65 +4813,66 @@ class Game {
   // ---------- run lifecycle ----------
 
   newRun() {
-    deleteSave();
-    this.run = {
-      seed: randomSeed(), camp: 0, bounty: 0, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
-      hp: T.player.hp, unlocked: ['revolver'], weapon: 0, deadEye: 0, version: 1,
-    };
-    this.loadCamp();
+    this.run = createLife(randomSeed());
+    writeLife(this.run, undefined, true);
+    this.saveFailed = false;
+    this.loadWorld();
   }
 
   continueRun(save) {
     this.run = { ...save };
-    this.loadCamp();
+    this.loadWorld();
   }
 
-  loadCamp() {
+  loadWorld() {
     this.unload();
     const run = this.run;
     this.levelGroup = new THREE.Group();
     this.scene.add(this.levelGroup);
     this.physics = new Physics();
     this.enemyController = this.physics.characterController();
-    this.time = 0;
-
-    buildScenery(this, run.seed + run.camp);
-    const layout = generateCamp(run.seed, run.camp);
-    this.campName = layout.name;
+    this.time = run.simTime ?? 0;
+    this.arenaHalf = run.world.half;
+    this.tokens.holders.clear();
+    this.frontier = buildFrontier(this, run.world);
     this.debris = new Debris(this);
     this.projectiles = new Projectiles(this);
-    this.props = layout.props.map((spec) => new Prop(this, spec.kind, spec));
-    this.player = new Player(this, PLAYER_SPAWN.x, PLAYER_SPAWN.z, run);
-    this.enemies = layout.enemies.map((e) => new Bandit(this, e.type, e.x, e.z, run.camp));
-    this.campStartBounty = run.bounty;
+    this.player = new Player(this, run.player.x, run.player.z, run);
+    for (const key of ['yaw', 'sinceHit', 'rollT', 'rollCooldown', 'rollX', 'rollZ']) {
+      if (Number.isFinite(run.player[key])) this.player[key] = run.player[key];
+    }
+    this.player.prevYaw = this.player.yaw;
+    this.encounters = buildEncounters(this);
+    this.props = this.encounters.flatMap((c) => c.props);
+    this.enemies = this.encounters.flatMap((c) => c.enemies);
+    for (const shot of run.projectiles ?? []) this.projectiles.spawn(shot.x, shot.z, shot.dx, shot.dz, shot.speed, shot.dmg, shot.left);
     this.corpses = [];
-
-    this.nav = new NavGrid(ARENA_HALF, 0.5, 0.45);
-    this.nav.setStatic(this.props.filter((p) => !p.dynamic).map((p) => p.footprint()));
     this.rebuildNav();
 
     this.deadEye.meter = run.deadEye ?? 0;
     this.deadEye.active = false;
-    this.tokens.holders.clear();
     this.flanker = null;
     this.hitStopT = 0;
     this.slowmo = { scale: 1, t: 0, target: 1 };
-    this.clearT = -1;
     this.deathT = -1;
-    this.camp = { x: PLAYER_SPAWN.x, z: PLAYER_SPAWN.z, t: 0 };
+    this.camp = { x: this.player.x, z: this.player.z, t: 0 };
     this.fx.clear();
     Object.assign(this.intent, { firePressed: false, reload: false, dodgeUntil: -1, switchTo: null, aim: null });
-    this.rig.snap(PLAYER_SPAWN.x, PLAYER_SPAWN.z - 3);
+    this.input.clear();
+    this.rig.snap(this.player.x, this.player.z - 3);
     this.state = 'playing';
     this.ui.show(null);
-    const n = this.enemies.length;
-    this.ui.toast(`Camp ${run.camp + 1} · ${this.campName} · ${n} outlaws`, 3);
+    this.ui.toast(run.migrated ? 'Your old life is now in Mercy Crossing. Your money and guns are kept.' : 'One life. Talk to the townspeople with E. Open your map with M.', 6);
+    delete run.migrated;
     this.audio.setAmbience(0.13);
     this.save();
   }
 
   unload() {
     if (!this.levelGroup) return;
+    this.frontier?.dispose();
+    this.frontier = null;
+    this.encounters = [];
     const shared = sharedGeometries();
     shared.add(lineGeo);
     shared.add(scorchGeo);
@@ -4149,8 +4897,42 @@ class Game {
 
   save() {
     if (!this.run || !this.player || !this.player.alive) return;
-    const data = { ...this.run, hp: this.player.hp, weapon: this.player.gunIndex, deadEye: this.deadEye.meter };
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch { /* storage unavailable */ }
+    this.capturePlayer();
+    captureEncounters(this);
+    this.run.simTime = this.time;
+    this.run.projectiles = this.projectiles.items.filter((p) => p.active).map(({ x, z, dx, dz, speed, dmg, left }) => ({ x, z, dx, dz, speed, dmg, left }));
+    const saved = writeLife(this.run);
+    this.ui.setSaveStatus(saved);
+    if (!saved && !this.saveFailed) {
+      this.saveFailed = true;
+      this.ui.toast('Save failed. Keep this tab open. Check browser storage.', 8);
+    }
+    if (saved) this.saveFailed = false;
+  }
+
+  capturePlayer() {
+    const p = this.player, run = this.run;
+    run.hp = p.hp; run.weapon = p.gunIndex; run.deadEye = this.deadEye.meter;
+    run.player = {};
+    for (const key of ['x', 'z', 'yaw', 'sinceHit', 'rollT', 'rollCooldown', 'rollX', 'rollZ']) run.player[key] = p[key];
+    for (const gun of p.guns) {
+      run.guns[gun.def.key] = {};
+      for (const key of ['ammo', 'reserve', 'cooldown', 'bloom', 'reloading', 'reloadT', 'reloadTotal']) run.guns[gun.def.key][key] = gun[key];
+    }
+  }
+
+  inTown() {
+    return !!this.player && Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius;
+  }
+
+  useBandage() {
+    if (!this.player.alive || this.player.hp >= T.player.hp) return;
+    if (!this.run.bandages) { this.ui.toast('No bandages. Visit the doctor in town.'); return; }
+    this.run.bandages--;
+    const healed = Math.min(T.player.hp - this.player.hp, T.player.bandageHeal);
+    this.player.hp += healed;
+    this.ui.toast(`Bandage used · +${Math.round(healed)} health`);
+    this.save();
   }
 
   quitToTitle() {
@@ -4193,28 +4975,10 @@ class Game {
     }
   }
 
-  onCampCleared() {
-    const run = this.run, p = this.player;
-    const bonus = 25 * (run.camp + 1);
-    run.bounty += bonus;
-    const earned = run.bounty - this.campStartBounty;
-    const unlockKey = UNLOCKS[run.camp + 1];
-    let unlock = null;
-    if (unlockKey && !run.unlocked.includes(unlockKey)) { run.unlocked.push(unlockKey); unlock = `${WEAPONS[unlockKey].name} (press ${run.unlocked.length})`; }
-    const healed = Math.round(Math.min(T.player.healBetweenCamps, T.player.hp - p.hp));
-    run.hp = Math.min(T.player.hp, p.hp + healed);
-    run.weapon = p.gunIndex;
-    run.deadEye = this.deadEye.meter;
-    run.camp++;
-    this.state = 'cleared';
-    this.setDeadEye(false);
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(run)); } catch { /* storage unavailable */ }
-    this.audio.play('coin', { bus: 'ui', vol: 0.9 });
-    this.ui.showCleared({ name: this.campName, earned, total: run.bounty, healed, unlock });
-  }
-
   onPlayerDied() {
-    deleteSave(); // Death is permanent: nothing to come back to.
+    // Write death before effects or menus. A reload must not revive this life.
+    this.capturePlayer();
+    if (!endLife(this.run)) this.ui.toast('The life has ended. Browser storage could not save this change.', 8);
     this.state = 'dying';
     this.deathT = 1.8;
     this.slowmo = { scale: T.run.deathSlowmo, t: 1.2, target: T.run.deathSlowmo };
@@ -4231,16 +4995,19 @@ class Game {
   onEnemyKilled(e, crit) {
     const run = this.run;
     run.kills++;
-    const b = BANDIT_TYPES[e.type].bounty;
-    run.bounty += b;
+    const proof = recordTargetKill(run, e.id);
     this.deadEye.add(T.deadEye.fillKill);
     this.hitStop(T.hitStop.kill);
     this.addTrauma(0.15);
-    this.ui.toast(crit ? `Sneak shot · +$${b}` : `+$${b}`, 1.2);
-    if (this.enemies.every((x) => !x.alive) && this.player.alive) {
+    this.ui.toast(proof ? 'Target down. Proof collected. Return to the sheriff.' : (crit ? 'Sneak shot' : 'Outlaw down'), 3);
+    const camp = e.encounter;
+    if (camp.enemies.every((x) => !x.alive) && !run.camps[camp.id].cleared) {
+      run.camps[camp.id].cleared = true;
+      run.camp++;
       this.slowmo = { scale: 0.3, t: T.run.killSlowmoTime, target: 0.3 };
-      this.clearT = T.run.clearDelay;
+      this.ui.toast(`${camp.name} is clear. Return to town when you are ready.`, 5);
     }
+    this.save();
   }
 
   spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall) {
@@ -4325,15 +5092,15 @@ class Game {
     return false;
   }
 
-  aliveFraction() {
-    if (!this.enemies.length) return 0;
-    return this.enemies.filter((e) => e.alive).length / this.enemies.length;
+  aliveFraction(camp) {
+    const total = this.run.camps[camp.id].enemies?.length || camp.enemies.length;
+    return total ? camp.enemies.filter((e) => e.alive).length / total : 0;
   }
 
   playerCamping() { return this.camp.t; }
 
   rebuildNav() {
-    this.nav.rebuild(this.props.filter((p) => p.alive && p.dynamic).map((p) => p.footprint()));
+    rebuildCampNav(this.encounters);
     this.navDirty = false;
     this.navT = 0.5;
   }
@@ -4352,6 +5119,10 @@ class Game {
   /** Reads input into intents. Runs once per frame before simulation ticks. */
   updateIntent() {
     const inp = this.input, it = this.intent;
+    if (this.state === 'interaction') {
+      if (inp.pressed('pause')) this.townActions.close();
+      return;
+    }
     if (this.state === 'map' && (inp.pressed('map') || inp.pressed('pause'))) { this.closeMap(); return; }
     if (this.state === 'playing' && inp.pressed('map')) { this.openMap(); return; }
     if (inp.pressed('pause') && (this.state === 'playing' || this.state === 'paused')) this.pause(this.state === 'playing');
@@ -4359,6 +5130,8 @@ class Game {
       it.fireHeld = false;
       return;
     }
+    if (this.state === 'playing' && inp.pressed('interact') && this.townActions.nearest()) { this.townActions.open(); return; }
+    if (this.state === 'playing' && inp.pressed('bandage')) this.useBandage();
     it.move = inp.moveAxis();
     this.rig.place(0);
     const aim = this.rig.projectCursor(inp.mouse.ndcX, inp.mouse.ndcY);
@@ -4374,12 +5147,12 @@ class Game {
       if (inp.pressed('weapon3')) it.switchTo = 2;
       if (inp.pressed('nextWeapon')) it.switchTo = (p.gunIndex + 1) % p.guns.length;
       const w = inp.takeWheel();
-      if (w) it.switchTo = (p.gunIndex + (w > 0 ? 1 : -1) + p.guns.length) % p.guns.length;
+      if (w) this.rig.zoom(w);
     }
 
     // Dead Eye is held, and drains in real time.
     const de = this.deadEye;
-    const want = inp.held('deadEye') && this.state === 'playing' && p && p.alive;
+    const want = inp.held('deadEye') && this.state === 'playing' && p && p.alive && !this.inTown();
     if (want && !de.active && de.meter >= T.deadEye.minToStart) this.setDeadEye(true);
     if (de.active && !want) this.setDeadEye(false);
   }
@@ -4400,11 +5173,19 @@ class Game {
 
     const p = this.player;
     p.tick(dt, gunDt, this.intent);
+    this.frontier.tick(dt);
     if (p.alive) {
+      discover(this.run, p.x, p.z);
       if (Math.hypot(p.x - this.camp.x, p.z - this.camp.z) > 2) { this.camp.x = p.x; this.camp.z = p.z; this.camp.t = 0; }
       else this.camp.t += dt;
     }
-    for (const e of this.enemies) e.tick(dt);
+    for (const e of this.enemies) {
+      if (Math.hypot(e.x - p.x, e.z - p.z) < 65) e.tick(dt);
+      else {
+        if (this.flanker === e) this.flanker = null;
+        if (e.token) { e.releaseToken(); e.hideAimLine(); e.setState('search'); }
+      }
+    }
     this.spotT -= dt;
     if (this.spotT <= 0) { this.spotT = 0.2; this.updateSpotting(); }
     this.projectiles.tick(dt);
@@ -4432,10 +5213,6 @@ class Game {
       if (de.meter <= 0) { de.meter = 0; this.setDeadEye(false); }
     }
 
-    if (this.clearT > 0 && this.state === 'playing') {
-      this.clearT -= dt;
-      if (this.clearT <= 0) this.onCampCleared();
-    }
     if (this.deathT > 0) {
       this.deathT -= dt;
       if (this.deathT <= 0) { this.state = 'dead'; this.ui.showDead(this.run); this.audio.setAmbience(0.05); }
@@ -4447,8 +5224,13 @@ class Game {
 
     const p = this.player;
     if (p) {
-      p.render(alpha, dt);
-      for (const e of this.enemies) e.render(alpha, dt);
+      const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
+      this.locationName = this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
+      this.interactionHint = this.townActions.hint();
+      this.frontier.render(alpha);
+      const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
+      p.render(alpha, simDt);
+      for (const e of this.enemies) e.render(alpha, simDt);
       for (const pr of this.props) pr.render(alpha, dt, this.realTime);
       this.debris.render(alpha);
       for (const c of this.corpses) c.render(alpha);
@@ -4458,7 +5240,7 @@ class Game {
       this.render.focusShadow(this.rig.target.x, this.rig.target.z);
       this.audio.setListener(this.rig.target.x, this.rig.target.z);
       const fxScale = (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
-      if (this.state !== 'paused') this.fx.update(dt * fxScale);
+      if (this.state === 'playing' || this.state === 'dying') this.fx.update(dt * fxScale);
       this.ui.update(this, dt);
     } else {
       // Title backdrop: slow drift over empty desert.
@@ -4527,7 +5309,6 @@ async function boot() {
     resume: () => game.pause(false),
     closeMap: () => game.closeMap(),
     quitToTitle: () => game.quitToTitle(),
-    nextCamp: () => { audio.unlock(); game.loadCamp(); },
   });
   ui.setContinue(loadSave());
   ui.show('title');
@@ -4535,12 +5316,12 @@ async function boot() {
   addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
-    else if (game.state === 'cleared' && (e.code === 'KeyE' || e.code === 'Enter')) game.loadCamp();
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
     else if (e.code === 'KeyN') audio.setMuted(!audio.muted);
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));
+  addEventListener('pagehide', () => game.save());
 
   const step = 1 / T.sim.hz;
   let acc = 0;

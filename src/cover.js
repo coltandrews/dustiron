@@ -14,11 +14,11 @@ export function chooseCover(game, bandit, opts) {
   const px = opts.fromX ?? P.x, pz = opts.fromZ ?? P.z;
   const [minD, maxD] = opts.range;
   const candidates = [];
-  for (const prop of game.props) {
+  for (const prop of bandit.encounter.props) {
     if (!prop.isCover()) continue;
     const propX = prop.x, propZ = prop.z;
     for (const pt of prop.coverPoints()) {
-      if (!game.nav.isFree(pt.x, pt.z)) continue;
+      if (!bandit.encounter.nav.isFree(pt.x, pt.z)) continue;
       if (game.coverClaimed(pt.x, pt.z, bandit)) continue;
       const dpx = px - pt.x, dpz = pz - pt.z;
       const dp = Math.hypot(dpx, dpz);

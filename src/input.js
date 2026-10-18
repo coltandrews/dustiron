@@ -8,6 +8,7 @@ export const BINDINGS = {
   dodge: ['Space'],
   deadEye: ['ShiftLeft', 'ShiftRight'],
   reload: ['KeyR'],
+  bandage: ['KeyH'],
   interact: ['KeyE', 'Enter'],
   nextWeapon: ['KeyQ'],
   weapon1: ['Digit1'],
@@ -98,5 +99,6 @@ export class Input {
     this.edges.clear();
     this.fireHeld = false;
     this.firePressed = false;
+    this.wheel = 0;
   }
 }

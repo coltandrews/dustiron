@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "single": "node tools/bundle.mjs"
+    "single": "node tools/bundle.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.19.3",

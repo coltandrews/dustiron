@@ -11,6 +11,8 @@ export class CameraRig {
     this.target = new THREE.Vector3();
     this.desired = new THREE.Vector3();
     this.trauma = 0;
+    this.distance = c.distance;
+    this.targetDistance = c.distance;
     this.time = 0;
     this.phase = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
     this.raycaster = new THREE.Raycaster();
@@ -22,7 +24,12 @@ export class CameraRig {
   offset() {
     const c = T.camera;
     const p = c.pitchDeg * DEG;
-    return { y: Math.sin(p) * c.distance, z: Math.cos(p) * c.distance };
+    return { y: Math.sin(p) * this.distance, z: Math.cos(p) * this.distance };
+  }
+
+  zoom(steps) {
+    const c = T.camera;
+    this.targetDistance = Math.max(c.minDistance, Math.min(c.maxDistance, this.targetDistance + steps * c.zoomStep));
   }
 
   snap(x, z) {
@@ -59,6 +66,7 @@ export class CameraRig {
     const c = T.camera;
     if (c.fov !== this.camera.fov) { this.camera.fov = c.fov; this.camera.updateProjectionMatrix(); }
     this.time += dt;
+    this.distance += (this.targetDistance - this.distance) * Math.min(1, dt * 10);
     this.desired.set(focus.x, 0, focus.z);
     if (aim) {
       let dx = (aim.x - focus.x) * c.lookAheadFactor, dz = (aim.z - focus.z) * c.lookAheadFactor;
