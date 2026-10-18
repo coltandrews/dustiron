@@ -1,0 +1,4253 @@
+<title>Dust &amp; Iron</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: the HUD hugs the four corners like a ledger; full-screen cards are
+   wanted posters on parchment. One committed dusk palette (no light theme). */
+:root {
+  --ink: #1c130f;
+  --ink-2: #2b1d15;
+  --paper: #efdcbb;
+  --paper-2: #e2c99d;
+  --sand: #d9a96b;
+  --rust: #b4532e;
+  --brass: #dcaa4c;
+  --blood: #b3291f;
+  --muted: #a88e70;
+  --display: 'Rye', 'Rockwell', Georgia, serif;
+  --body: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', system-ui, sans-serif;
+  --edge-t: max(16px, env(safe-area-inset-top, 0px));
+  --edge-b: max(16px, env(safe-area-inset-bottom, 0px));
+  --edge-l: max(16px, env(safe-area-inset-left, 0px));
+  --edge-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { background: var(--ink); color: var(--paper); font: 500 15px/1.4 var(--body); -webkit-font-smoothing: antialiased; }
+#app { position: fixed; inset: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
+#game-canvas { display: block; position: absolute; inset: 0; cursor: none; transition: filter 0.25s; }
+#app.in-menu #game-canvas { cursor: default; }
+#app.deadeye #game-canvas { filter: saturate(0.3) sepia(0.5) contrast(1.12) brightness(0.95); }
+[hidden] { display: none !important; }
+
+kbd {
+  display: inline-block; min-width: 1.5em; padding: 0.05em 0.4em; margin: 0 0.08em;
+  font: 600 0.8em/1.5 var(--body); text-align: center; letter-spacing: 0.02em;
+  color: var(--ink); background: var(--paper-2); border-radius: 4px; box-shadow: inset 0 -2px 0 rgba(28, 19, 15, 0.28);
+}
+
+/* ---------- HUD ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(20, 12, 8, 0.6); }
+.hud-tl { position: absolute; top: var(--edge-t); left: var(--edge-l); display: grid; gap: 10px; width: min(300px, 44vw); }
+.meter { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.meter-label { grid-column: 1 / -1; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--paper-2); }
+.meter-label kbd { font-size: 10px; letter-spacing: 0; }
+.meter-track { position: relative; height: 14px; background: rgba(28, 19, 15, 0.72); border: 1.5px solid rgba(239, 220, 187, 0.7); border-radius: 3px; overflow: hidden; }
+.meter-fill, .meter-ghost { position: absolute; inset: 0 auto 0 0; width: 100%; }
+.meter.hp .meter-ghost { background: #f3e2bf; opacity: 0.55; }
+.meter.hp .meter-fill { background: linear-gradient(#d84a35, var(--blood)); }
+.meter.hp .meter-fill.low { animation: pulse 0.8s ease-in-out infinite alternate; }
+.meter-ticks { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+.meter-ticks i { border-right: 1.5px solid rgba(28, 19, 15, 0.75); }
+.meter-num { font: 700 20px/1 var(--body); min-width: 2.2em; text-align: right; }
+.meter.de .meter-track { height: 8px; grid-column: 1 / -1; }
+.meter.de .meter-fill { background: linear-gradient(90deg, #b8792c, var(--brass)); }
+.meter.de.ready .meter-track { border-color: var(--brass); box-shadow: 0 0 10px rgba(220, 170, 76, 0.6); }
+.meter.de.active .meter-fill { background: #ffd27a; }
+
+.hud-tc { position: absolute; top: var(--edge-t); left: 50%; transform: translateX(-50%); text-align: center; }
+.camp-no { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-2); }
+.camp-name { font: 22px/1.1 var(--display); color: var(--paper); margin-top: 2px; white-space: nowrap; }
+.outlaws { font-size: 15px; font-weight: 600; color: var(--brass); margin-top: 2px; }
+
+.hud-tr { position: absolute; top: var(--edge-t); right: var(--edge-r); text-align: right; display: grid; }
+.bounty-label { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-2); }
+.bounty { font: 30px/1 var(--display); color: var(--brass); }
+
+.hud-br { position: absolute; right: var(--edge-r); bottom: var(--edge-b); display: grid; justify-items: end; gap: 8px; }
+.weapon-row { display: flex; align-items: center; gap: 14px; }
+.weapon-name { font: 26px/1 var(--display); }
+.slots { display: flex; gap: 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.slots span.on { color: var(--paper); }
+.slots kbd { font-size: 10px; margin-right: 4px; }
+.reload-hint { font-weight: 700; color: var(--brass); animation: pulse 0.6s ease-in-out infinite alternate; }
+
+.ammo { position: relative; }
+.ammo.cylinder { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle, #4a3a30 0 18%, #2c221c 19% 100%); border: 2px solid rgba(239, 220, 187, 0.75); transform: rotate(var(--cyl, 0deg)); transition: transform 0.12s cubic-bezier(.3, 1.6, .5, 1); }
+.ammo.cylinder i { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f6d488, var(--brass) 55%, #8a6526); box-shadow: inset 0 0 0 1.5px rgba(28, 19, 15, 0.6); }
+.ammo.cylinder i.spent { background: #15100c; box-shadow: inset 0 0 0 1.5px rgba(239, 220, 187, 0.35); }
+.ammo.row { display: flex; gap: 5px; }
+.ammo.row i { width: 9px; height: 26px; border-radius: 4px 4px 2px 2px; background: linear-gradient(var(--brass) 0 38%, var(--rust) 38%); box-shadow: inset 0 0 0 1px rgba(28, 19, 15, 0.5); }
+.ammo.row i.spent { background: rgba(28, 19, 15, 0.7); box-shadow: inset 0 0 0 1.5px rgba(239, 220, 187, 0.35); }
+
+.hint { position: absolute; left: 50%; bottom: var(--edge-b); transform: translateX(-50%); padding: 8px 14px; border-radius: 6px; background: rgba(28, 19, 15, 0.7); font-size: 14px; white-space: nowrap; opacity: 0; transition: opacity 0.6s; }
+.hint.show { opacity: 1; }
+.toast { position: absolute; left: 50%; top: 26%; transform: translate(-50%, 8px); font: 30px/1.1 var(--display); color: var(--paper); text-align: center; opacity: 0; transition: opacity 0.25s, transform 0.25s; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- reticle ---------- */
+#reticle { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 3; }
+#app.in-menu #reticle { display: none; }
+.ret-dot { position: absolute; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: var(--paper); box-shadow: 0 0 0 1.5px rgba(28, 19, 15, 0.7); }
+.ret-ring { position: absolute; width: 28px; height: 28px; transform: translate(-50%, -50%); border-radius: 50%; border: 1.5px solid rgba(239, 220, 187, 0.85); box-shadow: 0 0 0 1px rgba(28, 19, 15, 0.45); transition: width 0.08s, height 0.08s; }
+.ret-ring i { position: absolute; background: var(--paper); }
+.ret-ring i:nth-child(1), .ret-ring i:nth-child(2) { width: 1.5px; height: 6px; left: calc(50% - 0.75px); }
+.ret-ring i:nth-child(1) { top: -7px; } .ret-ring i:nth-child(2) { bottom: -7px; }
+.ret-ring i:nth-child(3), .ret-ring i:nth-child(4) { height: 1.5px; width: 6px; top: calc(50% - 0.75px); }
+.ret-ring i:nth-child(3) { left: -7px; } .ret-ring i:nth-child(4) { right: -7px; }
+#reticle.empty .ret-ring { border-color: var(--blood); }
+.ret-hit { position: absolute; width: 0; height: 0; opacity: 0; }
+.ret-hit i { position: absolute; width: 2px; height: 9px; left: -1px; top: -4.5px; background: #fff; box-shadow: 0 0 2px rgba(0, 0, 0, 0.6); }
+.ret-hit i:nth-child(1) { transform: rotate(45deg) translateY(-11px); } .ret-hit i:nth-child(2) { transform: rotate(135deg) translateY(-11px); }
+.ret-hit i:nth-child(3) { transform: rotate(225deg) translateY(-11px); } .ret-hit i:nth-child(4) { transform: rotate(315deg) translateY(-11px); }
+.ret-hit.show { animation: hit 0.22s ease-out; }
+.ret-hit.kill i { background: #ff5a3c; height: 12px; }
+.ret-reload-svg { position: absolute; width: 50px; height: 50px; left: -25px; top: -25px; transform: rotate(-90deg); overflow: visible; }
+#ret-reload { fill: none; stroke: var(--brass); stroke-width: 3; stroke-linecap: round; transition: opacity 0.1s; }
+
+#vignette { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(150, 18, 10, 0.75) 100%); }
+#app.deadeye #vignette { opacity: 1 !important; background: radial-gradient(ellipse at center, transparent 40%, rgba(90, 50, 10, 0.6) 100%); }
+#hurt-dir { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; transform: rotate(var(--angle, 0deg)); opacity: 0; }
+#hurt-dir::before { content: ''; position: absolute; left: -38px; top: -170px; width: 76px; height: 22px; border-radius: 50%; background: radial-gradient(ellipse, rgba(230, 40, 20, 0.9), transparent 70%); }
+#hurt-dir.show { animation: fade 0.6s ease-out; }
+
+/* ---------- screens ---------- */
+.screen { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--edge-t) var(--edge-r) var(--edge-b) var(--edge-l); background: rgba(20, 13, 9, 0.68); overflow-y: auto; z-index: 5; }
+.card { position: relative; width: min(600px, 100%); padding: 32px clamp(20px, 5vw, 44px); background: var(--paper); color: var(--ink); border-radius: 4px; box-shadow: 0 0 0 6px var(--paper), 0 0 0 8px var(--ink-2), 0 24px 60px rgba(0, 0, 0, 0.55); }
+.card.small { width: min(460px, 100%); text-align: center; }
+.card h1 { margin: 6px 0 12px; font: clamp(42px, 9vw, 72px)/0.95 var(--display); color: var(--ink); text-wrap: balance; }
+.card h1 span { color: var(--rust); }
+.card h2 { margin: 4px 0 14px; font: clamp(26px, 6vw, 34px)/1.05 var(--display); text-wrap: balance; }
+.eyebrow { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rust); }
+.lede { margin: 0 0 20px; font-size: 17px; line-height: 1.45; max-width: 46ch; }
+.card.small .lede { margin-inline: auto; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.card.small .actions { justify-content: center; }
+.btn { appearance: none; border: 2px solid var(--ink); background: transparent; color: var(--ink); font: 600 17px/1 var(--body); letter-spacing: 0.04em; padding: 12px 20px; border-radius: 3px; cursor: pointer; transition: background 0.12s, color 0.12s, transform 0.08s; }
+.btn:hover { background: rgba(28, 19, 15, 0.08); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 3px solid var(--rust); outline-offset: 3px; }
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn.primary:hover { background: var(--rust); border-color: var(--rust); }
+.continue-info { margin: 10px 0 0; font-size: 14px; color: #6b5440; font-variant-numeric: tabular-nums; }
+.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin: 24px 0 0; padding-top: 18px; border-top: 1.5px dashed rgba(28, 19, 15, 0.35); }
+.controls div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.controls dt { white-space: nowrap; }
+.controls dd { margin: 0; font-weight: 600; text-align: right; }
+.controls kbd { background: var(--ink); color: var(--paper); box-shadow: none; }
+.fine { margin: 14px 0 0; font-size: 14px; color: #6b5440; }
+.fine kbd { background: var(--ink); color: var(--paper); box-shadow: none; }
+.mobile-note { display: none; }
+
+.ledger { display: grid; gap: 2px; margin: 0 0 22px; text-align: left; font-variant-numeric: tabular-nums; }
+.ledger .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 2px; border-bottom: 1px dashed rgba(28, 19, 15, 0.3); font-size: 17px; }
+.ledger .row b { font-weight: 700; }
+.poster::before { content: ''; position: absolute; inset: 10px; border: 1.5px solid rgba(28, 19, 15, 0.45); pointer-events: none; }
+.poster.dead h2 { color: var(--blood); }
+
+/* Title backdrop */
+.screen.title { background: linear-gradient(#3b2333 0%, #8f4632 38%, #e28a4d 62%, #f2c27f 76%, #c88a52 76.2%, #9a6038 100%); }
+.dusk { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.sun { position: absolute; left: 68%; top: 48%; width: 22vmin; height: 22vmin; border-radius: 50%; background: #ffe0a0; box-shadow: 0 0 80px 30px rgba(255, 200, 120, 0.45); transform: translate(-50%, -50%); }
+.mesa { position: absolute; bottom: 23.8%; background: #5c2f26; }
+.mesa.m1 { left: -4%; width: 34%; height: 15%; clip-path: polygon(0 100%, 6% 22%, 18% 18%, 22% 0, 64% 0, 70% 30%, 88% 34%, 100% 100%); }
+.mesa.m2 { left: 52%; width: 30%; height: 9%; background: #6e382a; clip-path: polygon(0 100%, 12% 10%, 70% 0, 82% 40%, 100% 100%); }
+.mesa.m3 { left: 80%; width: 26%; height: 19%; background: #4d2620; clip-path: polygon(0 100%, 10% 30%, 30% 26%, 36% 0, 80% 4%, 92% 50%, 100% 100%); }
+.title-card { z-index: 1; }
+
+.loading { display: flex; align-items: center; gap: 14px; font: 26px/1 var(--display); color: var(--paper); }
+.loading i { width: 18px; height: 18px; border: 3px solid var(--brass); border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+@keyframes pulse { from { opacity: 1; } to { opacity: 0.55; } }
+@keyframes hit { 0% { opacity: 1; transform: scale(0.7); } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes fade { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .controls { grid-template-columns: minmax(0, 1fr); }
+  .camp-name { font-size: 17px; }
+  .hud-tc { top: calc(var(--edge-t) + 70px); }
+  .hint { display: none; }
+  .bounty { font-size: 24px; }
+}
+@media (hover: none) and (pointer: coarse) { .mobile-note { display: block; color: var(--blood); font-weight: 700; } }
+@media (prefers-reduced-motion: reduce) {
+  .ammo.cylinder, .toast, .hint, #game-canvas { transition: none; }
+  .loading i, .reload-hint, .meter.hp .meter-fill.low { animation: none; }
+}
+
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "@dimforge/rapier3d-compat": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/+esm",
+    "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.20.0/+esm"
+  }
+}
+</script>
+
+<div id="app" class="in-menu">
+  <div id="hud" hidden>
+    <div class="hud-tl">
+      <div class="meter hp" aria-label="Health">
+        <span class="meter-label">Health</span>
+        <div class="meter-track">
+          <div class="meter-ghost" id="hp-ghost"></div>
+          <div class="meter-fill" id="hp-fill"></div>
+          <div class="meter-ticks"><i></i><i></i><i></i></div>
+        </div>
+        <span class="meter-num" id="hp-text">100</span>
+      </div>
+      <div class="meter de" id="de-bar" aria-label="Dead Eye">
+        <span class="meter-label">Dead Eye <kbd>Shift</kbd></span>
+        <div class="meter-track"><div class="meter-fill" id="de-fill"></div></div>
+      </div>
+    </div>
+    <div class="hud-tc">
+      <div class="camp-no" id="camp-no">Camp 1</div>
+      <div class="camp-name" id="camp-name">Coyote Wash</div>
+      <div class="outlaws" id="outlaws">4 outlaws left</div>
+    </div>
+    <div class="hud-tr">
+      <span class="bounty-label">Bounty</span>
+      <span class="bounty" id="bounty">$0</span>
+    </div>
+    <div class="hud-br">
+      <div class="slots" id="slots"></div>
+      <div class="weapon-row">
+        <div class="ammo cylinder" id="ammo"></div>
+        <div class="weapon-name" id="weapon-name">Revolver</div>
+      </div>
+      <div class="reload-hint" id="reload-hint" hidden>Press <kbd>R</kbd> to reload</div>
+    </div>
+    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>Esc</kbd> pause</div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div id="reticle" aria-hidden="true">
+    <div class="ret-ring" id="ret-ring"><i></i><i></i><i></i><i></i></div>
+    <div class="ret-dot"></div>
+    <div class="ret-hit" id="ret-hit"><i></i><i></i><i></i><i></i></div>
+    <svg class="ret-reload-svg" viewBox="0 0 50 50"><circle id="ret-reload" cx="25" cy="25" r="22"></circle></svg>
+  </div>
+  <div id="vignette"></div>
+  <div id="hurt-dir"></div>
+
+  <section class="screen title" id="screen-title" hidden>
+    <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
+    <div class="card title-card">
+      <p class="eyebrow">A bounty run through outlaw country</p>
+      <h1>Dust <span>&amp;</span> Iron</h1>
+      <p class="lede">Clear bandit camps one after another and collect the bounty. You get one life: die and the run is over.</p>
+      <div class="actions">
+        <button id="btn-start" class="btn primary" type="button">Ride out</button>
+        <button id="btn-continue" class="btn" type="button" hidden>Continue run</button>
+      </div>
+      <p class="continue-info" id="continue-info" hidden></p>
+      <dl class="controls">
+        <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
+        <div><dt><kbd>Mouse</kbd></dt><dd>Aim</dd></div>
+        <div><dt><kbd>Click</kbd></dt><dd>Shoot</dd></div>
+        <div><dt><kbd>Space</kbd></dt><dd>Dodge roll</dd></div>
+        <div><dt><kbd>R</kbd></dt><dd>Reload</dd></div>
+        <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
+        <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
+        <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
+      </dl>
+      <p class="fine">Shots at bandits who haven't seen you deal double damage. Watch for aim lines: when one turns red, roll.</p>
+      <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-pause" hidden>
+    <div class="card small">
+      <h2>Paused</h2>
+      <p class="lede">Your run is saved. Closing the tab keeps your place at the start of this camp's fight.</p>
+      <div class="actions">
+        <button id="btn-resume" class="btn primary" type="button">Resume</button>
+        <button id="btn-quit" class="btn" type="button">Save and quit</button>
+      </div>
+      <p class="fine"><kbd>M</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-cleared" hidden>
+    <div class="card small poster">
+      <p class="eyebrow">Bounty collected</p>
+      <h2 id="cleared-title">Camp cleared</h2>
+      <div class="ledger" id="cleared-body"></div>
+      <div class="actions">
+        <button id="btn-next" class="btn primary" type="button">Ride to the next camp</button>
+      </div>
+      <p class="fine">or press <kbd>E</kbd></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-dead" hidden>
+    <div class="card small poster dead">
+      <p class="eyebrow">Run over</p>
+      <h2 id="dead-title">Shot down</h2>
+      <div class="ledger" id="dead-body"></div>
+      <div class="actions">
+        <button id="btn-restart" class="btn primary" type="button">Start a new run</button>
+      </div>
+      <p class="fine">or press <kbd>R</kbd></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-loading">
+    <div class="loading"><span>Saddling up</span><i></i></div>
+  </section>
+
+  <section class="screen" id="screen-error" hidden>
+    <div class="card small">
+      <h2>The game couldn't start</h2>
+      <p class="lede" id="error-body"></p>
+    </div>
+  </section>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import * as RAPIER_NS from '@dimforge/rapier3d-compat';
+const __m = {};
+
+// ---- src/tuning.js ----
+__m.tuning = (() => {
+// Every feel number lives here. Press ` (backquote) in game to tune live.
+
+const T = {
+  sim: { hz: 60, maxFrame: 0.25, maxTicksPerFrame: 8 },
+
+  render: { maxPixelRatio: 1.5, shadowMapSize: 2048, shadowSpan: 17 },
+
+  camera: {
+    fov: 35,
+    pitchDeg: 55,
+    distance: 28,
+    followHalfLife: 0.06,
+    lookAhead: 3,
+    lookAheadFactor: 0.3,
+    shakeDecay: 1.5,
+    shakeMaxOffset: 0.45,
+    shakeMaxRollDeg: 1.6,
+    shakeFreq: 17,
+  },
+
+  player: {
+    radius: 0.35,
+    halfHeight: 0.55,
+    speed: 5.5,
+    accelTime: 0.08,
+    stopTime: 0.06,
+    turnRate: 24,
+    hp: 100,
+    regenDelay: 3,
+    regenRate: 22,
+    regenStep: 25,
+    gunHeight: 1.0,
+    hitRadius: 0.42,
+    healBetweenCamps: 50,
+  },
+
+  dodge: { duration: 0.35, distance: 4.5, iframes: 0.25, cooldown: 0.6, buffer: 0.15 },
+
+  deadEye: { timeScale: 0.3, maxRealTime: 4, fillHit: 0.08, fillKill: 0.2, minToStart: 0.1, damageMult: 1.5 },
+
+  hitStop: { kill: 0.05, crit: 0.03, explosion: 0.06 },
+
+  aimAssist: { angleDeg: 3, range: 30 },
+
+  enemy: {
+    sightRange: 18,
+    sightFovDeg: 110,
+    closeSense: 3.5,
+    hearRange: 25,
+    memory: 6,
+    perceptionInterval: 0.2,
+    alertTime: 0.6,
+    tokens: 2,
+    flankAfter: 5,
+    coverMin: 6,
+    coverMax: 14,
+    separation: 1.1,
+    accuracyPerCamp: 0.08,
+  },
+
+  explosion: { radius: 4, damage: 80, impulse: 26, chainDelay: 0.15, trauma: 0.7 },
+
+  run: { saveInterval: 2, clearDelay: 1.4, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
+};
+
+return { T };
+})();
+
+// ---- src/physics.js ----
+__m.physics = (() => {
+// Rapier world wrapper: collision groups, body helpers, ray casts, interpolation.
+
+
+const { T } = __m.tuning;
+const RAPIER = RAPIER_NS.default ?? RAPIER_NS;
+
+async function initPhysics() {
+  await RAPIER.init();
+}
+
+// Collision group bits. Interaction needs (A.member & B.filter) && (B.member & A.filter).
+const G = { GROUND: 1, WORLD: 2, PROP: 4, DEBRIS: 8, PLAYER: 16, ENEMY: 32, CORPSE: 64, SHOT: 128 };
+const ALL = 0xffff;
+const groups = (member, filter) => ((member << 16) | filter) >>> 0;
+
+const GROUPS = {
+  ground: groups(G.GROUND, G.PROP | G.DEBRIS | G.CORPSE),
+  world: groups(G.WORLD, ALL),
+  prop: groups(G.PROP, G.GROUND | G.WORLD | G.PROP | G.DEBRIS | G.PLAYER | G.ENEMY | G.CORPSE | G.SHOT),
+  debris: groups(G.DEBRIS, G.GROUND | G.WORLD | G.PROP),
+  player: groups(G.PLAYER, G.WORLD | G.PROP | G.ENEMY | G.SHOT),
+  enemy: groups(G.ENEMY, G.WORLD | G.PROP | G.PLAYER | G.ENEMY | G.SHOT),
+  corpse: groups(G.CORPSE, G.GROUND | G.WORLD | G.PROP | G.CORPSE),
+  // Query groups
+  playerMove: groups(G.PLAYER, G.WORLD | G.PROP | G.ENEMY),
+  enemyMove: groups(G.ENEMY, G.WORLD | G.PROP | G.PLAYER | G.ENEMY),
+  playerShot: groups(G.SHOT, G.WORLD | G.PROP | G.ENEMY),
+  blockers: groups(G.SHOT, G.WORLD | G.PROP),
+};
+
+const yawQuat = (ry) => ({ x: 0, y: Math.sin(ry / 2), z: 0, w: Math.cos(ry / 2) });
+
+/** Keeps a mesh in step with a dynamic body, interpolated between ticks. */
+class PhysObj {
+  constructor(body, mesh) {
+    this.body = body;
+    this.mesh = mesh;
+    this.prevP = new THREE.Vector3();
+    this.currP = new THREE.Vector3();
+    this.prevQ = new THREE.Quaternion();
+    this.currQ = new THREE.Quaternion();
+    this.capture();
+    this.prevP.copy(this.currP);
+    this.prevQ.copy(this.currQ);
+  }
+
+  capture() {
+    this.prevP.copy(this.currP);
+    this.prevQ.copy(this.currQ);
+    const t = this.body.translation(), r = this.body.rotation();
+    this.currP.set(t.x, t.y, t.z);
+    this.currQ.set(r.x, r.y, r.z, r.w);
+  }
+
+  render(alpha) {
+    this.mesh.position.lerpVectors(this.prevP, this.currP, alpha);
+    this.mesh.quaternion.slerpQuaternions(this.prevQ, this.currQ, alpha);
+  }
+}
+
+class Physics {
+  constructor() {
+    this.world = new RAPIER.World({ x: 0, y: -20, z: 0 });
+    this.world.timestep = 1 / T.sim.hz;
+    this.owners = new Map();
+    this.tracked = new Set();
+    this.ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+  }
+
+  setOwner(collider, owner) { if (owner) this.owners.set(collider.handle, owner); }
+  ownerOf(collider) { return this.owners.get(collider.handle) ?? null; }
+
+  fixedBox(x, y, z, hx, hy, hz, ry = 0, group = GROUPS.world, owner = null) {
+    const desc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+      .setTranslation(x, y, z).setRotation(yawQuat(ry))
+      .setCollisionGroups(group).setSolverGroups(group);
+    const c = this.world.createCollider(desc);
+    this.setOwner(c, owner);
+    return c;
+  }
+
+  fixedCylinder(x, y, z, halfH, r, group = GROUPS.world, owner = null) {
+    const desc = RAPIER.ColliderDesc.cylinder(halfH, r).setTranslation(x, y, z)
+      .setCollisionGroups(group).setSolverGroups(group);
+    const c = this.world.createCollider(desc);
+    this.setOwner(c, owner);
+    return c;
+  }
+
+  /**
+   * @param {{x:number,y:number,z:number,ry?:number,rot?:{x,y,z,w},shape:{type:string,hx?,hy?,hz?,r?,halfH?},
+   *   density?:number,friction?:number,restitution?:number,group:number,linDamp?:number,angDamp?:number,owner?:any}} o
+   */
+  dynamic(o) {
+    const bd = RAPIER.RigidBodyDesc.dynamic().setTranslation(o.x, o.y, o.z)
+      .setRotation(o.rot ?? yawQuat(o.ry ?? 0))
+      .setLinearDamping(o.linDamp ?? 0.4).setAngularDamping(o.angDamp ?? 0.6).setCanSleep(true);
+    const body = this.world.createRigidBody(bd);
+    const s = o.shape;
+    let cd;
+    if (s.type === 'box') cd = RAPIER.ColliderDesc.cuboid(s.hx, s.hy, s.hz);
+    else if (s.type === 'cylinder') cd = RAPIER.ColliderDesc.cylinder(s.halfH, s.r);
+    else cd = RAPIER.ColliderDesc.ball(s.r);
+    cd.setDensity(o.density ?? 1).setFriction(o.friction ?? 0.7).setRestitution(o.restitution ?? 0.1)
+      .setCollisionGroups(o.group).setSolverGroups(o.group);
+    const collider = this.world.createCollider(cd, body);
+    this.setOwner(collider, o.owner);
+    return { body, collider };
+  }
+
+  kinematicCapsule(x, z, halfHeight, radius, group, owner) {
+    const y = halfHeight + radius + 0.02;
+    const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z));
+    const collider = this.world.createCollider(
+      RAPIER.ColliderDesc.capsule(halfHeight, radius).setCollisionGroups(group).setSolverGroups(group), body);
+    this.setOwner(collider, owner);
+    return { body, collider, y };
+  }
+
+  characterController() {
+    const cc = this.world.createCharacterController(0.02);
+    cc.setApplyImpulsesToDynamicBodies(true);
+    cc.setCharacterMass?.(70);
+    cc.setSlideEnabled?.(true);
+    return cc;
+  }
+
+  track(obj) { this.tracked.add(obj); return obj; }
+  untrack(obj) { this.tracked.delete(obj); }
+
+  /** Returns {dist,x,y,z,nx,ny,nz,collider,owner} or null. Direction must be normalized. */
+  castRay(ox, oy, oz, dx, dy, dz, max, group, exclude = undefined) {
+    const r = this.ray;
+    r.origin = { x: ox, y: oy, z: oz };
+    r.dir = { x: dx, y: dy, z: dz };
+    const hit = this.world.castRayAndGetNormal(r, max, true, undefined, group, exclude);
+    if (!hit) return null;
+    const t = hit.timeOfImpact ?? hit.toi;
+    return {
+      dist: t, x: ox + dx * t, y: oy + dy * t, z: oz + dz * t,
+      nx: hit.normal.x, ny: hit.normal.y, nz: hit.normal.z,
+      collider: hit.collider, owner: this.ownerOf(hit.collider),
+    };
+  }
+
+  /** True if nothing solid (world or props) blocks the straight line at height y. */
+  los(ax, az, bx, bz, y = T.player.gunHeight) {
+    const dx = bx - ax, dz = bz - az;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.01) return true;
+    return !this.castRay(ax, y, az, dx / d, 0, dz / d, d, GROUPS.blockers);
+  }
+
+  removeBody(body) {
+    if (!body) return;
+    for (let i = 0; i < body.numColliders(); i++) this.owners.delete(body.collider(i).handle);
+    this.world.removeRigidBody(body);
+  }
+
+  removeCollider(collider) {
+    this.owners.delete(collider.handle);
+    this.world.removeCollider(collider, false);
+  }
+
+  step() {
+    this.world.step();
+    for (const o of this.tracked) o.capture();
+  }
+
+  free() {
+    this.tracked.clear();
+    this.owners.clear();
+    this.world.free();
+  }
+}
+
+return { RAPIER, initPhysics, G, GROUPS, PhysObj, Physics };
+})();
+
+// ---- src/render.js ----
+__m.render = (() => {
+// Renderer, scene, light rig and the shadow box that follows the player.
+
+const { T } = __m.tuning;
+const SKY = 0xe9b886;
+
+function createRenderContext(container) {
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, T.render.maxPixelRatio));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.domElement.id = 'game-canvas';
+  container.prepend(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(SKY);
+  scene.fog = new THREE.Fog(SKY, 42, 90);
+
+  const hemi = new THREE.HemisphereLight(0xffe2b8, 0x7a4a2e, 1.55);
+  scene.add(hemi);
+
+  const sun = new THREE.DirectionalLight(0xfff0d6, 2.4);
+  sun.castShadow = true;
+  const span = T.render.shadowSpan;
+  sun.shadow.mapSize.set(T.render.shadowMapSize, T.render.shadowMapSize);
+  Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 1, far: 80 });
+  sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.03;
+  scene.add(sun, sun.target);
+  const sunOffset = new THREE.Vector3(-14, 26, 9);
+  const texel = (span * 2) / T.render.shadowMapSize;
+
+  const flash = new THREE.PointLight(0xffc070, 0, 9, 1.6);
+  scene.add(flash);
+
+  function focusShadow(x, z) {
+    // Snap to shadow texels so shadows don't shimmer as the camera moves.
+    const sx = Math.round(x / texel) * texel, sz = Math.round(z / texel) * texel;
+    sun.target.position.set(sx, 0, sz);
+    sun.position.set(sx + sunOffset.x, sunOffset.y, sz + sunOffset.z);
+  }
+
+  function resize(camera) {
+    const w = container.clientWidth, h = container.clientHeight;
+    renderer.setSize(w, h, false);
+    renderer.domElement.style.width = w + 'px';
+    renderer.domElement.style.height = h + 'px';
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  return { renderer, scene, sun, hemi, flash, focusShadow, resize };
+}
+
+return { SKY, createRenderContext };
+})();
+
+// ---- src/camera.js ----
+__m.camera = (() => {
+// Angled follow camera: spring follow, look-ahead toward the cursor, trauma shake.
+
+const { T } = __m.tuning;
+const DEG = Math.PI / 180;
+
+class CameraRig {
+  constructor() {
+    const c = T.camera;
+    this.camera = new THREE.PerspectiveCamera(c.fov, 16 / 9, 0.5, 140);
+    this.target = new THREE.Vector3();
+    this.desired = new THREE.Vector3();
+    this.trauma = 0;
+    this.time = 0;
+    this.phase = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
+    this.raycaster = new THREE.Raycaster();
+    this.plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -T.player.gunHeight);
+    this.aim = new THREE.Vector3();
+    this.ndc = new THREE.Vector2();
+  }
+
+  offset() {
+    const c = T.camera;
+    const p = c.pitchDeg * DEG;
+    return { y: Math.sin(p) * c.distance, z: Math.cos(p) * c.distance };
+  }
+
+  snap(x, z) {
+    this.target.set(x, 0, z);
+    this.place(0);
+  }
+
+  addTrauma(amount) { this.trauma = Math.min(1, this.trauma + amount); }
+
+  /** Projects the cursor onto the gun-height plane using the unshaken camera. */
+  projectCursor(ndcX, ndcY) {
+    this.ndc.set(ndcX, ndcY);
+    this.raycaster.setFromCamera(this.ndc, this.camera);
+    this.plane.constant = -T.player.gunHeight;
+    const hit = this.raycaster.ray.intersectPlane(this.plane, this.aim);
+    return hit ? this.aim : null;
+  }
+
+  place(roll) {
+    const o = this.offset();
+    this.camera.position.set(this.target.x, o.y, this.target.z + o.z);
+    this.camera.lookAt(this.target.x, 0, this.target.z);
+    if (roll) this.camera.rotateZ(roll);
+    this.camera.updateMatrixWorld();
+  }
+
+  /**
+   * @param {number} dt real seconds
+   * @param {{x:number,z:number}} focus player position
+   * @param {{x:number,z:number}|null} aim aim point
+   * @param {() => void} beforeShake called with the unshaken camera (for cursor projection)
+   */
+  update(dt, focus, aim, beforeShake) {
+    const c = T.camera;
+    if (c.fov !== this.camera.fov) { this.camera.fov = c.fov; this.camera.updateProjectionMatrix(); }
+    this.time += dt;
+    this.desired.set(focus.x, 0, focus.z);
+    if (aim) {
+      let dx = (aim.x - focus.x) * c.lookAheadFactor, dz = (aim.z - focus.z) * c.lookAheadFactor;
+      const len = Math.hypot(dx, dz);
+      if (len > c.lookAhead) { dx *= c.lookAhead / len; dz *= c.lookAhead / len; }
+      this.desired.x += dx;
+      this.desired.z += dz;
+    }
+    const k = 1 - Math.pow(2, -dt / c.followHalfLife);
+    this.target.lerp(this.desired, k);
+    this.place(0);
+    if (beforeShake) beforeShake();
+
+    this.trauma = Math.max(0, this.trauma - c.shakeDecay * dt);
+    const s = this.trauma * this.trauma;
+    if (s > 0.0001) {
+      const t = this.time * c.shakeFreq;
+      const n = (i) => Math.sin(t + this.phase[i]) * 0.6 + Math.sin(t * 2.17 + this.phase[i] * 1.3) * 0.4;
+      this.camera.position.x += n(0) * c.shakeMaxOffset * s;
+      this.camera.position.z += n(1) * c.shakeMaxOffset * s;
+      this.camera.rotateZ(n(2) * c.shakeMaxRollDeg * DEG * s);
+      this.camera.updateMatrixWorld();
+    }
+  }
+}
+
+return { CameraRig };
+})();
+
+// ---- src/input.js ----
+__m.input = (() => {
+// Keyboard and mouse state. Keys are read by event.code so any layout works.
+
+const BINDINGS = {
+  up: ['KeyW', 'ArrowUp'],
+  down: ['KeyS', 'ArrowDown'],
+  left: ['KeyA', 'ArrowLeft'],
+  right: ['KeyD', 'ArrowRight'],
+  dodge: ['Space'],
+  deadEye: ['ShiftLeft', 'ShiftRight'],
+  reload: ['KeyR'],
+  interact: ['KeyE', 'Enter'],
+  nextWeapon: ['KeyQ'],
+  weapon1: ['Digit1'],
+  weapon2: ['Digit2'],
+  weapon3: ['Digit3'],
+  pause: ['Escape', 'KeyP'],
+  debug: ['Backquote'],
+};
+
+const BLOCK_DEFAULT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab']);
+
+class Input {
+  constructor(target) {
+    this.target = target;
+    this.down = new Set();
+    this.edges = new Set(); // codes pressed since last endFrame()
+    this.mouse = { x: 0, y: 0, ndcX: 0, ndcY: 0, inside: false };
+    this.fireHeld = false;
+    this.firePressed = false;
+    this.wheel = 0;
+    this.lastActivity = performance.now();
+
+    addEventListener('keydown', (e) => {
+      if (BLOCK_DEFAULT.has(e.code)) e.preventDefault();
+      if (!e.repeat) this.edges.add(e.code);
+      this.down.add(e.code);
+      this.lastActivity = performance.now();
+    });
+    addEventListener('keyup', (e) => this.down.delete(e.code));
+    addEventListener('blur', () => this.clear());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.clear(); });
+
+    target.addEventListener('contextmenu', (e) => e.preventDefault());
+    target.addEventListener('pointerdown', (e) => {
+      if (e.button === 0) { this.fireHeld = true; this.firePressed = true; }
+      this.updatePointer(e);
+    });
+    addEventListener('pointerup', (e) => { if (e.button === 0) this.fireHeld = false; });
+    addEventListener('pointermove', (e) => this.updatePointer(e));
+    target.addEventListener('pointerleave', () => { this.mouse.inside = false; });
+    target.addEventListener('pointerenter', () => { this.mouse.inside = true; });
+    target.addEventListener('wheel', (e) => { e.preventDefault(); this.wheel += Math.sign(e.deltaY); }, { passive: false });
+  }
+
+  updatePointer(e) {
+    const r = this.target.getBoundingClientRect();
+    this.mouse.x = e.clientX - r.left;
+    this.mouse.y = e.clientY - r.top;
+    this.mouse.ndcX = (this.mouse.x / r.width) * 2 - 1;
+    this.mouse.ndcY = -(this.mouse.y / r.height) * 2 + 1;
+    this.mouse.inside = true;
+  }
+
+  held(action) {
+    for (const code of BINDINGS[action]) if (this.down.has(code)) return true;
+    return false;
+  }
+
+  pressed(action) {
+    for (const code of BINDINGS[action]) if (this.edges.has(code)) return true;
+    return false;
+  }
+
+  moveAxis() {
+    let x = 0, z = 0;
+    if (this.held('left')) x -= 1;
+    if (this.held('right')) x += 1;
+    if (this.held('up')) z -= 1;
+    if (this.held('down')) z += 1;
+    const len = Math.hypot(x, z);
+    return len > 0 ? { x: x / len, z: z / len } : { x: 0, z: 0 };
+  }
+
+  takeWheel() {
+    const w = this.wheel;
+    this.wheel = 0;
+    return w;
+  }
+
+  endFrame() {
+    this.edges.clear();
+    this.firePressed = false;
+  }
+
+  clear() {
+    this.down.clear();
+    this.edges.clear();
+    this.fireHeld = false;
+    this.firePressed = false;
+  }
+}
+
+return { BINDINGS, Input };
+})();
+
+// ---- src/audio.js ----
+__m.audio = (() => {
+// Web Audio with every sound synthesized in code: no files to download.
+// Buses: sfx -> low-pass (swept by Dead Eye) -> master; reverb send; ui; ambience.
+
+const TAU = Math.PI * 2;
+
+class Audio {
+  constructor() {
+    this.ctx = null;
+    this.buffers = {};
+    this.active = 0;
+    this.maxVoices = 28;
+    this.listenerX = 0;
+    this.listenerZ = 0;
+    this.muted = false;
+  }
+
+  /** Must run from a user gesture (browsers block audio until then). */
+  unlock() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = (this.ctx = new AC());
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
+    comp.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.gain.value = 0.85; this.master.connect(comp);
+    this.lp = ctx.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 20000; this.lp.Q.value = 0.7;
+    this.lp.connect(this.master);
+    this.sfx = ctx.createGain(); this.sfx.connect(this.lp);
+    this.reverb = ctx.createConvolver(); this.reverb.buffer = this.makeImpulse(1.7);
+    this.reverbOut = ctx.createGain(); this.reverbOut.gain.value = 0.3;
+    this.reverb.connect(this.reverbOut); this.reverbOut.connect(this.lp);
+    this.ui = ctx.createGain(); this.ui.gain.value = 0.6; this.ui.connect(this.master);
+    this.amb = ctx.createGain(); this.amb.gain.value = 0.0; this.amb.connect(this.master);
+    this.build();
+    this.startAmbience();
+  }
+
+  setMuted(m) {
+    this.muted = m;
+    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.85, this.ctx.currentTime, 0.05);
+  }
+
+  setDeadEye(on) {
+    if (!this.ctx) return;
+    this.lp.frequency.setTargetAtTime(on ? 900 : 20000, this.ctx.currentTime, on ? 0.06 : 0.2);
+  }
+
+  setAmbience(level) {
+    if (this.amb) this.amb.gain.setTargetAtTime(level, this.ctx.currentTime, 0.8);
+  }
+
+  setListener(x, z) { this.listenerX = x; this.listenerZ = z; }
+
+  /** Play a sound positioned in the world (pan and distance from the listener). */
+  at(name, x, z, opts = {}) {
+    const dx = x - this.listenerX, dz = z - this.listenerZ;
+    const d = Math.hypot(dx, dz);
+    const vol = (opts.vol ?? 1) / (1 + d / 14);
+    this.play(name, { ...opts, vol, pan: Math.max(-0.85, Math.min(0.85, dx / 16)) });
+  }
+
+  play(name, { vol = 1, pan = 0, pitch = 1, vary = 0.06, reverb = 0.25, bus = 'sfx', delay = 0 } = {}) {
+    const ctx = this.ctx;
+    if (!ctx || this.muted) return;
+    const buffer = this.buffers[name];
+    if (!buffer) return;
+    if (this.active >= this.maxVoices && vol < 0.5) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.playbackRate.value = pitch * (1 + (Math.random() * 2 - 1) * vary);
+    const g = ctx.createGain(); g.gain.value = vol;
+    const p = ctx.createStereoPanner(); p.pan.value = pan;
+    src.connect(g); g.connect(p);
+    p.connect(bus === 'ui' ? this.ui : this.sfx);
+    if (reverb > 0 && bus !== 'ui') { const s = ctx.createGain(); s.gain.value = reverb; p.connect(s); s.connect(this.reverb); }
+    this.active++;
+    src.onended = () => { this.active--; src.disconnect(); g.disconnect(); p.disconnect(); };
+    src.start(ctx.currentTime + delay);
+  }
+
+  // ---------- synthesis ----------
+
+  makeBuffer(dur, fn, channels = 1) {
+    const sr = this.ctx.sampleRate;
+    const n = Math.max(1, Math.floor(dur * sr));
+    const buf = this.ctx.createBuffer(channels, n, sr);
+    for (let c = 0; c < channels; c++) {
+      const d = buf.getChannelData(c);
+      const state = { lp: 0, lp2: 0, hp: 0 };
+      let peak = 0;
+      for (let i = 0; i < n; i++) {
+        const v = fn(i / sr, state, sr);
+        d[i] = v;
+        if (Math.abs(v) > peak) peak = Math.abs(v);
+      }
+      if (peak > 0.98) for (let i = 0; i < n; i++) d[i] *= 0.95 / peak;
+    }
+    return buf;
+  }
+
+  makeImpulse(dur) {
+    return this.makeBuffer(dur, (t) => (Math.random() * 2 - 1) * Math.exp(-t * 3.2) * (t < 0.01 ? t / 0.01 : 1), 2);
+  }
+
+  build() {
+    const N = () => Math.random() * 2 - 1;
+    const lp = (s, x, fc, sr, key = 'lp') => { const a = 1 - Math.exp((-TAU * fc) / sr); s[key] += a * (x - s[key]); return s[key]; };
+    const sweep = (t, a, b, k) => b + (a - b) * Math.exp(-t * k);
+
+    const shot = (bodyStart, bodyEnd, bodyDecay, thumpHz, thumpAmt, crackAmt, dur) => this.makeBuffer(dur, (t, s, sr) => {
+      const n = N();
+      const low = lp(s, n, 7000, sr, 'lp2');
+      const crack = (n - low) * Math.exp(-t * 110) * crackAmt + n * Math.exp(-t * 160) * 0.5 * crackAmt;
+      const body = lp(s, n, sweep(t, bodyStart, bodyEnd, 10), sr) * Math.exp(-t * bodyDecay) * 1.6;
+      const thump = Math.sin(TAU * (thumpHz - thumpHz * 0.45 * Math.min(1, t * 6)) * t) * Math.exp(-t * 18) * thumpAmt;
+      return crack + body + thump;
+    });
+
+    const B = this.buffers;
+    B.revolver = shot(3200, 260, 8, 85, 0.9, 1, 0.8);
+    B.enemyShot = shot(2600, 220, 9, 75, 0.7, 0.8, 0.7);
+    B.shotgun = shot(2200, 160, 5.5, 60, 1.2, 1, 1.1);
+    B.rifle = shot(4200, 300, 6, 95, 0.8, 1.3, 1.0);
+
+    const click = (t, at, hz, decay) => (t >= at ? Math.sin(TAU * hz * (t - at)) * Math.exp(-(t - at) * decay) : 0);
+    B.dryClick = this.makeBuffer(0.12, (t) => click(t, 0, 2600, 260) * 0.7 + click(t, 0.035, 1900, 300) * 0.5 + N() * Math.exp(-t * 400) * 0.3);
+    B.reloadTick = this.makeBuffer(0.08, (t) => click(t, 0, 3100, 200) * 0.5 + N() * Math.exp(-t * 350) * 0.35);
+    B.reloadDone = this.makeBuffer(0.25, (t, s, sr) => click(t, 0, 1500, 120) * 0.7 + click(t, 0.06, 2400, 160) * 0.6 + lp(s, N(), 400, sr) * Math.exp(-t * 30) * 0.8);
+    B.switch = this.makeBuffer(0.18, (t, s, sr) => click(t, 0, 900, 90) * 0.6 + lp(s, N(), 900, sr) * Math.exp(-t * 40) * 0.6);
+
+    B.whiz = this.makeBuffer(0.32, (t, s, sr) => {
+      const env = Math.sin(Math.PI * Math.min(1, t / 0.32)) ** 2;
+      const x = N();
+      const hp = x - lp(s, x, sweep(t, 2400, 900, 6), sr);
+      return lp(s, hp, 5200, sr, 'lp2') * env * 0.9;
+    });
+
+    B.hitFlesh = this.makeBuffer(0.22, (t, s, sr) => lp(s, N(), 650, sr) * Math.exp(-t * 26) * 2 + Math.sin(TAU * 120 * t) * Math.exp(-t * 32) * 0.7);
+    B.hitWood = this.makeBuffer(0.2, (t, s, sr) => lp(s, N(), 1700, sr) * Math.exp(-t * 38) * 1.4 + Math.sin(TAU * 310 * t) * Math.exp(-t * 34) * 0.6);
+    B.hitDirt = this.makeBuffer(0.18, (t, s, sr) => lp(s, N(), 900, sr) * Math.exp(-t * 30) * 1.6);
+    B.hitMetal = this.makeBuffer(0.3, (t) => (Math.sin(TAU * 1850 * t) * 0.5 + Math.sin(TAU * 2770 * t) * 0.3) * Math.exp(-t * 16) + N() * Math.exp(-t * 200) * 0.3);
+
+    const knocks = Array.from({ length: 7 }, () => [Math.random() * 0.28, 180 + Math.random() * 260]);
+    B.crateBreak = this.makeBuffer(0.55, (t, s, sr) => {
+      let v = lp(s, N(), 2200, sr) * Math.exp(-t * 9) * 1.2;
+      for (const [at, hz] of knocks) v += click(t, at, hz, 40) * 0.5;
+      return v;
+    });
+    B.barrelBreak = this.makeBuffer(0.8, (t, s, sr) => {
+      let v = lp(s, N(), 1800, sr) * Math.exp(-t * 7) * 1.1;
+      const x = N();
+      v += (x - lp(s, x, 1500, sr, 'lp2')) * Math.exp(-t * 4) * 0.5;
+      for (const [at, hz] of knocks) v += click(t, at * 1.2, hz * 0.8, 35) * 0.45;
+      return v;
+    });
+    B.explosion = this.makeBuffer(2.4, (t, s, sr) => {
+      const body = lp(s, N(), sweep(t, 1500, 70, 2.2), sr) * Math.exp(-t * 1.9) * 2.4;
+      const sub = Math.sin(TAU * (48 - 18 * Math.min(1, t)) * t) * Math.exp(-t * 3.5) * 1.3;
+      const crackle = Math.random() < 0.004 * Math.exp(-t * 2) ? N() * 2 : 0;
+      return body + sub + crackle + N() * Math.exp(-t * 60) * 0.8;
+    });
+    B.footstep = this.makeBuffer(0.09, (t, s, sr) => lp(s, N(), 520, sr) * Math.exp(-t * 55) * 1.4);
+    B.roll = this.makeBuffer(0.4, (t, s, sr) => lp(s, N(), 480, sr) * Math.sin(Math.PI * Math.min(1, t / 0.4)) * 1.6);
+    B.hurt = this.makeBuffer(0.32, (t, s, sr) => Math.sin(TAU * sweep(t, 190, 95, 6) * t + Math.sin(TAU * 30 * t) * 0.6) * Math.exp(-t * 9) * 0.7 + lp(s, N(), 700, sr) * Math.exp(-t * 18) * 0.8);
+    B.enemyHurt = this.makeBuffer(0.25, (t, s, sr) => Math.sin(TAU * sweep(t, 160, 110, 8) * t) * Math.exp(-t * 12) * 0.55 + lp(s, N(), 600, sr) * Math.exp(-t * 20) * 0.6);
+    B.enemyDeath = this.makeBuffer(0.55, (t, s, sr) => Math.sin(TAU * sweep(t, 170, 70, 4) * t + Math.sin(TAU * 22 * t)) * Math.exp(-t * 5) * 0.6 + lp(s, N(), 500, sr) * Math.exp(-t * 8) * 0.6);
+    B.bodyFall = this.makeBuffer(0.3, (t, s, sr) => lp(s, N(), 350, sr) * Math.exp(-t * 16) * 2 + Math.sin(TAU * 60 * t) * Math.exp(-t * 20) * 0.6);
+    B.deadEyeIn = this.makeBuffer(0.9, (t, s, sr) => {
+      const rise = Math.min(1, t / 0.25);
+      return lp(s, N(), 300 + 2500 * rise * Math.exp(-t * 3), sr) * Math.exp(-t * 3) * 1.4 + Math.sin(TAU * 52 * t) * Math.exp(-t * 4) * 0.8;
+    });
+    B.heartbeat = this.makeBuffer(0.5, (t) => (click(t, 0, 52, 22) + click(t, 0.17, 46, 26) * 0.75) * 1.1);
+    B.coin = this.makeBuffer(0.9, (t) => [0, 0.09, 0.18].reduce((v, at, i) => v + click(t, at, [1320, 1568, 2093][i], 7) * 0.4, 0));
+    B.uiClick = this.makeBuffer(0.06, (t) => click(t, 0, 1400, 140) * 0.6);
+    B.alert = this.makeBuffer(0.3, (t) => click(t, 0, 660, 14) * 0.25 + click(t, 0.08, 880, 14) * 0.25);
+    B.fuse = this.makeBuffer(0.3, (t, s, sr) => { const x = N(); return (x - lp(s, x, 3000, sr)) * 0.5 * (1 - t / 0.3); });
+    B.wind = this.makeBuffer(6, (t, s, sr) => {
+      const cut = 260 + 180 * Math.sin(TAU * t / 6) + 90 * Math.sin(TAU * t / 1.5);
+      const fade = Math.min(1, t / 0.3, (6 - t) / 0.3);
+      return lp(s, lp(s, N(), cut, sr, 'lp2'), cut, sr) * 2.4 * fade;
+    });
+  }
+
+  startAmbience() {
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buffers.wind;
+    src.loop = true;
+    src.connect(this.amb);
+    src.start();
+  }
+}
+
+return { Audio };
+})();
+
+// ---- src/ui.js ----
+__m.ui = (() => {
+// HUD, reticle and full-screen cards. Plain DOM over the canvas.
+
+const $ = (id) => document.getElementById(id);
+
+class UI {
+  constructor() {
+    this.el = {
+      app: $('app'), hud: $('hud'), reticle: $('reticle'), hit: $('ret-hit'), ring: $('ret-ring'), reload: $('ret-reload'),
+      hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
+      campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
+      weaponName: $('weapon-name'), ammo: $('ammo'), slots: $('slots'), reloadHint: $('reload-hint'),
+      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'),
+      screens: { title: $('screen-title'), pause: $('screen-pause'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
+      continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
+      clearedTitle: $('cleared-title'), clearedBody: $('cleared-body'), deadBody: $('dead-body'), deadTitle: $('dead-title'),
+      errorBody: $('error-body'),
+    };
+    this.ammoKey = '';
+    this.cylAngle = 0;
+    this.lastAmmo = -1;
+    this.hpGhost = 100;
+    this.hurtT = 0;
+    this.toastT = 0;
+    this.hintT = 12;
+  }
+
+  bind(handlers) {
+    const on = (id, fn) => $(id).addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+    on('btn-start', handlers.newRun);
+    on('btn-continue', handlers.continueRun);
+    on('btn-resume', handlers.resume);
+    on('btn-quit', handlers.quitToTitle);
+    on('btn-next', handlers.nextCamp);
+    on('btn-restart', handlers.newRun);
+  }
+
+  show(name) {
+    for (const [k, el] of Object.entries(this.el.screens)) el.hidden = k !== name;
+    const playing = name === null || name === 'cleared' || name === 'dead';
+    this.el.hud.hidden = !playing;
+    this.el.app.classList.toggle('in-menu', name !== null);
+  }
+
+  error(message) {
+    this.el.errorBody.textContent = message;
+    this.show('error');
+  }
+
+  setContinue(save) {
+    this.el.continueBtn.hidden = !save;
+    this.el.continueInfo.hidden = !save;
+    if (save) this.el.continueInfo.textContent = `Camp ${save.camp + 1} · $${save.bounty} bounty · ${Math.round(save.hp)} HP`;
+  }
+
+  toast(text, seconds = 2.2) {
+    this.el.toast.textContent = text;
+    this.el.toast.classList.add('show');
+    this.toastT = seconds;
+  }
+
+  hitMarker(kill) {
+    const h = this.el.hit;
+    h.classList.remove('show', 'kill');
+    void h.offsetWidth;
+    h.classList.add('show');
+    if (kill) h.classList.add('kill');
+  }
+
+  hurt(dirX, dirZ) {
+    this.hurtT = 0.5;
+    // Bullets come from the opposite of their travel direction. Screen up is world -Z.
+    const deg = (Math.atan2(-dirX, dirZ) * 180) / Math.PI;
+    this.el.hurtDir.style.setProperty('--angle', deg + 'deg');
+    this.el.hurtDir.classList.remove('show');
+    void this.el.hurtDir.offsetWidth;
+    this.el.hurtDir.classList.add('show');
+  }
+
+  showCleared(info) {
+    this.el.clearedTitle.textContent = `${info.name} cleared`;
+    const rows = [
+      ['Bounty collected', `$${info.earned}`],
+      ['Run total', `$${info.total}`],
+      ['Healed', `+${info.healed} HP`],
+    ];
+    if (info.unlock) rows.push(['New weapon', info.unlock]);
+    this.el.clearedBody.innerHTML = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+    this.show('cleared');
+  }
+
+  showDead(stats) {
+    const acc = stats.shots ? Math.round((stats.hits / stats.shots) * 100) : 0;
+    const t = Math.floor(stats.time);
+    const rows = [
+      ['Camps cleared', stats.camp],
+      ['Outlaws downed', stats.kills],
+      ['Bounty earned', `$${stats.bounty}`],
+      ['Accuracy', `${acc}%`],
+      ['Time on the trail', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
+    ];
+    this.el.deadTitle.textContent = stats.camp === 0 ? 'Shot down at the first camp' : `Shot down after ${stats.camp} camp${stats.camp > 1 ? 's' : ''}`;
+    this.el.deadBody.innerHTML = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+    this.show('dead');
+  }
+
+  buildAmmo(gun) {
+    const def = gun.def;
+    const key = def.key + gun.def.mag;
+    if (key === this.ammoKey) return;
+    this.ammoKey = key;
+    const box = this.el.ammo;
+    box.className = 'ammo ' + def.layout;
+    box.innerHTML = '';
+    for (let i = 0; i < def.mag; i++) {
+      const d = document.createElement('i');
+      if (def.layout === 'cylinder') {
+        const a = (i / def.mag) * Math.PI * 2;
+        d.style.left = `calc(50% + ${Math.sin(a) * 15}px)`;
+        d.style.top = `calc(50% - ${Math.cos(a) * 15}px)`;
+      }
+      box.appendChild(d);
+    }
+    this.lastAmmo = -1;
+    this.cylAngle = 0;
+  }
+
+  update(game, dt) {
+    const p = game.player;
+    const e = this.el;
+    if (!p) return;
+
+    // Health with threshold ticks and a trailing ghost bar.
+    const hp = Math.max(0, p.hp);
+    e.hpFill.style.width = hp + '%';
+    this.hpGhost = hp > this.hpGhost ? hp : this.hpGhost + (hp - this.hpGhost) * Math.min(1, dt * 3);
+    e.hpGhost.style.width = this.hpGhost + '%';
+    e.hpText.textContent = Math.ceil(hp);
+    e.hpFill.classList.toggle('low', hp <= 25);
+
+    const de = game.deadEye;
+    e.deFill.style.width = de.meter * 100 + '%';
+    e.deBar.classList.toggle('active', de.active);
+    e.deBar.classList.toggle('ready', de.meter >= 0.999 && !de.active);
+
+    const alive = game.enemies.filter((b) => b.alive).length;
+    e.campNo.textContent = `Camp ${game.run.camp + 1}`;
+    e.campName.textContent = game.campName;
+    e.outlaws.textContent = alive === 1 ? '1 outlaw left' : `${alive} outlaws left`;
+    e.bounty.textContent = `$${game.run.bounty}`;
+
+    // Weapon, ammo, slots.
+    const gun = p.gun;
+    this.buildAmmo(gun);
+    e.weaponName.textContent = gun.def.name;
+    const pips = e.ammo.children;
+    if (gun.ammo !== this.lastAmmo) {
+      if (gun.def.layout === 'cylinder' && this.lastAmmo > gun.ammo) this.cylAngle += 60 * (this.lastAmmo - gun.ammo);
+      this.lastAmmo = gun.ammo;
+      for (let i = 0; i < pips.length; i++) pips[i].classList.toggle('spent', i >= gun.ammo);
+      e.ammo.style.setProperty('--cyl', this.cylAngle + 'deg');
+    }
+    e.reloadHint.hidden = !(gun.ammo === 0 && !gun.reloading);
+    const slotsKey = p.guns.map((g) => g.def.key).join() + p.gunIndex;
+    if (slotsKey !== this.slotsKey) {
+      this.slotsKey = slotsKey;
+      e.slots.innerHTML = p.guns.map((g, i) => `<span class="${i === p.gunIndex ? 'on' : ''}"><kbd>${i + 1}</kbd>${g.def.name}</span>`).join('');
+    }
+
+    // Reticle follows the cursor; ring shows spread, arc shows reload.
+    const m = game.input.mouse;
+    e.reticle.style.transform = `translate(${m.x}px, ${m.y}px)`;
+    const spread = 10 + gun.spreadDeg * 4.5;
+    e.ring.style.width = e.ring.style.height = spread * 2 + 'px';
+    const circ = 2 * Math.PI * 22;
+    e.reload.style.strokeDasharray = `${circ}`;
+    e.reload.style.strokeDashoffset = `${circ * (1 - gun.reloadProgress)}`;
+    e.reload.style.opacity = gun.reloading ? 1 : 0;
+    e.reticle.classList.toggle('empty', gun.ammo === 0);
+
+    // Damage vignette.
+    this.hurtT = Math.max(0, this.hurtT - dt);
+    const low = hp <= 25 && p.alive ? 0.35 + Math.sin(game.realTime * 6) * 0.1 : 0;
+    e.vignette.style.opacity = Math.max(this.hurtT * 1.4, low);
+
+    if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) e.toast.classList.remove('show'); }
+    if (this.hintT > 0) { this.hintT -= dt; e.hint.classList.toggle('show', this.hintT > 0); }
+  }
+}
+
+return { UI };
+})();
+
+// ---- src/nav.js ----
+__m.nav = (() => {
+// A 0.5 m navigation grid with A* and path smoothing. Static walls are baked
+// once per camp; movable props are re-stamped whenever something breaks or moves.
+
+const SQRT2 = Math.SQRT2;
+
+class NavGrid {
+  constructor(half = 22, cell = 0.5, inflate = 0.45) {
+    this.half = half;
+    this.cell = cell;
+    this.inflate = inflate;
+    this.n = Math.round((half * 2) / cell);
+    const size = this.n * this.n;
+    this.staticBlocked = new Uint8Array(size);
+    this.blocked = new Uint8Array(size);
+    this.g = new Float32Array(size);
+    this.f = new Float32Array(size);
+    this.parent = new Int32Array(size);
+    this.state = new Uint8Array(size); // 0 new, 1 open, 2 closed
+    this.heap = [];
+  }
+
+  toCell(v) { return Math.floor((v + this.half) / this.cell); }
+  center(c) { return -this.half + (c + 0.5) * this.cell; }
+  inside(cx, cz) { return cx >= 0 && cz >= 0 && cx < this.n && cz < this.n; }
+
+  isFree(x, z) {
+    const cx = this.toCell(x), cz = this.toCell(z);
+    return this.inside(cx, cz) && !this.blocked[cz * this.n + cx];
+  }
+
+  stamp(arr, fp, inflate = this.inflate) {
+    const reach = fp.r !== undefined ? fp.r + inflate : Math.hypot(fp.hx, fp.hz) + inflate;
+    const x0 = Math.max(0, this.toCell(fp.x - reach)), x1 = Math.min(this.n - 1, this.toCell(fp.x + reach));
+    const z0 = Math.max(0, this.toCell(fp.z - reach)), z1 = Math.min(this.n - 1, this.toCell(fp.z + reach));
+    const c = fp.ry !== undefined ? Math.cos(fp.ry) : 1, s = fp.ry !== undefined ? Math.sin(fp.ry) : 0;
+    for (let cz = z0; cz <= z1; cz++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const dx = this.center(cx) - fp.x, dz = this.center(cz) - fp.z;
+        let hit;
+        if (fp.r !== undefined) hit = dx * dx + dz * dz <= (fp.r + inflate) ** 2;
+        else {
+          const lx = dx * c - dz * s, lz = dx * s + dz * c;
+          hit = Math.abs(lx) <= fp.hx + inflate && Math.abs(lz) <= fp.hz + inflate;
+        }
+        if (hit) arr[cz * this.n + cx] = 1;
+      }
+    }
+  }
+
+  setStatic(footprints) {
+    this.staticBlocked.fill(0);
+    // The outer ring of cells is a wall.
+    const n = this.n;
+    for (let i = 0; i < n; i++) {
+      this.staticBlocked[i] = this.staticBlocked[(n - 1) * n + i] = 1;
+      this.staticBlocked[i * n] = this.staticBlocked[i * n + n - 1] = 1;
+    }
+    for (const fp of footprints) this.stamp(this.staticBlocked, fp);
+  }
+
+  rebuild(dynamicFootprints) {
+    this.blocked.set(this.staticBlocked);
+    for (const fp of dynamicFootprints) this.stamp(this.blocked, fp);
+  }
+
+  nearestFree(cx, cz, maxR = 8) {
+    const n = this.n;
+    if (this.inside(cx, cz) && !this.blocked[cz * n + cx]) return cz * n + cx;
+    for (let r = 1; r <= maxR; r++) {
+      for (let dz = -r; dz <= r; dz++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dz) !== r) continue;
+          const x = cx + dx, z = cz + dz;
+          if (this.inside(x, z) && !this.blocked[z * n + x]) return z * n + x;
+        }
+      }
+    }
+    return -1;
+  }
+
+  /** True if a straight walk between two points crosses no blocked cell. */
+  lineFree(x0, z0, x1, z1) {
+    const d = Math.hypot(x1 - x0, z1 - z0);
+    const steps = Math.ceil(d / (this.cell * 0.5));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      if (!this.isFree(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t)) return false;
+    }
+    return true;
+  }
+
+  push(i) {
+    const h = this.heap, f = this.f;
+    h.push(i);
+    let k = h.length - 1;
+    while (k > 0) {
+      const p = (k - 1) >> 1;
+      if (f[h[p]] <= f[h[k]]) break;
+      [h[p], h[k]] = [h[k], h[p]];
+      k = p;
+    }
+  }
+
+  pop() {
+    const h = this.heap, f = this.f;
+    const top = h[0];
+    const last = h.pop();
+    if (h.length) {
+      h[0] = last;
+      let k = 0;
+      for (;;) {
+        const l = k * 2 + 1, r = l + 1;
+        let m = k;
+        if (l < h.length && f[h[l]] < f[h[m]]) m = l;
+        if (r < h.length && f[h[r]] < f[h[m]]) m = r;
+        if (m === k) break;
+        [h[m], h[k]] = [h[k], h[m]];
+        k = m;
+      }
+    }
+    return top;
+  }
+
+  /** @returns {{x:number,z:number}[] | null} waypoints after the start */
+  findPath(sx, sz, tx, tz, maxIter = 5000) {
+    const n = this.n;
+    const start = this.nearestFree(this.toCell(sx), this.toCell(sz), 4);
+    const goal = this.nearestFree(this.toCell(tx), this.toCell(tz), 8);
+    if (start < 0 || goal < 0) return null;
+    if (start === goal) return [{ x: tx, z: tz }];
+    const gx = goal % n, gz = (goal / n) | 0;
+    const H = (i) => { const dx = Math.abs((i % n) - gx), dz = Math.abs(((i / n) | 0) - gz); return (dx + dz + (SQRT2 - 2) * Math.min(dx, dz)); };
+
+    this.state.fill(0);
+    this.heap.length = 0;
+    this.g[start] = 0;
+    this.f[start] = H(start);
+    this.parent[start] = -1;
+    this.state[start] = 1;
+    this.push(start);
+    let found = false, iter = 0;
+    while (this.heap.length && iter++ < maxIter) {
+      const cur = this.pop();
+      if (this.state[cur] === 2) continue;
+      if (cur === goal) { found = true; break; }
+      this.state[cur] = 2;
+      const cx = cur % n, cz = (cur / n) | 0;
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dz) continue;
+          const x = cx + dx, z = cz + dz;
+          if (!this.inside(x, z)) continue;
+          const ni = z * n + x;
+          if (this.blocked[ni] || this.state[ni] === 2) continue;
+          if (dx && dz && (this.blocked[cz * n + x] || this.blocked[z * n + cx])) continue; // no corner cutting
+          const g = this.g[cur] + (dx && dz ? SQRT2 : 1);
+          if (this.state[ni] === 1 && g >= this.g[ni]) continue;
+          this.g[ni] = g;
+          this.f[ni] = g + H(ni);
+          this.parent[ni] = cur;
+          this.state[ni] = 1;
+          this.push(ni);
+        }
+      }
+    }
+    if (!found) return null;
+
+    const cells = [];
+    for (let i = goal; i !== -1; i = this.parent[i]) cells.push(i);
+    cells.reverse();
+    const pts = cells.map((i) => ({ x: this.center(i % n), z: this.center((i / n) | 0) }));
+    pts[pts.length - 1] = this.isFree(tx, tz) ? { x: tx, z: tz } : pts[pts.length - 1];
+
+    // String-pull: keep only waypoints needed to stay on free cells.
+    const out = [];
+    let from = { x: sx, z: sz };
+    let i = 0;
+    while (i < pts.length) {
+      let j = pts.length - 1;
+      while (j > i && !this.lineFree(from.x, from.z, pts[j].x, pts[j].z)) j--;
+      out.push(pts[j]);
+      from = pts[j];
+      i = j + 1;
+    }
+    return out;
+  }
+}
+
+return { NavGrid };
+})();
+
+// ---- src/models.js ----
+__m.models = (() => {
+// Code-built low-poly models. Every shape is vertex-colored and shares one
+// flat-shaded material, so a whole camp renders in very few draw calls.
+
+const PAL = {
+  sand: 0xd9a96b, sandDark: 0xc4925a, sandLight: 0xe6bd82, dirt: 0xa8754a,
+  rock: 0xa06c4e, rockDark: 0x7c5040, rockLight: 0xb98563, cliff: 0xa9673f,
+  wood: 0x8c5a34, woodDark: 0x5c3a22, woodLight: 0xb27c48, plank: 0x9e6b3d,
+  iron: 0x34302d, brass: 0xd6a54a, red: 0xa8322a, tnt: 0xb8352a, black: 0x221b18,
+  canvas: 0xe4cfa6, canvasDark: 0xc4ad85, cactus: 0x6c8a46, cactusDark: 0x536f38,
+  skin: 0xe0a47b, skinDark: 0xb07a55, bone: 0xeadfc6, water: 0x56707c,
+  fire: 0xffb24a, ember: 0xff6a24, smoke: 0x6d625a,
+  pShirt: 0x3e6189, pVest: 0x6b4128, pHat: 0xc9a273, pPants: 0x3b3f50, boots: 0x3a2518,
+  bShirtA: 0x7c3a2e, bShirtB: 0x5d5b3a, bShirtC: 0x4b4a52, bHat: 0x2e2420, poncho: 0x9a6a3a,
+  scarf: 0xc0452f, bandanaA: 0xa8322a, bandanaB: 0x26201d,
+};
+
+const MAT = {
+  solid: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }),
+  glow: new THREE.MeshBasicMaterial({ vertexColors: true }),
+};
+
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _e = new THREE.Euler();
+const _p = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const _c = new THREE.Color();
+
+function hash3(x, y, z) {
+  const h = Math.sin(Math.round(x * 1000) * 12.9898 + Math.round(y * 1000) * 78.233 + Math.round(z * 1000) * 37.719) * 43758.5453;
+  return h - Math.floor(h);
+}
+
+/** Collects colored, transformed parts and merges them into one geometry. */
+class Shape {
+  constructor() { this.parts = []; }
+
+  add(geo, color, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    if (!g.attributes.normal) g.computeVertexNormals();
+    _m.compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, ry, rz)), _s.set(sx, sy, sz));
+    g.applyMatrix4(_m);
+    _c.set(color);
+    const n = g.attributes.position.count;
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = _c.r; col[i * 3 + 1] = _c.g; col[i * 3 + 2] = _c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    this.parts.push(g);
+    return this;
+  }
+
+  box(w, h, d, color, x, y, z, rx, ry, rz) { return this.add(new THREE.BoxGeometry(w, h, d), color, x, y, z, rx, ry, rz); }
+
+  cyl(rt, rb, h, seg, color, x, y, z, rx, ry, rz) {
+    return this.add(new THREE.CylinderGeometry(rt, rb, h, seg), color, x, y, z, rx, ry, rz);
+  }
+
+  cone(r, h, seg, color, x, y, z, rx, ry, rz) { return this.add(new THREE.ConeGeometry(r, h, seg), color, x, y, z, rx, ry, rz); }
+
+  rock(r, color, x, y, z, sy = 0.7, jitter = 0.28, seed = 1, ry = 0) {
+    const g = new THREE.IcosahedronGeometry(r, 0);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+      const k = 1 + (hash3(px + seed, py, pz) - 0.5) * 2 * jitter;
+      pos.setXYZ(i, px * k, py * k, pz * k);
+    }
+    g.computeVertexNormals();
+    return this.add(g, color, x, y, z, 0, ry, 0, 1, sy, 1);
+  }
+
+  build() { return mergeGeometries(this.parts); }
+}
+
+function mergeGeometries(parts) {
+  let count = 0;
+  for (const g of parts) count += g.attributes.position.count;
+  const pos = new Float32Array(count * 3), nor = new Float32Array(count * 3), col = new Float32Array(count * 3);
+  let o = 0;
+  for (const g of parts) {
+    pos.set(g.attributes.position.array, o);
+    nor.set(g.attributes.normal.array, o);
+    col.set(g.attributes.color.array, o);
+    o += g.attributes.position.count * 3;
+    g.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  out.computeBoundingSphere();
+  return out;
+}
+
+function meshOf(shape, material = MAT.solid, cast = true, receive = true) {
+  const mesh = new THREE.Mesh(shape instanceof Shape ? shape.build() : shape, material);
+  mesh.castShadow = cast;
+  mesh.receiveShadow = receive;
+  return mesh;
+}
+
+// ---------- Characters ----------
+
+const LOOKS = {
+  player: { shirt: PAL.pShirt, vest: PAL.pVest, hat: PAL.pHat, band: PAL.woodDark, pants: PAL.pPants, scarf: PAL.scarf },
+  gunman: { shirt: PAL.bShirtA, vest: PAL.woodDark, hat: PAL.bHat, band: PAL.brass, pants: PAL.bShirtC, bandana: PAL.bandanaA },
+  rusher: { shirt: PAL.bShirtB, vest: PAL.poncho, hat: PAL.woodDark, band: PAL.red, pants: PAL.woodDark, bandana: PAL.bandanaB, poncho: true },
+  sharpshooter: { shirt: PAL.bShirtC, vest: PAL.black, hat: PAL.black, band: PAL.bone, pants: PAL.black, bandana: PAL.bandanaB, tall: true },
+};
+
+const ARM_PITCH = 0.45;
+const GUN_REACH = { revolver: 0.76, shotgun: 0.98, rifle: 1.08 };
+
+function gunShape(kind) {
+  const s = new Shape();
+  if (kind === 'revolver') {
+    s.box(0.06, 0.07, 0.3, PAL.iron, 0, 0.05, 0.6);
+    s.box(0.1, 0.1, 0.11, PAL.iron, 0, 0.05, 0.47);
+    s.box(0.07, 0.14, 0.08, PAL.woodDark, 0, -0.03, 0.43, 0.4);
+  } else if (kind === 'shotgun') {
+    s.box(0.1, 0.07, 0.62, PAL.iron, 0, 0.06, 0.66);
+    s.box(0.09, 0.1, 0.34, PAL.wood, 0, 0.0, 0.33);
+  } else {
+    s.box(0.05, 0.06, 0.72, PAL.iron, 0, 0.06, 0.72);
+    s.box(0.08, 0.1, 0.42, PAL.woodLight, 0, 0.0, 0.32);
+    s.box(0.05, 0.05, 0.16, PAL.brass, 0, 0.12, 0.5);
+  }
+  return s;
+}
+
+/** Builds a character. Forward is +Z; feet at y=0. */
+function makeCharacter(look) {
+  const material = MAT.solid.clone();
+  material.emissive = new THREE.Color(0xffffff);
+  material.emissiveIntensity = 0;
+  const tall = look.tall ? 1.04 : 1;
+
+  const root = new THREE.Group();
+  const body = new THREE.Group();
+  root.add(body);
+
+  const mk = (shape) => { const m = meshOf(shape, material); return m; };
+
+  // Legs pivot at the hip.
+  const legs = [];
+  for (const side of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.12, 0.82 * tall, 0);
+    const s = new Shape();
+    s.box(0.17, 0.72 * tall, 0.2, look.pants, 0, -0.36 * tall, 0);
+    s.box(0.19, 0.14, 0.28, PAL.boots, 0, -0.75 * tall, 0.03);
+    pivot.add(mk(s));
+    body.add(pivot);
+    legs.push(pivot);
+  }
+
+  const torso = new Shape();
+  torso.box(0.46, 0.13, 0.27, PAL.woodDark, 0, 0.86 * tall, 0);
+  torso.box(0.07, 0.07, 0.02, PAL.brass, 0, 0.86 * tall, 0.14);
+  torso.box(0.46, 0.5, 0.27, look.shirt, 0, 1.17 * tall, 0);
+  torso.box(0.48, 0.44, 0.285, look.vest, 0, 1.15 * tall, -0.005);
+  torso.box(0.14, 0.42, 0.02, look.shirt, 0, 1.16 * tall, 0.143);
+  if (look.poncho) {
+    torso.cone(0.48, 0.52, 4, look.vest, 0, 1.2 * tall, 0, 0, Math.PI / 4);
+  }
+  if (look.scarf) torso.box(0.3, 0.09, 0.3, look.scarf, 0, 1.43 * tall, 0);
+  // Left arm hangs.
+  torso.box(0.13, 0.5, 0.15, look.shirt, -0.31, 1.13 * tall, 0.02, 0.15, 0, 0.12);
+  torso.box(0.11, 0.11, 0.12, PAL.skin, -0.34, 0.85 * tall, 0.06);
+  // Head and hat.
+  torso.box(0.26, 0.27, 0.26, PAL.skin, 0, 1.6 * tall, 0);
+  torso.box(0.27, 0.05, 0.05, PAL.skinDark, 0, 1.63 * tall, 0.12);
+  if (look.bandana) torso.box(0.28, 0.12, 0.28, look.bandana, 0, 1.52 * tall, 0.005);
+  torso.cyl(0.34, 0.34, 0.04, 10, look.hat, 0, 1.75 * tall, 0);
+  torso.cyl(0.15, 0.18, 0.2, 8, look.hat, 0, 1.86 * tall, 0);
+  torso.cyl(0.185, 0.185, 0.045, 8, look.band, 0, 1.78 * tall, 0);
+  body.add(mk(torso));
+
+  // Gun arm pivots at the right shoulder.
+  const arm = new THREE.Group();
+  arm.position.set(0.29, 1.34 * tall, 0);
+  arm.rotation.x = ARM_PITCH;
+  const armShape = new Shape();
+  armShape.box(0.13, 0.13, 0.44, look.shirt, 0, 0, 0.2);
+  armShape.box(0.11, 0.12, 0.12, PAL.skin, 0, 0, 0.44);
+  arm.add(mk(armShape));
+  const guns = {};
+  for (const kind of ['revolver', 'shotgun', 'rifle']) {
+    const g = mk(gunShape(kind));
+    g.visible = kind === 'revolver';
+    arm.add(g);
+    guns[kind] = g;
+  }
+  body.add(arm);
+
+  return { root, body, legs, arm, guns, material, tall };
+}
+
+/** Muzzle position in character-local space (x right, z forward). */
+function muzzleLocal(gunKind, tall = 1) {
+  const reach = GUN_REACH[gunKind] ?? 0.76;
+  return {
+    x: 0.29,
+    y: 1.34 * tall - Math.sin(ARM_PITCH) * reach + 0.05,
+    z: Math.cos(ARM_PITCH) * reach,
+  };
+}
+
+// ---------- Props ----------
+
+function crateShape(size = 1.1) {
+  const s = new Shape();
+  const h = size / 2, t = 0.1;
+  s.box(size * 0.96, size * 0.96, size * 0.96, PAL.plank, 0, 0, 0);
+  for (const x of [-h + t / 2, h - t / 2]) for (const z of [-h + t / 2, h - t / 2]) s.box(t, size, t, PAL.woodDark, x, 0, z);
+  for (const y of [-h + t / 2, h - t / 2]) {
+    s.box(size, t, t, PAL.woodDark, 0, y, -h + t / 2);
+    s.box(size, t, t, PAL.woodDark, 0, y, h - t / 2);
+    s.box(t, t, size, PAL.woodDark, -h + t / 2, y, 0);
+    s.box(t, t, size, PAL.woodDark, h - t / 2, y, 0);
+  }
+  s.box(size * 1.3, 0.08, 0.02, PAL.woodDark, 0, 0, h, 0, 0, Math.PI / 4);
+  return s;
+}
+
+function barrelShape(r = 0.42, h = 1.15, body = PAL.wood, hoop = PAL.iron, band = null) {
+  const s = new Shape();
+  s.cyl(r, r * 0.86, h / 2, 10, body, 0, -h / 4, 0);
+  s.cyl(r * 0.86, r, h / 2, 10, body, 0, h / 4, 0);
+  for (const y of [-h * 0.38, 0, h * 0.38]) s.cyl(r * 1.03, r * 1.03, 0.05, 10, hoop, 0, y, 0);
+  s.cyl(r * 0.8, r * 0.8, 0.02, 10, PAL.woodDark, 0, h / 2, 0);
+  if (band) s.cyl(r * 1.04, r * 1.04, 0.16, 10, band, 0, h * 0.18, 0);
+  return s;
+}
+
+function fenceShape(len = 2.2) {
+  const s = new Shape();
+  for (const x of [-len / 2 + 0.07, len / 2 - 0.07]) s.box(0.14, 1.15, 0.14, PAL.woodDark, x, 0.575, 0);
+  s.box(len, 0.12, 0.07, PAL.woodLight, 0, 0.45, 0, 0, 0, 0.02);
+  s.box(len, 0.12, 0.07, PAL.woodLight, 0, 1.0, 0, 0, 0, -0.03);
+  return s;
+}
+
+function wagonShape() {
+  const s = new Shape();
+  s.box(2.0, 0.18, 3.2, PAL.woodDark, 0, 0.72, 0);
+  s.box(2.0, 0.5, 0.1, PAL.wood, 0, 1.05, 1.55);
+  s.box(2.0, 0.5, 0.1, PAL.wood, 0, 1.05, -1.55);
+  s.box(0.1, 0.5, 3.2, PAL.wood, 0.95, 1.05, 0);
+  s.box(0.1, 0.5, 3.2, PAL.wood, -0.95, 1.05, 0);
+  for (const x of [-1.08, 1.08]) for (const z of [-1.05, 1.05]) {
+    s.cyl(0.55, 0.55, 0.1, 12, PAL.woodDark, x, 0.55, z, 0, 0, Math.PI / 2);
+    s.cyl(0.14, 0.14, 0.14, 6, PAL.iron, x, 0.55, z, 0, 0, Math.PI / 2);
+  }
+  s.add(new THREE.CylinderGeometry(1.02, 1.02, 2.7, 10, 1, true, -Math.PI / 2, Math.PI), PAL.canvas, 0, 1.25, 0, -Math.PI / 2, 0, 0);
+  s.box(0.08, 0.08, 1.6, PAL.woodDark, 0, 0.62, 2.3);
+  return s;
+}
+
+function tentShape() {
+  const s = new Shape();
+  s.cone(1.85, 2.3, 4, PAL.canvas, 0, 1.15, 0, 0, Math.PI / 4);
+  s.add(new THREE.ConeGeometry(0.5, 1.2, 3), PAL.canvasDark, 0, 0.6, 1.06, -0.48, 0, 0);
+  s.cyl(0.05, 0.05, 2.6, 4, PAL.woodDark, 0, 1.3, 0);
+  return s;
+}
+
+function cactusShape(h = 2.2, seed = 0) {
+  const s = new Shape();
+  s.cyl(0.2, 0.24, h, 8, PAL.cactus, 0, h / 2, 0);
+  s.cone(0.2, 0.18, 8, PAL.cactus, 0, h + 0.09, 0);
+  const side = seed % 2 ? 1 : -1;
+  s.cyl(0.12, 0.12, 0.45, 6, PAL.cactusDark, side * 0.32, h * 0.5, 0, 0, 0, Math.PI / 2);
+  s.cyl(0.13, 0.13, 0.75, 6, PAL.cactus, side * 0.52, h * 0.5 + 0.33, 0);
+  if (seed % 3 === 0) {
+    s.cyl(0.11, 0.11, 0.35, 6, PAL.cactusDark, -side * 0.28, h * 0.65, 0, 0, 0, Math.PI / 2);
+    s.cyl(0.11, 0.11, 0.5, 6, PAL.cactus, -side * 0.44, h * 0.65 + 0.2, 0);
+  }
+  return s;
+}
+
+function campfireShape(s = new Shape()) {
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    s.rock(0.17, PAL.rockDark, Math.cos(a) * 0.62, 0.08, Math.sin(a) * 0.62, 0.6, 0.25, i);
+  }
+  s.box(1.0, 0.13, 0.13, PAL.woodDark, 0, 0.1, 0, 0, 0.5, 0);
+  s.box(1.0, 0.13, 0.13, PAL.woodDark, 0, 0.16, 0, 0, -0.6, 0);
+  s.box(0.9, 0.12, 0.12, PAL.black, 0, 0.12, 0, 0, 1.5, 0);
+  return s;
+}
+
+function flameShape() {
+  const s = new Shape();
+  s.cone(0.32, 0.8, 5, PAL.ember, 0, 0.45, 0);
+  s.cone(0.2, 0.62, 5, PAL.fire, 0.08, 0.42, 0.05, 0, 0.6, 0);
+  s.cone(0.14, 0.42, 4, 0xffe08a, -0.06, 0.35, -0.04);
+  return s;
+}
+
+function fragmentShape(kind) {
+  const s = new Shape();
+  if (kind === 'plank') s.box(0.9, 0.1, 0.24, PAL.plank);
+  else if (kind === 'stave') s.box(0.16, 1.0, 0.07, PAL.wood);
+  else if (kind === 'rail') s.box(1.0, 0.11, 0.07, PAL.woodLight);
+  else if (kind === 'redStave') s.box(0.16, 1.0, 0.07, PAL.tnt);
+  else s.box(0.2, 0.2, 0.2, PAL.woodDark);
+  return s;
+}
+
+const FRAGMENT_HALF = {
+  plank: [0.45, 0.05, 0.12], stave: [0.08, 0.5, 0.035], rail: [0.5, 0.055, 0.035],
+  redStave: [0.08, 0.5, 0.035], chunk: [0.1, 0.1, 0.1],
+};
+
+return { PAL, MAT, Shape, mergeGeometries, meshOf, LOOKS, GUN_REACH, makeCharacter, muzzleLocal, crateShape, barrelShape, fenceShape, wagonShape, tentShape, cactusShape, campfireShape, flameShape, fragmentShape, FRAGMENT_HALF };
+})();
+
+// ---- src/rng.js ----
+__m.rng = (() => {
+// Seeded random numbers so each run's camps are reproducible from one seed.
+
+function createRng(seed) {
+  let s = seed >>> 0;
+  const next = () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  return {
+    next,
+    range: (a, b) => a + (b - a) * next(),
+    int: (a, b) => Math.floor(a + (b - a + 1) * next()),
+    pick: (arr) => arr[Math.floor(next() * arr.length)],
+    chance: (p) => next() < p,
+  };
+}
+
+function randomSeed() {
+  return (Math.random() * 0xffffffff) >>> 0;
+}
+
+// Unseeded helpers for cosmetic randomness (particles, pitch variation).
+const rand = (a = 0, b = 1) => a + (b - a) * Math.random();
+const randSpread = (spread) => (Math.random() + Math.random() - 1) * spread;
+
+return { createRng, randomSeed, rand, randSpread };
+})();
+
+// ---- src/fx.js ----
+__m.fx = (() => {
+// Pooled visual effects: particles, tracers and light flashes. Nothing here
+// allocates per frame, so effects never cause garbage-collection hitches.
+
+const { PAL } = __m.models;
+const { rand } = __m.rng;
+const MAX_SOLID = 700;
+const MAX_GLOW = 320;
+const MAX_TRACERS = 40;
+
+const KINDS = {
+  dust: { colors: [PAL.sandLight, PAL.sand, PAL.sandDark], size: [0.12, 0.26], speed: [1, 3], up: [0.8, 2.4], g: -5, drag: 2.2, life: [0.45, 0.9], bounce: 0, glow: false, grow: 0.6 },
+  wood: { colors: [PAL.plank, PAL.woodDark, PAL.woodLight], size: [0.06, 0.14], speed: [2.5, 6], up: [1.5, 4], g: -18, drag: 0.6, life: [0.9, 1.5], bounce: 0.3, glow: false },
+  blood: { colors: [0x8e1f1a, 0x6e1612, 0xa52a20], size: [0.06, 0.12], speed: [1.5, 4.5], up: [0.5, 2.5], g: -18, drag: 0.8, life: [0.7, 1.1], bounce: 0, stick: true, glow: false },
+  sparks: { colors: [0xffd27a, 0xffe7b0, 0xffa94a], size: [0.035, 0.07], speed: [3, 8], up: [0.5, 3], g: -12, drag: 1, life: [0.15, 0.3], bounce: 0.4, glow: true },
+  smoke: { colors: [PAL.smoke, 0x857a70, 0x5a514a], size: [0.35, 0.7], speed: [0.3, 1.4], up: [0.6, 1.6], g: 0.6, drag: 1.4, life: [1.2, 2.4], bounce: 0, glow: false, grow: 0.9 },
+  fire: { colors: [0xffa040, 0xff6a24, 0xffe08a], size: [0.3, 0.65], speed: [1, 5], up: [1.5, 4.5], g: 1.5, drag: 2.5, life: [0.3, 0.65], bounce: 0, glow: true },
+  muzzle: { colors: [0xffe2a0, 0xffc060], size: [0.12, 0.24], speed: [2, 5], up: [0, 0.4], g: 0, drag: 8, life: [0.04, 0.08], bounce: 0, glow: true },
+  casing: { colors: [PAL.brass], size: [0.05, 0.06], speed: [1.2, 2.4], up: [2, 3], g: -18, drag: 0.3, life: [1.2, 1.8], bounce: 0.35, glow: false },
+  splash: { colors: [0x8fb4c2, 0xb7d3dc, 0x6f97a6], size: [0.06, 0.12], speed: [1.5, 4], up: [2, 4.5], g: -16, drag: 0.5, life: [0.5, 0.9], bounce: 0, glow: false },
+  ember: { colors: [0xffb24a, 0xff7a2a], size: [0.04, 0.08], speed: [0.1, 0.5], up: [0.8, 1.8], g: 0.4, drag: 0.6, life: [0.6, 1.2], bounce: 0, glow: true },
+};
+
+class Pool {
+  constructor(scene, max, material) {
+    this.max = max;
+    this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, max);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.frustumCulled = false;
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = false;
+    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+    this.mesh.count = 0;
+    scene.add(this.mesh);
+    this.items = [];
+    for (let i = 0; i < max; i++) {
+      this.items.push({ alive: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rx: 0, ry: 0, rz: 0, vr: 0, size: 0, t: 0, life: 1, k: null, color: new THREE.Color() });
+    }
+    this.cursor = 0;
+  }
+
+  take() {
+    for (let n = 0; n < this.max; n++) {
+      const i = (this.cursor + n) % this.max;
+      if (!this.items[i].alive) { this.cursor = i + 1; return this.items[i]; }
+    }
+    // Pool full: recycle the next slot.
+    const p = this.items[this.cursor % this.max];
+    this.cursor++;
+    return p;
+  }
+}
+
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _e = new THREE.Euler();
+const _p = new THREE.Vector3();
+const _s = new THREE.Vector3();
+
+class FX {
+  constructor(scene, flashLight) {
+    this.scene = scene;
+    this.solid = new Pool(scene, MAX_SOLID, new THREE.MeshLambertMaterial({ flatShading: true }));
+    this.glow = new Pool(scene, MAX_GLOW, new THREE.MeshBasicMaterial({ toneMapped: false }));
+    this.flash = flashLight;
+    this.flashT = 0;
+    this.flashMax = 0;
+
+    this.tracers = [];
+    const tgeo = new THREE.BoxGeometry(1, 1, 1);
+    tgeo.translate(0, 0, 0.5);
+    for (let i = 0; i < MAX_TRACERS; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffe7b0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+      const mesh = new THREE.Mesh(tgeo, mat);
+      mesh.visible = false;
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+      this.tracers.push({ mesh, t: 0, life: 0.06 });
+    }
+    this.tracerCursor = 0;
+  }
+
+  emit(kind, x, y, z, count, dirX = 0, dirZ = 0, cone = Math.PI, speedMul = 1) {
+    const k = KINDS[kind];
+    const pool = k.glow ? this.glow : this.solid;
+    const baseA = dirX || dirZ ? Math.atan2(dirX, dirZ) : 0;
+    for (let i = 0; i < count; i++) {
+      const p = pool.take();
+      const a = dirX || dirZ ? baseA + rand(-cone, cone) : rand(0, Math.PI * 2);
+      const sp = rand(k.speed[0], k.speed[1]) * speedMul;
+      p.alive = true;
+      p.k = k;
+      p.x = x; p.y = y; p.z = z;
+      p.vx = Math.sin(a) * sp; p.vz = Math.cos(a) * sp; p.vy = rand(k.up[0], k.up[1]) * speedMul;
+      p.rx = rand(0, 6); p.ry = rand(0, 6); p.rz = rand(0, 6); p.vr = rand(-12, 12);
+      p.size = rand(k.size[0], k.size[1]);
+      p.t = 0; p.life = rand(k.life[0], k.life[1]);
+      p.color.set(k.colors[(Math.random() * k.colors.length) | 0]);
+    }
+  }
+
+  impact(surface, x, y, z, nx, nz, dirX, dirZ) {
+    if (surface === 'wood') { this.emit('wood', x, y, z, 6, nx, nz, 1.0); this.emit('dust', x, y, z, 2, nx, nz, 1.2); }
+    else if (surface === 'flesh') { this.emit('blood', x, y, z, 9, dirX, dirZ, 0.6); }
+    else if (surface === 'water') { this.emit('splash', x, y, z, 10, nx, nz, 1.1); this.emit('wood', x, y, z, 3, nx, nz, 1); }
+    else if (surface === 'metal') { this.emit('sparks', x, y, z, 8, nx, nz, 1.1); }
+    else { this.emit('dust', x, y, z, 5, nx, nz, 1.1); this.emit('sparks', x, y, z, 2, nx, nz, 0.9); }
+  }
+
+  muzzle(x, y, z, dirX, dirZ, big = false) {
+    this.emit('muzzle', x, y, z, big ? 7 : 4, dirX, dirZ, 0.25);
+    this.emit('smoke', x, y, z, big ? 2 : 1, dirX, dirZ, 0.4, 0.6);
+    this.light(x, y + 0.2, z, big ? 26 : 16, 9);
+  }
+
+  casing(x, y, z, dirX, dirZ) {
+    // Eject to the right of the firing direction.
+    this.emit('casing', x, y, z, 1, dirZ, -dirX, 0.5);
+  }
+
+  explosion(x, z) {
+    this.emit('fire', x, 0.6, z, 34, 0, 0, Math.PI, 1.4);
+    this.emit('smoke', x, 0.8, z, 16, 0, 0, Math.PI, 2.2);
+    this.emit('sparks', x, 0.7, z, 22, 0, 0, Math.PI, 1.6);
+    this.emit('dust', x, 0.2, z, 18, 0, 0, Math.PI, 2.4);
+    this.light(x, 1.5, z, 90, 16);
+  }
+
+  tracer(x0, y0, z0, x1, y1, z1, color = 0xffe7b0, thickness = 0.045, life = 0.06) {
+    const tr = this.tracers[this.tracerCursor++ % MAX_TRACERS];
+    const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
+    tr.mesh.position.set(x0, y0, z0);
+    tr.mesh.lookAt(x1, y1, z1);
+    tr.mesh.scale.set(thickness, thickness, Math.max(0.01, len));
+    tr.mesh.material.color.set(color);
+    tr.mesh.material.opacity = 1;
+    tr.mesh.visible = true;
+    tr.t = 0;
+    tr.life = life;
+  }
+
+  light(x, y, z, intensity, distance) {
+    if (intensity < this.flash.intensity) return;
+    this.flash.position.set(x, y, z);
+    this.flash.distance = distance;
+    this.flash.intensity = intensity;
+    this.flashMax = intensity;
+  }
+
+  clear() {
+    for (const pool of [this.solid, this.glow]) { for (const p of pool.items) p.alive = false; pool.mesh.count = 0; }
+    for (const tr of this.tracers) tr.mesh.visible = false;
+    this.flash.intensity = 0;
+  }
+
+  update(dt) {
+    for (const pool of [this.solid, this.glow]) {
+      let n = 0;
+      for (const p of pool.items) {
+        if (!p.alive) continue;
+        p.t += dt;
+        if (p.t >= p.life) { p.alive = false; continue; }
+        const k = p.k;
+        const drag = Math.exp(-k.drag * dt);
+        p.vx *= drag; p.vz *= drag; p.vy = p.vy * drag + k.g * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+        p.rx += p.vr * dt; p.rz += p.vr * 0.7 * dt;
+        const ground = p.size * 0.5;
+        if (p.y < ground) {
+          p.y = ground;
+          if (k.stick) { p.vx = p.vy = p.vz = 0; p.vr = 0; }
+          else if (k.bounce > 0 && p.vy < -1) { p.vy = -p.vy * k.bounce; p.vx *= 0.6; p.vz *= 0.6; p.vr *= 0.5; }
+          else { p.vy = 0; p.vx *= 0.8; p.vz *= 0.8; p.vr *= 0.8; }
+        }
+        const f = p.t / p.life;
+        let s = p.size;
+        if (k.grow) s *= 1 + f * k.grow * 2;
+        if (f > 0.65) s *= 1 - (f - 0.65) / 0.35;
+        _m.compose(_p.set(p.x, p.y, p.z), _q.setFromEuler(_e.set(p.rx, p.ry, p.rz)), _s.set(s, s, s));
+        pool.mesh.setMatrixAt(n, _m);
+        pool.mesh.setColorAt(n, p.color);
+        n++;
+      }
+      pool.mesh.count = n;
+      pool.mesh.instanceMatrix.needsUpdate = true;
+      if (pool.mesh.instanceColor) pool.mesh.instanceColor.needsUpdate = true;
+    }
+
+    for (const tr of this.tracers) {
+      if (!tr.mesh.visible) continue;
+      tr.t += dt;
+      const f = tr.t / tr.life;
+      if (f >= 1) { tr.mesh.visible = false; continue; }
+      tr.mesh.material.opacity = 1 - f;
+    }
+
+    if (this.flash.intensity > 0) {
+      this.flash.intensity *= Math.exp(-dt * 22);
+      if (this.flash.intensity < 0.3) this.flash.intensity = 0;
+    }
+  }
+}
+
+return { FX };
+})();
+
+// ---- src/props.js ----
+__m.props = (() => {
+// Props: cover objects, destructibles, explosive barrels and their debris.
+
+const { GROUPS, PhysObj } = __m.physics;
+const { MAT, PAL, Shape, meshOf, crateShape, barrelShape, fenceShape, wagonShape, tentShape, cactusShape, fragmentShape, FRAGMENT_HALF } = __m.models;
+const { T } = __m.tuning;
+const { rand } = __m.rng;
+const PROP_DEFS = {
+  crate: { hp: 40, body: 'box', half: [0.55, 0.55, 0.55], density: 2.2, surface: 'wood', frag: 'plank', frags: 6, cover: true, sound: 'crateBreak' },
+  barrel: { hp: 60, body: 'cyl', r: 0.42, halfH: 0.575, density: 2.6, surface: 'water', frag: 'stave', frags: 5, cover: true, sound: 'barrelBreak' },
+  tnt: { hp: 20, body: 'cyl', r: 0.42, halfH: 0.575, density: 1.6, surface: 'wood', frag: 'redStave', frags: 4, cover: true, explosive: true, sound: 'barrelBreak' },
+  fence: { hp: 25, body: 'fixedBox', half: [1.1, 0.575, 0.08], surface: 'wood', frag: 'rail', frags: 3, cover: false, sound: 'crateBreak' },
+  wagon: { indestructible: true, body: 'fixedBox', half: [1.12, 0.75, 1.65], surface: 'wood', cover: true },
+  tent: { indestructible: true, body: 'fixedBox', half: [1.2, 1.2, 1.2], surface: 'cloth', cover: true },
+  rock: { indestructible: true, body: 'fixedCyl', surface: 'stone', cover: true },
+  cactus: { indestructible: true, body: 'fixedCyl', r: 0.26, halfH: 1.1, surface: 'plant', cover: false },
+  campfire: { indestructible: true, body: 'fixedCyl', r: 0.75, halfH: 0.15, surface: 'stone', cover: false },
+};
+
+const geoCache = new Map();
+const sharedGeometries = () => new Set(geoCache.values());
+function cachedGeo(key, make) {
+  if (!geoCache.has(key)) geoCache.set(key, make().build());
+  return geoCache.get(key);
+}
+
+const _up = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+
+class Prop {
+  /**
+   * @param {object} game
+   * @param {string} kind
+   * @param {{x:number,z:number,ry?:number,r?:number,h?:number,seed?:number}} spec
+   */
+  constructor(game, kind, spec) {
+    this.game = game;
+    this.kind = kind;
+    this.def = PROP_DEFS[kind];
+    this.hp = this.def.hp ?? Infinity;
+    this.alive = true;
+    this.fixedX = spec.x;
+    this.fixedZ = spec.z;
+    this.ry = spec.ry ?? 0;
+    this.fuse = -1;
+    this.flash = 0;
+    this.build(spec);
+  }
+
+  build(spec) {
+    const { game, def, kind } = this;
+    const ph = game.physics;
+    let geo;
+    if (kind === 'crate') geo = cachedGeo('crate', () => crateShape(1.1));
+    else if (kind === 'barrel') geo = cachedGeo('barrel', () => barrelShape(0.42, 1.15, PAL.wood, PAL.iron));
+    else if (kind === 'tnt') geo = cachedGeo('tnt', () => barrelShape(0.42, 1.15, PAL.tnt, PAL.black, PAL.bone));
+    else if (kind === 'fence') geo = cachedGeo('fence', () => fenceShape(2.2));
+    else if (kind === 'wagon') geo = cachedGeo('wagon', () => wagonShape());
+    else if (kind === 'tent') geo = cachedGeo('tent', () => tentShape());
+    else if (kind === 'cactus') geo = cachedGeo('cactus' + (spec.seed % 6), () => cactusShape(1.9 + (spec.seed % 3) * 0.3, spec.seed));
+    else if (kind === 'rock') {
+      const s = new Shape();
+      s.rock(spec.r, PAL.rock, 0, spec.r * 0.45, 0, 0.75, 0.3, spec.seed ?? 1);
+      s.rock(spec.r * 0.55, PAL.rockLight, spec.r * 0.55, spec.r * 0.25, spec.r * 0.3, 0.7, 0.3, (spec.seed ?? 1) + 7);
+      geo = s.build();
+    } else if (kind === 'campfire') geo = cachedGeo('campfire', () => {
+      const s = new Shape();
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        s.rock(0.17, PAL.rockDark, Math.cos(a) * 0.62, 0.08, Math.sin(a) * 0.62, 0.6, 0.25, i);
+      }
+      s.box(1.0, 0.13, 0.13, PAL.woodDark, 0, 0.1, 0, 0, 0.5, 0);
+      s.box(1.0, 0.13, 0.13, PAL.woodDark, 0, 0.16, 0, 0, -0.6, 0);
+      return s;
+    });
+
+    this.material = def.indestructible ? MAT.solid : MAT.solid.clone();
+    if (!def.indestructible) { this.material.emissive = new THREE.Color(0xfff2d0); this.material.emissiveIntensity = 0; }
+    this.mesh = new THREE.Mesh(geo, this.material);
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = true;
+    game.levelGroup.add(this.mesh);
+
+    if (def.body === 'box' || def.body === 'cyl') {
+      const halfY = def.body === 'box' ? def.half[1] : def.halfH;
+      const shape = def.body === 'box'
+        ? { type: 'box', hx: def.half[0], hy: def.half[1], hz: def.half[2] }
+        : { type: 'cylinder', halfH: def.halfH, r: def.r };
+      const { body, collider } = ph.dynamic({
+        x: spec.x, y: halfY + 0.002, z: spec.z, ry: this.ry, shape, density: def.density,
+        friction: 0.8, restitution: 0.05, group: GROUPS.prop, owner: this, linDamp: 0.6, angDamp: 0.9,
+      });
+      this.body = body;
+      this.collider = collider;
+      this.physObj = ph.track(new PhysObj(body, this.mesh));
+      this.physObj.render(1);
+    } else {
+      this.mesh.position.set(spec.x, 0, spec.z);
+      this.mesh.rotation.y = this.ry;
+      this.mesh.updateMatrix();
+      this.mesh.matrixAutoUpdate = false;
+      if (def.body === 'fixedBox') {
+        this.halfExt = def.half;
+        this.collider = ph.fixedBox(spec.x, def.half[1], spec.z, def.half[0], def.half[1], def.half[2], this.ry, GROUPS.prop, this);
+      } else {
+        const r = kind === 'rock' ? spec.r * 0.95 : def.r;
+        const halfH = kind === 'rock' ? Math.max(0.6, spec.r * 0.75) : def.halfH;
+        this.radius = r;
+        this.collider = ph.fixedCylinder(spec.x, halfH, spec.z, halfH, r, GROUPS.prop, this);
+        this.coverOk = kind !== 'rock' || spec.r >= 0.8;
+      }
+    }
+
+    if (kind === 'campfire') {
+      this.flame = meshOf(cachedGeo('flame', () => {
+        const s = new Shape();
+        s.cone(0.32, 0.8, 5, PAL.ember, 0, 0.45, 0);
+        s.cone(0.2, 0.62, 5, PAL.fire, 0.08, 0.42, 0.05, 0, 0.6, 0);
+        s.cone(0.14, 0.42, 4, 0xffe08a, -0.06, 0.35, -0.04);
+        return s;
+      }), MAT.glow, false, false);
+      this.flame.position.set(spec.x, 0.1, spec.z);
+      game.levelGroup.add(this.flame);
+      this.fireLight = new THREE.PointLight(0xff8a3a, 6, 9, 1.4);
+      this.fireLight.position.set(spec.x, 1.1, spec.z);
+      game.levelGroup.add(this.fireLight);
+      this.emberT = 0;
+    }
+  }
+
+  get dynamic() { return !!this.body; }
+  get x() { return this.body ? this.body.translation().x : this.fixedX; }
+  get z() { return this.body ? this.body.translation().z : this.fixedZ; }
+
+  yaw() {
+    if (!this.body) return this.ry;
+    const r = this.body.rotation();
+    _q.set(r.x, r.y, r.z, r.w);
+    _up.set(0, 0, 1).applyQuaternion(_q);
+    return Math.atan2(_up.x, _up.z);
+  }
+
+  upright() {
+    if (!this.body) return true;
+    const r = this.body.rotation();
+    _q.set(r.x, r.y, r.z, r.w);
+    _up.set(0, 1, 0).applyQuaternion(_q);
+    return Math.abs(_up.y) > 0.7;
+  }
+
+  /** Footprint for navigation: a rotated box or a circle. */
+  footprint() {
+    const def = this.def;
+    if (def.body === 'box') return { x: this.x, z: this.z, hx: def.half[0], hz: def.half[2], ry: this.yaw() };
+    if (def.body === 'fixedBox') return { x: this.x, z: this.z, hx: def.half[0], hz: def.half[2], ry: this.ry };
+    if (def.body === 'cyl') return { x: this.x, z: this.z, r: this.upright() ? def.r : def.halfH };
+    return { x: this.x, z: this.z, r: this.radius };
+  }
+
+  isCover() {
+    if (!this.alive || !this.def.cover) return false;
+    if (this.kind === 'rock') return this.coverOk;
+    return true;
+  }
+
+  coverPoints() {
+    const fp = this.footprint();
+    const pad = 0.75;
+    const pts = [];
+    if (fp.r !== undefined) {
+      const n = fp.r > 1 ? 8 : 6;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        pts.push({ x: fp.x + Math.sin(a) * (fp.r + pad), z: fp.z + Math.cos(a) * (fp.r + pad) });
+      }
+      return pts;
+    }
+    const c = Math.cos(fp.ry), s = Math.sin(fp.ry);
+    const local = [[fp.hx + pad, 0], [-fp.hx - pad, 0], [0, fp.hz + pad], [0, -fp.hz - pad]];
+    if (fp.hz > 1.2) local.push([fp.hx + pad, fp.hz * 0.6], [fp.hx + pad, -fp.hz * 0.6], [-fp.hx - pad, fp.hz * 0.6], [-fp.hx - pad, -fp.hz * 0.6]);
+    if (fp.hx > 1.2) local.push([fp.hx * 0.6, fp.hz + pad], [-fp.hx * 0.6, fp.hz + pad], [fp.hx * 0.6, -fp.hz - pad], [-fp.hx * 0.6, -fp.hz - pad]);
+    for (const [lx, lz] of local) pts.push({ x: fp.x + lx * c + lz * s, z: fp.z - lx * s + lz * c });
+    return pts;
+  }
+
+  /** Bullet or blast damage. Returns the surface name for effects. */
+  damage(amount, hx, hy, hz, dirX, dirZ, impulse, source = 'player') {
+    if (!this.alive) return this.def.surface;
+    if (this.body && impulse > 0) {
+      this.body.applyImpulseAtPoint({ x: dirX * impulse, y: impulse * 0.15, z: dirZ * impulse }, { x: hx, y: hy, z: hz }, true);
+    }
+    if (this.def.indestructible) return this.def.surface;
+    this.hp -= amount;
+    this.flash = 0.05;
+    if (this.hp <= 0) {
+      if (this.def.explosive && source === 'chain') { this.fuse = T.explosion.chainDelay; this.hp = 1; }
+      else this.break(dirX, dirZ);
+    } else if (this.def.explosive) {
+      this.game.audio.at('fuse', this.x, this.z, { vol: 0.5 });
+    }
+    return this.def.surface;
+  }
+
+  break(dirX = 0, dirZ = 0) {
+    if (!this.alive) return;
+    this.alive = false;
+    const g = this.game;
+    const x = this.x, z = this.z;
+    const y = this.body ? this.body.translation().y : 0.6;
+    const def = this.def;
+    for (let i = 0; i < def.frags; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = rand(1.5, 4.5);
+      g.debris.spawn(def.frag,
+        x + Math.sin(a) * 0.3, y + rand(-0.2, 0.4), z + Math.cos(a) * 0.3,
+        Math.sin(a) * sp + dirX * 3, rand(2, 5), Math.cos(a) * sp + dirZ * 3);
+    }
+    g.fx.emit(def.surface === 'water' ? 'splash' : 'wood', x, y, z, 14, 0, 0, Math.PI, 1.2);
+    g.fx.emit('dust', x, 0.3, z, 8, 0, 0, Math.PI, 1.3);
+    g.audio.at(def.sound, x, z, { vol: 0.9 });
+    g.addTrauma(0.12);
+    this.remove();
+    g.navDirty = true;
+    if (def.explosive) g.explode(x, z);
+  }
+
+  remove() {
+    const g = this.game;
+    if (this.physObj) g.physics.untrack(this.physObj);
+    if (this.body) g.physics.removeBody(this.body);
+    else if (this.collider) g.physics.removeCollider(this.collider);
+    this.body = null;
+    this.collider = null;
+    g.levelGroup.remove(this.mesh);
+    if (this.material !== MAT.solid) this.material.dispose();
+    if (this.kind === 'rock') this.mesh.geometry.dispose();
+  }
+
+  tick(dt) {
+    if (this.fuse > 0) {
+      this.fuse -= dt;
+      if (this.fuse <= 0) { this.fuse = -1; this.break(); }
+    }
+    if (this.body && this.alive) {
+      const t = this.body.translation();
+      // Props knocked out of the arena fall away; remove them.
+      if (t.y < -5) { this.alive = false; this.remove(); this.game.navDirty = true; }
+    }
+  }
+
+  render(alpha, realDt, time) {
+    if (!this.alive) return;
+    if (this.physObj) this.physObj.render(alpha);
+    if (this.flash > 0) {
+      this.flash -= realDt;
+      this.material.emissiveIntensity = this.flash > 0 ? 0.55 : 0;
+    }
+    if (this.flame) {
+      const f = 1 + Math.sin(time * 17) * 0.08 + Math.sin(time * 29) * 0.06;
+      this.flame.scale.set(f, 1 + Math.sin(time * 13) * 0.14, f);
+      this.flame.rotation.y = time * 0.7;
+      this.fireLight.intensity = 6 + Math.sin(time * 19) * 0.9 + Math.sin(time * 7) * 0.6;
+      this.emberT -= realDt;
+      if (this.emberT <= 0) { this.emberT = rand(0.08, 0.2); this.game.fx.emit('ember', this.x, 0.5, this.z, 1); }
+    }
+  }
+}
+
+/** Short-lived physical fragments from broken props. */
+class Debris {
+  constructor(game) {
+    this.game = game;
+    this.items = [];
+    this.max = 70;
+  }
+
+  spawn(type, x, y, z, vx, vy, vz) {
+    const g = this.game;
+    const half = FRAGMENT_HALF[type] ?? FRAGMENT_HALF.chunk;
+    const geo = cachedGeo('frag-' + type, () => fragmentShape(type));
+    const mesh = new THREE.Mesh(geo, MAT.solid);
+    mesh.castShadow = true;
+    g.levelGroup.add(mesh);
+    const rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand(0, 6), rand(0, 6), rand(0, 6)));
+    const { body } = g.physics.dynamic({
+      x, y: Math.max(y, 0.3), z, rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
+      shape: { type: 'box', hx: half[0], hy: half[1], hz: half[2] }, density: 0.7,
+      friction: 0.9, restitution: 0.2, group: GROUPS.debris, linDamp: 0.2, angDamp: 0.4,
+    });
+    body.setLinvel({ x: vx, y: vy, z: vz }, true);
+    body.setAngvel({ x: rand(-9, 9), y: rand(-9, 9), z: rand(-9, 9) }, true);
+    const obj = g.physics.track(new PhysObj(body, mesh));
+    this.items.push({ obj, body, mesh, t: 0, life: rand(5, 7) });
+    while (this.items.length > this.max) this.kill(this.items[0]);
+  }
+
+  kill(item) {
+    const g = this.game;
+    g.physics.untrack(item.obj);
+    g.physics.removeBody(item.body);
+    g.levelGroup.remove(item.mesh);
+    this.items.splice(this.items.indexOf(item), 1);
+  }
+
+  tick(dt) {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const it = this.items[i];
+      it.t += dt;
+      if (it.t >= it.life) this.kill(it);
+    }
+  }
+
+  render(alpha) {
+    for (const it of this.items) {
+      it.obj.render(alpha);
+      const left = it.life - it.t;
+      const s = left < 0.6 ? Math.max(0.01, left / 0.6) : 1;
+      it.mesh.scale.setScalar(s);
+    }
+  }
+}
+
+return { PROP_DEFS, sharedGeometries, Prop, Debris };
+})();
+
+// ---- src/character.js ----
+__m.character = (() => {
+// Procedural animation shared by the player and bandits: leg swing, bob,
+// aim pose, hit flash, and the pivot used for dodge rolls.
+
+const PIVOT_Y = 0.85;
+
+/** Re-parents the body under a pivot at hip height so it can roll in place. */
+function addRollPivot(model) {
+  const pivot = new THREE.Group();
+  pivot.position.y = PIVOT_Y;
+  model.root.add(pivot);
+  pivot.add(model.body);
+  model.body.position.y = -PIVOT_Y;
+  model.pivot = pivot;
+  model.phase = Math.random() * 6;
+  model.armPitch = model.arm.rotation.x;
+  return model;
+}
+
+/**
+ * @param {object} m model from makeCharacter + addRollPivot
+ * @param {{speed:number, dt:number, aiming:boolean, flash:number, roll?:number}} s
+ */
+function animateCharacter(m, s) {
+  const moving = Math.min(1, s.speed / 3.2);
+  m.phase += s.dt * (4 + s.speed * 1.9);
+  const swing = Math.sin(m.phase) * 0.75 * moving;
+  m.legs[0].rotation.x = swing;
+  m.legs[1].rotation.x = -swing;
+  m.body.position.y = -PIVOT_Y + Math.abs(Math.sin(m.phase)) * 0.06 * moving;
+  m.body.rotation.z = Math.sin(m.phase) * 0.03 * moving;
+
+  const targetPitch = s.aiming ? 0.12 : 0.45;
+  m.armPitch += (targetPitch - m.armPitch) * Math.min(1, s.dt * 14);
+  m.arm.rotation.x = m.armPitch;
+
+  if (s.roll !== undefined && s.roll >= 0) {
+    m.pivot.rotation.x = s.roll * Math.PI * 2;
+    const squash = 1 - Math.sin(s.roll * Math.PI) * 0.25;
+    m.pivot.scale.set(1, squash, 1);
+    m.pivot.position.y = PIVOT_Y * squash * 0.8 + 0.1;
+  } else {
+    m.pivot.rotation.x *= 0.5;
+    m.pivot.scale.set(1, 1, 1);
+    m.pivot.position.y = PIVOT_Y;
+  }
+  m.material.emissiveIntensity = s.flash > 0 ? 0.9 : 0;
+}
+
+function showGun(m, kind) {
+  for (const [k, mesh] of Object.entries(m.guns)) mesh.visible = k === kind;
+}
+
+/** Smallest signed angle from a to b. */
+function angleDelta(a, b) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+function turnToward(current, target, maxStep) {
+  const d = angleDelta(current, target);
+  return current + Math.max(-maxStep, Math.min(maxStep, d));
+}
+
+/** Converts a character's living model into a tumbling physics corpse. */
+function makeCorpse(game, model, x, z, yaw, dirX, dirZ, force, tall = 1) {
+  const pivot = new THREE.Group();
+  game.levelGroup.add(pivot);
+  model.root.position.set(0, -0.92 * tall, 0);
+  model.root.rotation.set(0, 0, 0);
+  pivot.add(model.root);
+  return game.spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall);
+}
+
+return { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse };
+})();
+
+// ---- src/cover.js ----
+__m.cover = (() => {
+// Cover selection: score every cover point, then confirm the best few with a
+// line-of-sight ray. A point hidden from the player is worth far more than any
+// other factor.
+const { T } = __m.tuning;
+/**
+ * @param {object} game
+ * @param {object} bandit
+ * @param {{range:[number,number], fromX?:number, fromZ?:number}} opts
+ * @returns {{x:number,z:number,prop:object}|null}
+ */
+function chooseCover(game, bandit, opts) {
+  const P = game.player;
+  const px = opts.fromX ?? P.x, pz = opts.fromZ ?? P.z;
+  const [minD, maxD] = opts.range;
+  const candidates = [];
+  for (const prop of game.props) {
+    if (!prop.isCover()) continue;
+    const propX = prop.x, propZ = prop.z;
+    for (const pt of prop.coverPoints()) {
+      if (!game.nav.isFree(pt.x, pt.z)) continue;
+      if (game.coverClaimed(pt.x, pt.z, bandit)) continue;
+      const dpx = px - pt.x, dpz = pz - pt.z;
+      const dp = Math.hypot(dpx, dpz);
+      if (dp < 3.5) continue;
+      const db = Math.hypot(pt.x - bandit.x, pt.z - bandit.z);
+      // Is the prop roughly between this point and the player?
+      const tpx = propX - pt.x, tpz = propZ - pt.z;
+      const tl = Math.hypot(tpx, tpz) || 1;
+      const between = (tpx * dpx + tpz * dpz) / (tl * dp);
+      let score = -db * 0.22 - Math.max(0, minD - dp) * 0.9 - Math.max(0, dp - maxD) * 0.6 + between * 3;
+      candidates.push({ x: pt.x, z: pt.z, prop, score });
+    }
+  }
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  let best = null, bestScore = -Infinity;
+  const n = Math.min(10, candidates.length);
+  for (let i = 0; i < n; i++) {
+    const c = candidates[i];
+    const hidden = !game.physics.los(c.x, c.z, px, pz, T.player.gunHeight);
+    const s = c.score + (hidden ? 10 : 0);
+    if (s > bestScore) { bestScore = s; best = c; }
+  }
+  return best;
+}
+
+return { chooseCover };
+})();
+
+// ---- src/enemy.js ----
+__m.enemy = (() => {
+// Bandits: perception, a small state machine, cover use, attack tokens and
+// readable aim lines before every shot.
+
+const { T } = __m.tuning;
+const { GROUPS, RAPIER } = __m.physics;
+const { makeCharacter, LOOKS, muzzleLocal } = __m.models;
+const { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse } = __m.character;
+const { chooseCover } = __m.cover;
+const { rand, randSpread } = __m.rng;
+const DEG = Math.PI / 180;
+
+const BANDIT_TYPES = {
+  gunman: {
+    look: 'gunman', hp: 100, speed: 3.6, gun: 'revolver', aim: 0.45, burst: 2, burstGap: 0.28, pellets: 1,
+    dmg: 15, bulletSpeed: 40, spreadDeg: 4, cooldown: [1.2, 2.2], range: [6, 14], fireRange: 20,
+    mag: 6, reload: 1.6, bounty: 15, usesCover: true, sight: 18,
+  },
+  rusher: {
+    look: 'rusher', hp: 70, speed: 5.0, gun: 'shotgun', aim: 0.35, burst: 1, burstGap: 0, pellets: 5,
+    dmg: 9, bulletSpeed: 34, spreadDeg: 16, cooldown: [1.2, 1.7], range: [2.5, 6], fireRange: 7.5,
+    mag: 2, reload: 1.6, bounty: 20, usesCover: false, sight: 16,
+  },
+  sharpshooter: {
+    look: 'sharpshooter', hp: 60, speed: 3.2, gun: 'rifle', aim: 0.9, burst: 1, burstGap: 0, pellets: 1,
+    dmg: 35, bulletSpeed: 60, spreadDeg: 0.8, cooldown: [2.2, 3.2], range: [17, 26], fireRange: 32,
+    mag: 5, reload: 2.2, bounty: 30, usesCover: true, sight: 30,
+  },
+};
+
+const lineGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5);
+const _yellow = new THREE.Color(0xffd35a);
+const _red = new THREE.Color(0xff3322);
+
+class Bandit {
+  constructor(game, type, x, z, campIndex) {
+    this.game = game;
+    this.type = type;
+    this.def = BANDIT_TYPES[type];
+    this.maxHp = this.def.hp;
+    this.hp = this.def.hp;
+    this.alive = true;
+    this.x = x; this.z = z;
+    this.px = x; this.pz = z;
+    this.vx = 0; this.vz = 0;
+    this.kx = 0; this.kz = 0; // knockback velocity
+    this.yaw = Math.PI + rand(-0.6, 0.6);
+    this.prevYaw = this.yaw;
+    this.state = 'idle';
+    this.stateT = 0;
+    this.knows = false;
+    this.canSee = false;
+    this.unseenT = 0;
+    this.lastSeenX = x; this.lastSeenZ = z;
+    this.lastSeenT = -99;
+    this.stimX = x; this.stimZ = z;
+    this.perceptT = rand(0, T.enemy.perceptionInterval);
+    this.cover = null;
+    this.coverCheckT = 0;
+    this.token = false;
+    this.ammo = this.def.mag;
+    this.reloadT = 0;
+    this.cooldown = rand(0.3, 1.0);
+    this.aimT = 0;
+    this.aimYaw = this.yaw;
+    this.burstLeft = 0;
+    this.burstT = 0;
+    this.path = null;
+    this.pathIdx = 0;
+    this.pathTX = 0; this.pathTZ = 0;
+    this.repathT = 0;
+    this.homeX = x; this.homeZ = z;
+    this.wanderT = rand(0.5, 3);
+    this.wanderX = x; this.wanderZ = z;
+    this.peekX = x; this.peekZ = z;
+    this.fleeing = false;
+    this.flash = 0;
+    this.zig = rand(0, 6);
+    this.accuracy = 1 + campIndex * T.enemy.accuracyPerCamp;
+
+    const ph = game.physics;
+    const cap = ph.kinematicCapsule(x, z, T.player.halfHeight, T.player.radius, GROUPS.enemy, this);
+    this.body = cap.body;
+    this.collider = cap.collider;
+    this.bodyY = cap.y;
+
+    this.model = addRollPivot(makeCharacter(LOOKS[this.def.look]));
+    showGun(this.model, this.def.gun);
+    this.model.root.position.set(x, 0, z);
+    game.levelGroup.add(this.model.root);
+
+    this.aimLine = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({
+      color: 0xffd35a, transparent: true, opacity: 0.0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    }));
+    this.aimLine.visible = false;
+    this.aimLine.frustumCulled = false;
+    game.levelGroup.add(this.aimLine);
+  }
+
+  // ---------- perception ----------
+
+  perceive() {
+    const P = this.game.player;
+    if (!P.alive) { this.canSee = false; return; }
+    const dx = P.x - this.x, dz = P.z - this.z;
+    const d = Math.hypot(dx, dz);
+    let see = false;
+    if (d < this.def.sight) {
+      const off = Math.abs(angleDelta(this.yaw, Math.atan2(dx, dz)));
+      if (d < T.enemy.closeSense || this.knows || off < (T.enemy.sightFovDeg * DEG) / 2) {
+        see = this.game.physics.los(this.x, this.z, P.x, P.z);
+      }
+    }
+    this.canSee = see;
+    if (see) {
+      this.lastSeenX = P.x; this.lastSeenZ = P.z;
+      this.lastSeenT = this.game.time;
+      if (!this.knows && this.state !== 'alert') {
+        this.alertTo(P.x, P.z);
+        this.game.shout(this);
+      }
+    }
+  }
+
+  /** Gunfire or an ally's shout. */
+  hear(x, z, direct = false) {
+    if (!this.alive) return;
+    if (!this.knows) {
+      if (this.state !== 'alert') this.alertTo(x, z);
+    } else if (!this.canSee || direct) {
+      this.lastSeenX = x; this.lastSeenZ = z;
+      this.lastSeenT = this.game.time;
+    }
+  }
+
+  alertTo(x, z) {
+    this.stimX = x; this.stimZ = z;
+    this.lastSeenX = x; this.lastSeenZ = z;
+    this.lastSeenT = this.game.time;
+    this.setState('alert');
+    this.game.audio.at('alert', this.x, this.z, { vol: 0.35 });
+  }
+
+  // ---------- state helpers ----------
+
+  setState(s) {
+    if (this.state === s) return;
+    if ((this.state === 'aim' || this.state === 'burst') && s !== 'burst') this.hideAimLine();
+    this.state = s;
+    this.stateT = 0;
+    this.path = null;
+  }
+
+  releaseToken() {
+    if (this.token) { this.game.tokens.release(this); this.token = false; }
+  }
+
+  engageAfterAlert() {
+    this.knows = true;
+    if (this.type === 'rusher') this.setState('charge');
+    else this.setState('toCover');
+  }
+
+  coverRange() {
+    if (this.fleeing) return [16, 40];
+    return this.def.range;
+  }
+
+  pickCover() {
+    this.cover = chooseCover(this.game, this, { range: this.coverRange(), fromX: this.lastSeenX, fromZ: this.lastSeenZ });
+    return this.cover;
+  }
+
+  finishEngage() {
+    this.releaseToken();
+    this.hideAimLine();
+    const [a, b] = this.def.cooldown;
+    this.cooldown = rand(a, b) * (this.fleeing ? 1.6 : 1);
+    if (this.ammo <= 0) this.reloadT = this.def.reload;
+    if (this.type === 'rusher') this.setState('charge');
+    else if (this.cover) this.setState('toCover');
+    else this.setState('open');
+  }
+
+  // ---------- movement ----------
+
+  /** Steers along a nav path toward (tx,tz). Returns true when arrived. */
+  moveTo(tx, tz, speed, dt, arrive = 0.35) {
+    const dist = Math.hypot(tx - this.x, tz - this.z);
+    if (dist < arrive) { this.desire(0, 0, 0); return true; }
+    this.repathT -= dt;
+    if (!this.path || this.repathT <= 0 || Math.hypot(tx - this.pathTX, tz - this.pathTZ) > 1) {
+      this.path = this.game.nav.findPath(this.x, this.z, tx, tz);
+      this.pathIdx = 0;
+      this.pathTX = tx; this.pathTZ = tz;
+      this.repathT = rand(0.7, 1.1);
+    }
+    let wx = tx, wz = tz;
+    if (this.path && this.path.length) {
+      while (this.pathIdx < this.path.length - 1 && Math.hypot(this.path[this.pathIdx].x - this.x, this.path[this.pathIdx].z - this.z) < 0.4) this.pathIdx++;
+      wx = this.path[this.pathIdx].x; wz = this.path[this.pathIdx].z;
+    }
+    const dx = wx - this.x, dz = wz - this.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const slow = Math.min(1, dist / 1.2);
+    this.desire(dx / d, dz / d, speed * Math.max(0.35, slow));
+    return false;
+  }
+
+  desire(dirX, dirZ, speed) {
+    this.wantX = dirX * speed;
+    this.wantZ = dirZ * speed;
+  }
+
+  integrate(dt) {
+    // Separation from other bandits.
+    let sx = 0, sz = 0;
+    for (const o of this.game.enemies) {
+      if (o === this || !o.alive) continue;
+      const dx = this.x - o.x, dz = this.z - o.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 0.001 && d < T.enemy.separation) { sx += (dx / d) * (T.enemy.separation - d); sz += (dz / d) * (T.enemy.separation - d); }
+    }
+    const tx = this.wantX + sx * 2.5, tz = this.wantZ + sz * 2.5;
+    const k = Math.min(1, dt * 14);
+    this.vx += (tx - this.vx) * k;
+    this.vz += (tz - this.vz) * k;
+    const decay = Math.exp(-dt * 7);
+    this.kx *= decay; this.kz *= decay;
+    const mx = (this.vx + this.kx) * dt, mz = (this.vz + this.kz) * dt;
+    const cc = this.game.enemyController;
+    cc.computeColliderMovement(this.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
+    const mv = cc.computedMovement();
+    this.x += mv.x; this.z += mv.z;
+    const lim = this.game.arenaHalf - 0.6;
+    this.x = Math.max(-lim, Math.min(lim, this.x));
+    this.z = Math.max(-lim, Math.min(lim, this.z));
+    this.body.setNextKinematicTranslation({ x: this.x, y: this.bodyY, z: this.z });
+    this.moveSpeed = Math.hypot(mv.x, mv.z) / dt;
+  }
+
+  faceTo(x, z, dt, rate = 9) {
+    this.yaw = turnToward(this.yaw, Math.atan2(x - this.x, z - this.z), rate * dt);
+  }
+
+  // ---------- combat ----------
+
+  muzzle() {
+    const m = muzzleLocal(this.def.gun, this.model.tall);
+    const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
+    return { x: this.x + m.x * c + m.z * s, y: m.y, z: this.z - m.x * s + m.z * c };
+  }
+
+  hasShot() {
+    const P = this.game.player;
+    return P.alive && this.game.physics.los(this.x, this.z, P.x, P.z);
+  }
+
+  fire() {
+    const g = this.game, P = g.player, def = this.def;
+    const mz = this.muzzle();
+    const spread = (def.spreadDeg / this.accuracy) * DEG;
+    for (let i = 0; i < def.pellets; i++) {
+      const a = this.aimYaw + randSpread(spread / 2);
+      g.projectiles.spawn(mz.x, mz.z, Math.sin(a), Math.cos(a), def.bulletSpeed, def.dmg, def.pellets > 1 ? def.fireRange * 1.4 : 45);
+    }
+    this.ammo--;
+    g.fx.muzzle(mz.x, mz.y, mz.z, Math.sin(this.aimYaw), Math.cos(this.aimYaw), def.pellets > 1);
+    g.audio.at('enemyShot', this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: def.gun === 'rifle' ? 1.12 : def.gun === 'shotgun' ? 0.8 : 0.92 });
+    g.addTrauma(0.04);
+    if (P.alive) { this.lastSeenX = P.x; this.lastSeenZ = P.z; }
+  }
+
+  updateAimLine() {
+    const g = this.game;
+    const mz = this.muzzle();
+    const dx = Math.sin(this.aimYaw), dz = Math.cos(this.aimYaw);
+    const hit = g.physics.castRay(mz.x, T.player.gunHeight, mz.z, dx, 0, dz, this.def.fireRange, GROUPS.blockers);
+    let len = hit ? hit.dist : this.def.fireRange;
+    const P = g.player;
+    if (P.alive) len = Math.min(len, Math.hypot(P.x - mz.x, P.z - mz.z) + 1.5);
+    const f = Math.min(1, this.aimT / this.def.aim);
+    const line = this.aimLine;
+    line.visible = true;
+    line.position.set(mz.x, mz.y, mz.z);
+    line.rotation.set(0, this.aimYaw, 0);
+    const thick = this.type === 'sharpshooter' ? 0.05 : 0.035;
+    line.scale.set(thick, thick, len);
+    line.material.color.copy(_yellow).lerp(_red, f);
+    line.material.opacity = 0.3 + f * 0.6;
+  }
+
+  hideAimLine() { this.aimLine.visible = false; }
+
+  /** @returns {{killed:boolean, crit:boolean}} */
+  onHit(dmg, dirX, dirZ, knock) {
+    if (!this.alive) return { killed: false, crit: false };
+    const crit = !this.knows;
+    this.hp -= crit ? dmg * 2 : dmg;
+    this.flash = 0.06;
+    this.kx += dirX * knock * 2.2;
+    this.kz += dirZ * knock * 2.2;
+    const P = this.game.player;
+    this.lastSeenX = P.x; this.lastSeenZ = P.z; this.lastSeenT = this.game.time;
+    if (this.hp <= 0) { this.die(dirX, dirZ, 3 + knock * 1.5); return { killed: true, crit }; }
+    if (!this.knows) { this.knows = true; this.engageAfterAlert(); this.game.shout(this); }
+    this.game.audio.at('enemyHurt', this.x, this.z, { vol: 0.6 });
+    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction() <= 0.5 && this.type !== 'rusher') {
+      this.fleeing = true;
+      this.releaseToken();
+      this.cover = null;
+      this.setState('toCover');
+    }
+    return { killed: false, crit };
+  }
+
+  die(dirX, dirZ, force) {
+    this.alive = false;
+    this.releaseToken();
+    this.hideAimLine();
+    if (this.game.flanker === this) this.game.flanker = null;
+    const g = this.game;
+    g.physics.removeBody(this.body);
+    this.body = null;
+    this.model.material.emissiveIntensity = 0;
+    this.model.pivot.rotation.set(0, 0, 0);
+    this.model.pivot.scale.set(1, 1, 1);
+    this.corpse = makeCorpse(g, this.model, this.x, this.z, this.yaw, dirX, dirZ, force, this.model.tall);
+    g.audio.at('enemyDeath', this.x, this.z, { vol: 0.8 });
+    g.audio.at('bodyFall', this.x, this.z, { vol: 0.7, delay: 0.45 });
+    g.levelGroup.remove(this.aimLine);
+    this.aimLine.material.dispose();
+  }
+
+  // ---------- main tick ----------
+
+  tick(dt) {
+    if (!this.alive) return;
+    const g = this.game, P = g.player, def = this.def;
+    this.px = this.x; this.pz = this.z;
+    this.prevYaw = this.yaw;
+    this.stateT += dt;
+    this.wantX = 0; this.wantZ = 0;
+
+    this.perceptT -= dt;
+    if (this.perceptT <= 0) { this.perceptT = T.enemy.perceptionInterval; this.perceive(); }
+    if (this.canSee) this.unseenT = 0; else this.unseenT += dt;
+
+    if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.ammo = def.mag; }
+    this.cooldown -= dt;
+    const sinceSeen = g.time - this.lastSeenT;
+
+    if (!P.alive && this.knows && this.state !== 'idle') {
+      this.releaseToken();
+      this.knows = false;
+      this.homeX = this.x; this.homeZ = this.z;
+      this.setState('idle');
+    }
+
+    switch (this.state) {
+      case 'idle': {
+        this.wanderT -= dt;
+        if (this.wanderT <= 0) {
+          this.wanderT = rand(3, 6);
+          const a = rand(0, Math.PI * 2), r = rand(0.5, 2.5);
+          this.wanderX = this.homeX + Math.sin(a) * r;
+          this.wanderZ = this.homeZ + Math.cos(a) * r;
+        }
+        if (!this.moveTo(this.wanderX, this.wanderZ, 1.3, dt)) this.faceTo(this.x + this.wantX, this.z + this.wantZ, dt, 4);
+        break;
+      }
+      case 'alert': {
+        this.faceTo(this.stimX, this.stimZ, dt, 7);
+        const wait = this.type === 'rusher' ? 0.35 : T.enemy.alertTime;
+        if (this.stateT >= wait) this.engageAfterAlert();
+        break;
+      }
+      case 'toCover': {
+        if (!this.cover || !this.cover.prop.isCover()) {
+          if (!this.pickCover()) { this.setState('open'); break; }
+        }
+        if (this.moveTo(this.cover.x, this.cover.z, def.speed, dt)) this.setState('hold');
+        else if (this.stateT > 6) { this.cover = null; this.setState('open'); }
+        break;
+      }
+      case 'hold': {
+        this.faceTo(this.lastSeenX, this.lastSeenZ, dt, 6);
+        if (this.cover && (!this.cover.prop.isCover() || Math.hypot(this.cover.x - this.x, this.cover.z - this.z) > 1.2)) {
+          this.cover = null; this.setState('toCover'); break;
+        }
+        this.coverCheckT -= dt;
+        if (this.coverCheckT <= 0 && this.cover) {
+          this.coverCheckT = 0.5;
+          // Flanked: the player can see this spot. Find new cover.
+          if (P.alive && this.cooldown > 0.4 && g.physics.los(this.cover.x, this.cover.z, P.x, P.z)) { this.cover = null; this.setState('toCover'); break; }
+        }
+        if (this.ammo <= 0 && this.reloadT <= 0) this.reloadT = def.reload;
+        if (sinceSeen > T.enemy.memory) { this.setState('search'); break; }
+        if (!this.fleeing && !this.canSee && g.playerCamping() > T.enemy.flankAfter && !g.flanker && this.type === 'gunman') {
+          g.flanker = this; this.setState('flank'); break;
+        }
+        if (this.cooldown <= 0 && this.ammo > 0 && this.reloadT <= 0 && g.tokens.take(this)) {
+          this.token = true;
+          this.setState('peek');
+        }
+        break;
+      }
+      case 'peek': {
+        if (this.stateT === dt) this.choosePeek();
+        this.faceTo(this.lastSeenX, this.lastSeenZ, dt, 8);
+        if (this.canSee && this.hasShot()) { this.startAim(); break; }
+        const arrived = this.moveTo(this.peekX, this.peekZ, def.speed, dt, 0.25);
+        if ((arrived && this.stateT > 0.25 && !this.hasShot()) || this.stateT > 1.6) {
+          this.releaseToken();
+          this.cooldown = 0.8;
+          if (g.playerCamping() > 2 && !g.flanker && this.type === 'gunman') { g.flanker = this; this.setState('flank'); }
+          else this.setState(this.cover ? 'toCover' : 'open');
+        }
+        break;
+      }
+      case 'aim': {
+        this.aimT += dt;
+        const lockAt = def.aim - 0.12;
+        if (this.aimT < lockAt && P.alive) {
+          const lead = Math.min(0.5, Math.hypot(P.x - this.x, P.z - this.z) / def.bulletSpeed) * 0.5;
+          const tx = P.x + P.vx * lead, tz = P.z + P.vz * lead;
+          this.aimYaw = turnToward(this.aimYaw, Math.atan2(tx - this.x, tz - this.z), 5 * dt);
+        }
+        this.yaw = this.aimYaw;
+        this.updateAimLine();
+        if (this.unseenT > 0.45) { this.finishEngage(); this.cooldown = 0.4; break; }
+        if (this.aimT >= def.aim) {
+          this.fire();
+          this.burstLeft = def.burst - 1;
+          if (this.burstLeft > 0 && this.ammo > 0) { this.burstT = def.burstGap; this.state = 'burst'; }
+          else this.finishEngage();
+        }
+        break;
+      }
+      case 'burst': {
+        this.yaw = this.aimYaw;
+        if (P.alive) this.aimYaw = turnToward(this.aimYaw, Math.atan2(P.x - this.x, P.z - this.z), 2 * dt);
+        this.updateAimLine();
+        this.burstT -= dt;
+        if (this.burstT <= 0) {
+          this.fire();
+          this.burstLeft--;
+          if (this.burstLeft > 0 && this.ammo > 0) this.burstT = def.burstGap;
+          else this.finishEngage();
+        }
+        break;
+      }
+      case 'open': {
+        // No cover: hold a preferred range and shoot when a token frees up.
+        const d = Math.hypot(this.lastSeenX - this.x, this.lastSeenZ - this.z);
+        const [lo, hi] = def.range;
+        if (d > hi) this.moveTo(this.lastSeenX, this.lastSeenZ, def.speed, dt, hi);
+        else if (d < lo) {
+          const ax = (this.x - this.lastSeenX) / (d || 1), az = (this.z - this.lastSeenZ) / (d || 1);
+          this.moveTo(this.x + ax * 2, this.z + az * 2, def.speed * 0.8, dt);
+        }
+        this.faceTo(this.lastSeenX, this.lastSeenZ, dt, 8);
+        if (this.ammo <= 0 && this.reloadT <= 0) this.reloadT = def.reload;
+        if (sinceSeen > T.enemy.memory) { this.setState('search'); break; }
+        if (this.stateT > 2 && this.def.usesCover && this.pickCover()) { this.setState('toCover'); break; }
+        if (this.cooldown <= 0 && this.ammo > 0 && this.reloadT <= 0 && this.canSee && g.tokens.take(this)) { this.token = true; this.startAim(); }
+        break;
+      }
+      case 'flank': {
+        if (this.stateT === dt && !this.chooseFlank()) { g.flanker = null; this.setState('hold'); break; }
+        const arrived = this.moveTo(this.peekX, this.peekZ, def.speed * 1.1, dt);
+        if (arrived || this.stateT > 7 || (this.canSee && this.stateT > 1)) {
+          g.flanker = null;
+          this.cover = null;
+          if (this.canSee && this.cooldown <= 0.6 && g.tokens.take(this)) { this.token = true; this.startAim(); }
+          else this.setState('toCover');
+        }
+        break;
+      }
+      case 'search': {
+        const arrived = this.moveTo(this.lastSeenX, this.lastSeenZ, def.speed * 0.75, dt);
+        if (arrived) this.yaw += dt * 2.2;
+        else this.faceTo(this.x + this.wantX, this.z + this.wantZ, dt, 6);
+        if (this.canSee) { this.cover = null; this.setState(this.type === 'rusher' ? 'charge' : 'toCover'); break; }
+        if (arrived && this.stateT > 4) {
+          this.knows = false;
+          this.homeX = this.x; this.homeZ = this.z;
+          this.setState('idle');
+        }
+        break;
+      }
+      case 'charge': {
+        const dx = P.x - this.x, dz = P.z - this.z;
+        const d = Math.hypot(dx, dz) || 1;
+        if (this.ammo <= 0 && this.reloadT <= 0) this.reloadT = def.reload;
+        if (sinceSeen > T.enemy.memory) { this.setState('search'); break; }
+        if (d < 2.6) {
+          // Too close: strafe sideways around the player.
+          this.desire(-dz / d, dx / d, def.speed * 0.7);
+        } else {
+          const tx = this.canSee ? P.x : this.lastSeenX, tz = this.canSee ? P.z : this.lastSeenZ;
+          this.moveTo(tx, tz, def.speed, dt, 2.4);
+          if (this.canSee && d > 4) {
+            const z = Math.sin(g.time * 3.5 + this.zig) * 0.75;
+            this.wantX += (-dz / d) * z * def.speed;
+            this.wantZ += (dx / d) * z * def.speed;
+          }
+        }
+        this.faceTo(P.x, P.z, dt, 10);
+        if (d < def.fireRange && this.canSee && this.cooldown <= 0 && this.ammo > 0 && this.reloadT <= 0 && this.hasShot()) this.startAim();
+        break;
+      }
+    }
+
+    this.integrate(dt);
+  }
+
+  startAim() {
+    this.aimT = 0;
+    const P = this.game.player;
+    this.aimYaw = Math.atan2(P.x - this.x, P.z - this.z);
+    this.setState('aim');
+  }
+
+  choosePeek() {
+    const P = this.game.player;
+    this.peekX = this.x; this.peekZ = this.z;
+    if (this.hasShot()) return;
+    const dx = this.lastSeenX - this.x, dz = this.lastSeenZ - this.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const px = -dz / d, pz = dx / d;
+    const opts = [[px * 1.3, pz * 1.3], [-px * 1.3, -pz * 1.3], [px * 2.2 + dx / d * 0.6, pz * 2.2 + dz / d * 0.6], [-px * 2.2 + dx / d * 0.6, -pz * 2.2 + dz / d * 0.6]];
+    if (Math.random() < 0.5) opts.reverse();
+    for (const [ox, oz] of opts) {
+      const x = this.x + ox, z = this.z + oz;
+      if (!this.game.nav.isFree(x, z)) continue;
+      if (P.alive && this.game.physics.los(x, z, P.x, P.z)) { this.peekX = x; this.peekZ = z; return; }
+    }
+    this.peekX = this.x + opts[0][0]; this.peekZ = this.z + opts[0][1];
+  }
+
+  chooseFlank() {
+    const P = this.game.player;
+    const bearing = Math.atan2(this.x - P.x, this.z - P.z);
+    const dist = Math.max(8, Math.min(12, Math.hypot(this.x - P.x, this.z - P.z)));
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    for (const off of [80, 100, 65, 120]) {
+      for (const s of [sign, -sign]) {
+        const a = bearing + s * off * DEG;
+        const x = P.x + Math.sin(a) * dist, z = P.z + Math.cos(a) * dist;
+        const lim = this.game.arenaHalf - 1.5;
+        if (Math.abs(x) > lim || Math.abs(z) > lim) continue;
+        if (!this.game.nav.isFree(x, z)) continue;
+        if (!this.game.physics.los(x, z, P.x, P.z)) continue;
+        this.peekX = x; this.peekZ = z;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  render(alpha, realDt) {
+    if (!this.alive) return;
+    const m = this.model;
+    m.root.position.set(this.px + (this.x - this.px) * alpha, 0, this.pz + (this.z - this.pz) * alpha);
+    m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
+    if (this.flash > 0) this.flash -= realDt;
+    animateCharacter(m, {
+      speed: this.moveSpeed ?? 0, dt: realDt,
+      aiming: this.state === 'aim' || this.state === 'burst' || this.state === 'peek' || (this.knows && this.state === 'hold'),
+      flash: this.flash,
+    });
+    if (this.aimLine.visible) {
+      const pulse = 0.85 + Math.sin(this.game.time * 40) * 0.15;
+      this.aimLine.material.opacity *= pulse;
+    }
+  }
+}
+
+return { BANDIT_TYPES, lineGeo, Bandit };
+})();
+
+// ---- src/weapons.js ----
+__m.weapons = (() => {
+// Weapons as data, plus the small state machine every gun shares.
+
+const WEAPONS = {
+  revolver: {
+    key: 'revolver', name: 'Revolver', damage: 34, pellets: 1, interval: 0.22, mag: 6,
+    reloadFull: 1.4, reloadPerRound: 0.45, spreadDeg: 1.5, bloomDeg: 0.4, bloomMaxDeg: 4, bloomRecover: 0.3,
+    range: 22, impulse: 1.6, knockback: 1.6, pierce: 0, trauma: 0.25, sound: 'revolver', layout: 'cylinder',
+  },
+  shotgun: {
+    key: 'shotgun', name: 'Shotgun', damage: 12, pellets: 7, interval: 0.85, mag: 2,
+    reloadFull: 1.8, reloadPerRound: 0.9, spreadDeg: 9, bloomDeg: 0, bloomMaxDeg: 0, bloomRecover: 0.3,
+    range: 9, impulse: 0.9, knockback: 3.2, pierce: 0, trauma: 0.45, sound: 'shotgun', layout: 'row',
+  },
+  rifle: {
+    key: 'rifle', name: 'Rifle', damage: 75, pellets: 1, interval: 1.1, mag: 5,
+    reloadFull: 2.4, reloadPerRound: 0.5, spreadDeg: 0.3, bloomDeg: 1.2, bloomMaxDeg: 2, bloomRecover: 0.6,
+    range: 40, impulse: 2.6, knockback: 2.2, pierce: 1, trauma: 0.35, sound: 'rifle', layout: 'row',
+  },
+};
+
+const UNLOCKS = { 1: 'shotgun', 2: 'rifle' }; // after clearing camp N
+
+class Gun {
+  constructor(def, ammo = def.mag) {
+    this.def = def;
+    this.ammo = ammo;
+    this.cooldown = 0;
+    this.bloom = 0;
+    this.reloading = false;
+    this.reloadT = 0;
+    this.reloadTotal = 0;
+    this.emptyT = 0;
+  }
+
+  get spreadDeg() { return this.def.spreadDeg + this.bloom; }
+  get reloadProgress() { return this.reloading ? this.reloadT / this.reloadTotal : 0; }
+
+  /** @returns {boolean} true when a reload just finished */
+  update(dt) {
+    this.cooldown -= dt;
+    if (this.bloom > 0) this.bloom = Math.max(0, this.bloom - (this.def.bloomDeg / this.def.bloomRecover) * dt);
+    if (this.reloading) {
+      this.reloadT += dt;
+      if (this.reloadT >= this.reloadTotal) {
+        this.reloading = false;
+        this.ammo = this.def.mag;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  startReload() {
+    if (this.reloading || this.ammo >= this.def.mag) return false;
+    this.reloading = true;
+    this.reloadT = 0;
+    this.reloadTotal = Math.min(this.def.reloadFull, this.def.reloadPerRound * (this.def.mag - this.ammo));
+    return true;
+  }
+
+  canFire() { return this.cooldown <= 0 && this.ammo > 0; }
+
+  fire() {
+    if (this.reloading) this.reloading = false; // firing cancels a partial reload
+    this.ammo--;
+    this.cooldown = this.def.interval;
+    const spread = this.spreadDeg;
+    this.bloom = Math.min(this.def.bloomMaxDeg, this.bloom + this.def.bloomDeg);
+    return spread;
+  }
+}
+
+return { WEAPONS, UNLOCKS, Gun };
+})();
+
+// ---- src/player.js ----
+__m.player = (() => {
+// The player: tight kinematic movement, dodge roll with i-frames, guns,
+// health with threshold regeneration.
+const { T } = __m.tuning;
+const { GROUPS, RAPIER } = __m.physics;
+const { makeCharacter, LOOKS, muzzleLocal } = __m.models;
+const { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse } = __m.character;
+const { WEAPONS, Gun } = __m.weapons;
+const { randSpread } = __m.rng;
+const DEG = Math.PI / 180;
+
+class Player {
+  /**
+   * @param {object} game
+   * @param {number} x
+   * @param {number} z
+   * @param {{hp:number, unlocked:string[], weapon:number}} run
+   */
+  constructor(game, x, z, run) {
+    this.game = game;
+    this.x = x; this.z = z;
+    this.px = x; this.pz = z;
+    this.vx = 0; this.vz = 0;
+    this.yaw = Math.PI;
+    this.prevYaw = this.yaw;
+    this.hp = run.hp;
+    this.alive = true;
+    this.sinceHit = 99;
+    this.guns = run.unlocked.map((k) => new Gun(WEAPONS[k]));
+    this.gunIndex = Math.min(run.weapon ?? 0, this.guns.length - 1);
+    this.rollT = -1;
+    this.rollCooldown = 0;
+    this.rollX = 0; this.rollZ = 1;
+    this.stepT = 0;
+    this.flash = 0;
+    this.speedNow = 0;
+    this.emptyClickT = 0;
+
+    const cap = game.physics.kinematicCapsule(x, z, T.player.halfHeight, T.player.radius, GROUPS.player, this);
+    this.body = cap.body;
+    this.collider = cap.collider;
+    this.bodyY = cap.y;
+    this.controller = game.physics.characterController();
+
+    this.model = addRollPivot(makeCharacter(LOOKS.player));
+    showGun(this.model, this.gun.def.key);
+    game.levelGroup.add(this.model.root);
+  }
+
+  get gun() { return this.guns[this.gunIndex]; }
+  get rolling() { return this.rollT >= 0; }
+  get invulnerable() { return this.rollT >= 0 && this.rollT < T.dodge.iframes; }
+
+  switchTo(i) {
+    if (i < 0 || i >= this.guns.length || i === this.gunIndex || !this.alive) return;
+    this.gun.reloading = false;
+    this.gunIndex = i;
+    this.gun.cooldown = Math.max(this.gun.cooldown, 0.18);
+    showGun(this.model, this.gun.def.key);
+    this.game.audio.play('switch', { vol: 0.6 });
+  }
+
+  /**
+   * @param {number} dt sim seconds
+   * @param {number} gunDt real seconds per tick (guns run in real time during Dead Eye)
+   * @param {object} intent
+   */
+  tick(dt, gunDt, intent) {
+    this.px = this.x; this.pz = this.z;
+    this.prevYaw = this.yaw;
+    if (!this.alive) return;
+    const g = this.game, P = T.player, D = T.dodge;
+
+    // Dodge roll (buffered input).
+    this.rollCooldown -= dt;
+    if (!this.rolling && this.rollCooldown <= 0 && g.realTime <= intent.dodgeUntil) {
+      intent.dodgeUntil = -1;
+      const mv = intent.move;
+      if (mv.x || mv.z) { this.rollX = mv.x; this.rollZ = mv.z; }
+      else { this.rollX = Math.sin(this.yaw); this.rollZ = Math.cos(this.yaw); }
+      this.rollT = 0;
+      g.audio.play('roll', { vol: 0.7 });
+      g.fx.emit('dust', this.x, 0.1, this.z, 6, -this.rollX, -this.rollZ, 0.8);
+    }
+
+    let mx, mz;
+    if (this.rolling) {
+      this.rollT += dt;
+      const f = this.rollT / D.duration;
+      const v0 = D.distance / (D.duration * 0.7);
+      const v = v0 * (1 - 0.6 * Math.min(1, f));
+      this.vx = this.rollX * v; this.vz = this.rollZ * v;
+      if (this.rollT >= D.duration) { this.rollT = -1; this.rollCooldown = D.cooldown; this.vx *= 0.4; this.vz *= 0.4; }
+    } else {
+      const tx = intent.move.x * P.speed, tz = intent.move.z * P.speed;
+      const accelerating = tx * this.vx + tz * this.vz > 0 || Math.hypot(tx, tz) > Math.hypot(this.vx, this.vz);
+      const rate = (P.speed / (tx || tz ? (accelerating ? P.accelTime : P.stopTime) : P.stopTime)) * dt;
+      const dx = tx - this.vx, dz = tz - this.vz;
+      const dl = Math.hypot(dx, dz);
+      if (dl <= rate) { this.vx = tx; this.vz = tz; } else { this.vx += (dx / dl) * rate; this.vz += (dz / dl) * rate; }
+    }
+    mx = this.vx * dt; mz = this.vz * dt;
+    this.controller.computeColliderMovement(this.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.playerMove);
+    const mv = this.controller.computedMovement();
+    this.x += mv.x; this.z += mv.z;
+    const lim = g.arenaHalf - 0.6;
+    this.x = Math.max(-lim, Math.min(lim, this.x));
+    this.z = Math.max(-lim, Math.min(lim, this.z));
+    this.body.setNextKinematicTranslation({ x: this.x, y: this.bodyY, z: this.z });
+    this.speedNow = Math.hypot(mv.x, mv.z) / dt;
+
+    // Footsteps.
+    if (!this.rolling && this.speedNow > 1) {
+      this.stepT -= dt * this.speedNow;
+      if (this.stepT <= 0) { this.stepT = 2.1; g.audio.play('footstep', { vol: 0.35, vary: 0.15 }); }
+    }
+
+    // Aim.
+    if (intent.aim) {
+      const dx = intent.aim.x - this.x, dz = intent.aim.z - this.z;
+      if (dx * dx + dz * dz > 0.25) {
+        const target = Math.atan2(dx, dz);
+        this.yaw = this.rolling ? Math.atan2(this.rollX, this.rollZ) : turnToward(this.yaw, target, P.turnRate * dt);
+      }
+    }
+
+    // Weapons.
+    if (intent.switchTo !== null) { this.switchTo(intent.switchTo); intent.switchTo = null; }
+    const gun = this.gun;
+    if (gun.update(gunDt)) g.audio.play('reloadDone', { vol: 0.8 });
+    if (gun.reloading) {
+      const per = gun.reloadTotal / Math.max(1, gun.def.mag - gun.ammo);
+      gun.tickAcc = (gun.tickAcc ?? 0) + gunDt;
+      if (gun.tickAcc >= per) { gun.tickAcc = 0; g.audio.play('reloadTick', { vol: 0.5 }); }
+    }
+    if (intent.reload) { intent.reload = false; if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6 }); }
+    this.emptyClickT -= gunDt;
+    if (!this.rolling && (intent.fireHeld || intent.firePressed)) {
+      if (gun.canFire()) this.fire();
+      else if (gun.ammo <= 0 && intent.firePressed && this.emptyClickT <= 0) {
+        this.emptyClickT = 0.3;
+        g.audio.play('dryClick', { vol: 0.8 });
+        if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6, delay: 0.1 });
+      }
+    }
+    intent.firePressed = false;
+    if (gun.ammo <= 0 && !gun.reloading && gun.cooldown < -0.15) gun.startReload();
+
+    // Threshold regeneration.
+    this.sinceHit += dt;
+    if (this.sinceHit >= P.regenDelay && this.hp < P.hp) {
+      const cap = Math.min(P.hp, Math.ceil(this.hp / P.regenStep - 1e-6) * P.regenStep);
+      if (this.hp < cap) this.hp = Math.min(cap, this.hp + P.regenRate * dt);
+    }
+  }
+
+  muzzle() {
+    const m = muzzleLocal(this.gun.def.key);
+    const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
+    return { x: this.x + m.x * c + m.z * s, y: m.y, z: this.z - m.x * s + m.z * c };
+  }
+
+  fire() {
+    const g = this.game, gun = this.gun, def = gun.def;
+    const spreadDeg = gun.fire();
+    const aim = g.intent.aim;
+    let dx = Math.sin(this.yaw), dz = Math.cos(this.yaw);
+    if (aim) {
+      const ax = aim.x - this.x, az = aim.z - this.z;
+      const l = Math.hypot(ax, az);
+      if (l > 1.2) { dx = ax / l; dz = az / l; }
+    }
+    // Aim assist: bend up to a few degrees toward a bandit near the line.
+    let baseA = Math.atan2(dx, dz);
+    let best = T.aimAssist.angleDeg * DEG;
+    for (const e of g.enemies) {
+      if (!e.alive) continue;
+      const ex = e.x - this.x, ez = e.z - this.z;
+      const d = Math.hypot(ex, ez);
+      if (d > T.aimAssist.range || d < 0.5) continue;
+      const off = Math.abs(angleDelta(baseA, Math.atan2(ex, ez)));
+      if (off < best && g.physics.los(this.x, this.z, e.x, e.z)) { best = off; baseA = Math.atan2(ex, ez); }
+    }
+
+    const mz = this.muzzle();
+    const y = T.player.gunHeight;
+    const mult = g.deadEye.active ? T.deadEye.damageMult : 1;
+    let anyHit = false, anyKill = false, anyCrit = false;
+    for (let i = 0; i < def.pellets; i++) {
+      const a = baseA + randSpread((spreadDeg * DEG) / 2);
+      const rx = Math.sin(a), rz = Math.cos(a);
+      const max = def.range * (def.pellets > 1 ? 1.35 : 1.8);
+      let ox = this.x, oz = this.z, traveled = 0, pierce = def.pierce, exclude = this.collider;
+      let endX = ox + rx * max, endZ = oz + rz * max;
+      for (let guard = 0; guard < 4; guard++) {
+        const hit = g.physics.castRay(ox, y, oz, rx, 0, rz, max - traveled, GROUPS.playerShot, exclude);
+        if (!hit) { endX = ox + rx * (max - traveled); endZ = oz + rz * (max - traveled); break; }
+        const d = traveled + hit.dist;
+        const fall = d <= def.range ? 1 : Math.max(0.5, 1 - (d - def.range) / def.range);
+        const dmg = def.damage * fall * mult;
+        const owner = hit.owner;
+        endX = hit.x; endZ = hit.z;
+        if (owner && owner.onHit) {
+          const res = owner.onHit(dmg, rx, rz, def.knockback);
+          anyHit = true;
+          anyKill = anyKill || res.killed;
+          anyCrit = anyCrit || res.crit;
+          g.fx.impact('flesh', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
+          g.audio.at('hitFlesh', hit.x, hit.z, { vol: 0.8 });
+          if (res.killed) g.onEnemyKilled(owner, res.crit);
+          else g.deadEye.add(T.deadEye.fillHit);
+          if (pierce > 0) { pierce--; traveled = d + 0.05; ox = hit.x + rx * 0.05; oz = hit.z + rz * 0.05; exclude = hit.collider; continue; }
+        } else if (owner && owner.damage) {
+          const surface = owner.damage(dmg, hit.x, hit.y, hit.z, rx, rz, def.impulse, 'player');
+          g.fx.impact(surface === 'cloth' || surface === 'plant' ? 'dirt' : surface, hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
+          const snd = surface === 'wood' || surface === 'water' ? 'hitWood' : surface === 'stone' ? 'hitDirt' : 'hitDirt';
+          g.audio.at(snd, hit.x, hit.z, { vol: 0.6 });
+        } else {
+          g.fx.impact('dirt', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
+          g.audio.at('hitDirt', hit.x, hit.z, { vol: 0.5 });
+        }
+        break;
+      }
+      g.fx.tracer(mz.x, mz.y, mz.z, endX, y, endZ, g.deadEye.active ? 0xffb070 : 0xffe7b0);
+    }
+
+    g.fx.muzzle(mz.x, mz.y, mz.z, dx, dz, def.pellets > 1);
+    if (def.key !== 'shotgun') g.fx.casing(this.x, 1.0, this.z, dx, dz);
+    g.audio.play(def.sound, { vol: 1, vary: 0.06 });
+    g.addTrauma(def.trauma);
+    g.noise(this.x, this.z, T.enemy.hearRange);
+    g.stats.shots++;
+    if (anyHit) { g.stats.hits++; g.ui.hitMarker(anyKill); }
+    if (anyCrit && !anyKill) g.hitStop(T.hitStop.crit);
+    this.vx -= dx * 0.6; this.vz -= dz * 0.6; // tiny recoil push
+  }
+
+  damage(amount, dirX, dirZ) {
+    if (!this.alive || this.invulnerable) return false;
+    const g = this.game;
+    this.hp -= amount;
+    this.sinceHit = 0;
+    this.flash = 0.08;
+    g.addTrauma(0.35);
+    g.ui.hurt(dirX, dirZ);
+    g.audio.play('hurt', { vol: 0.9 });
+    g.stats.damageTaken += amount;
+    if (this.hp <= 0) { this.hp = 0; this.die(dirX, dirZ); }
+    return true;
+  }
+
+  die(dirX, dirZ) {
+    this.alive = false;
+    const g = this.game;
+    g.physics.removeBody(this.body);
+    this.model.material.emissiveIntensity = 0;
+    this.model.pivot.rotation.set(0, 0, 0);
+    this.model.pivot.scale.set(1, 1, 1);
+    this.corpse = makeCorpse(g, this.model, this.x, this.z, this.yaw, dirX, dirZ, 3.5);
+    g.audio.play('bodyFall', { vol: 0.9, delay: 0.4 });
+    g.onPlayerDied();
+  }
+
+  render(alpha, realDt) {
+    if (!this.alive) return;
+    const m = this.model;
+    m.root.position.set(this.px + (this.x - this.px) * alpha, 0, this.pz + (this.z - this.pz) * alpha);
+    m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
+    if (this.flash > 0) this.flash -= realDt;
+    animateCharacter(m, {
+      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: true, flash: this.flash,
+      roll: this.rolling ? this.rollT / T.dodge.duration : -1,
+    });
+  }
+}
+
+return { Player };
+})();
+
+// ---- src/projectiles.js ----
+__m.projectiles = (() => {
+// Enemy bullets travel as visible tracers so a player who sees the flash can
+// roll through them. World and props block them; the player is tested directly.
+
+const { T } = __m.tuning;
+const { GROUPS } = __m.physics;
+const MAX = 60;
+
+class Projectiles {
+  constructor(game) {
+    this.game = game;
+    this.items = [];
+    const geo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, -0.5);
+    for (let i = 0; i < MAX; i++) {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffcf7a, toneMapped: false }));
+      mesh.scale.set(0.07, 0.07, 1.1);
+      mesh.visible = false;
+      mesh.frustumCulled = false;
+      game.levelGroup.add(mesh);
+      this.items.push({ active: false, x: 0, z: 0, px: 0, pz: 0, dx: 0, dz: 1, speed: 40, dmg: 10, left: 0, whizzed: false, mesh });
+    }
+  }
+
+  spawn(x, z, dx, dz, speed, dmg, maxDist) {
+    const p = this.items.find((it) => !it.active);
+    if (!p) return;
+    Object.assign(p, { active: true, x, z, px: x, pz: z, dx, dz, speed, dmg, left: maxDist, whizzed: false });
+    p.mesh.visible = true;
+    p.mesh.rotation.set(0, Math.atan2(dx, dz), 0);
+  }
+
+  tick(dt) {
+    const g = this.game, P = g.player;
+    const y = T.player.gunHeight;
+    for (const p of this.items) {
+      if (!p.active) continue;
+      p.px = p.x; p.pz = p.z;
+      let step = Math.min(p.speed * dt, p.left);
+      const hit = g.physics.castRay(p.x, y, p.z, p.dx, 0, p.dz, step, GROUPS.blockers);
+      const segLen = hit ? hit.dist : step;
+
+      // Closest approach to the player along this segment.
+      if (P.alive) {
+        const rx = P.x - p.x, rz = P.z - p.z;
+        const t = Math.max(0, Math.min(segLen, rx * p.dx + rz * p.dz));
+        const cx = p.x + p.dx * t, cz = p.z + p.dz * t;
+        const miss = Math.hypot(P.x - cx, P.z - cz);
+        if (miss < T.player.hitRadius) {
+          if (P.damage(p.dmg, p.dx, p.dz)) {
+            g.fx.impact('flesh', cx, y, cz, -p.dx, -p.dz, p.dx, p.dz);
+            this.kill(p);
+            continue;
+          }
+        } else if (!p.whizzed && miss < 1.8 && t > 0 && t < segLen) {
+          p.whizzed = true;
+          g.audio.at('whiz', cx, cz, { vol: 0.7, vary: 0.15 });
+        }
+      }
+
+      if (hit) {
+        const owner = hit.owner;
+        let surface = 'dirt';
+        if (owner && owner.damage) surface = owner.damage(p.dmg * 0.5, hit.x, hit.y, hit.z, p.dx, p.dz, 0.5, 'enemy');
+        g.fx.impact(surface === 'cloth' || surface === 'plant' ? 'dirt' : surface, hit.x, hit.y, hit.z, hit.nx, hit.nz, p.dx, p.dz);
+        this.kill(p);
+        continue;
+      }
+      p.x += p.dx * step;
+      p.z += p.dz * step;
+      p.left -= step;
+      if (p.left <= 0) this.kill(p);
+    }
+  }
+
+  kill(p) { p.active = false; p.mesh.visible = false; }
+
+  clear() { for (const p of this.items) this.kill(p); }
+
+  render(alpha) {
+    const y = T.player.gunHeight;
+    for (const p of this.items) {
+      if (!p.active) continue;
+      p.mesh.position.set(p.px + (p.x - p.px) * alpha, y, p.pz + (p.z - p.pz) * alpha);
+    }
+  }
+}
+
+return { Projectiles };
+})();
+
+// ---- src/level.js ----
+__m.level = (() => {
+// Seeded bandit-camp layouts and the static scenery around them.
+
+const { createRng } = __m.rng;
+const { PAL, Shape, MAT } = __m.models;
+const ARENA_HALF = 22;
+const PLAYER_SPAWN = { x: 0, z: 18.5 };
+
+/** Bandit roster for camp N (0-based). */
+function rosterFor(camp) {
+  const gunmen = Math.min(6, 3 + camp);
+  const rushers = Math.min(3, Math.floor((camp + 2) / 2));
+  const snipers = Math.min(2, Math.floor(camp / 2));
+  const list = [];
+  for (let i = 0; i < gunmen; i++) list.push('gunman');
+  for (let i = 0; i < rushers; i++) list.push('rusher');
+  for (let i = 0; i < snipers; i++) list.push('sharpshooter');
+  return list;
+}
+
+/**
+ * Pure data: where everything goes. The game turns this into meshes and colliders.
+ * @returns {{props:{kind:string,x:number,z:number,ry?:number,r?:number,seed?:number}[], enemies:{type:string,x:number,z:number}[], campfire:{x:number,z:number}, name:string}}
+ */
+function generateCamp(seed, camp) {
+  const rng = createRng(seed + camp * 7919);
+  const H = ARENA_HALF;
+  const placed = [];
+  const props = [];
+
+  const free = (x, z, r, gap = 1.4) => {
+    if (Math.abs(x) > H - 1.6 - r || Math.abs(z) > H - 1.6 - r) return false;
+    if (Math.hypot(x - PLAYER_SPAWN.x, z - PLAYER_SPAWN.z) < 5.5 + r) return false;
+    for (const p of placed) if (Math.hypot(p.x - x, p.z - z) < p.r + r + gap) return false;
+    return true;
+  };
+  const put = (kind, x, z, r, extra = {}) => { placed.push({ x, z, r }); props.push({ kind, x, z, ...extra }); };
+  const tryPlace = (r, zMin, zMax, gap, fn, tries = 40) => {
+    for (let i = 0; i < tries; i++) {
+      const x = rng.range(-H + 2, H - 2), z = rng.range(zMin, zMax);
+      if (free(x, z, r, gap)) { fn(x, z); return { x, z }; }
+    }
+    return null;
+  };
+
+  // Campfire and tents form the heart of the camp.
+  const cf = { x: rng.range(-5, 5), z: rng.range(-11, -5) };
+  put('campfire', cf.x, cf.z, 1.1);
+  const tents = rng.int(2, 3);
+  const base = rng.range(0, Math.PI * 2);
+  for (let i = 0; i < tents; i++) {
+    for (let t = 0; t < 12; t++) {
+      const a = base + (i / tents) * Math.PI * 2 + rng.range(-0.4, 0.4);
+      const d = rng.range(5, 7.5);
+      const x = cf.x + Math.sin(a) * d, z = cf.z + Math.cos(a) * d;
+      if (free(x, z, 1.8, 1.2)) { put('tent', x, z, 1.8, { ry: Math.atan2(cf.x - x, cf.z - z) }); break; }
+    }
+  }
+
+  // Wagons.
+  const wagons = rng.int(1, 2);
+  for (let i = 0; i < wagons; i++) tryPlace(2.0, -17, 9, 1.6, (x, z) => put('wagon', x, z, 2.0, { ry: rng.pick([0, Math.PI / 2, rng.range(-0.5, 0.5)]) }));
+
+  // Cover clusters of crates and barrels.
+  const clusters = 6 + Math.min(3, camp);
+  for (let c = 0; c < clusters; c++) {
+    tryPlace(1.7, -18, 12, 1.5, (x, z) => {
+      placed.push({ x, z, r: 1.7 });
+      const n = rng.int(2, 4);
+      const ry = rng.range(0, Math.PI);
+      const cx = Math.cos(ry), sx = Math.sin(ry);
+      const layout = [[0, 0], [1.15, 0], [0, 1.15], [-1.15, 0], [1.15, 1.15]];
+      for (let i = 0; i < n; i++) {
+        const [lx, lz] = layout[i];
+        const kind = rng.chance(0.62) ? 'crate' : 'barrel';
+        props.push({ kind, x: x + lx * cx + lz * sx, z: z - lx * sx + lz * cx, ry: ry + rng.range(-0.15, 0.15) });
+      }
+    });
+  }
+
+  // Explosive barrels: risky cover.
+  const tnt = rng.int(2, 3);
+  for (let i = 0; i < tnt; i++) tryPlace(0.5, -18, 10, 1.0, (x, z) => put('tnt', x, z, 0.5));
+
+  // Fence runs.
+  const fences = rng.int(3, 5);
+  for (let f = 0; f < fences; f++) {
+    const sections = rng.int(1, 3);
+    const ry = rng.pick([0, Math.PI / 2]);
+    tryPlace(sections * 1.15, -18, 13, 1.4, (x, z) => {
+      placed.push({ x, z, r: sections * 1.15 });
+      for (let s = 0; s < sections; s++) {
+        const o = (s - (sections - 1) / 2) * 2.2;
+        props.push({ kind: 'fence', x: x + Math.cos(ry) * o, z: z - Math.sin(ry) * o, ry });
+      }
+    });
+  }
+
+  // Rocks and cacti.
+  for (let i = 0; i < rng.int(6, 9); i++) {
+    const r = rng.range(0.55, 1.35);
+    tryPlace(r, -19, 15, 1.4, (x, z) => put('rock', x, z, r, { r, seed: rng.int(1, 999) }));
+  }
+  for (let i = 0; i < rng.int(6, 10); i++) {
+    tryPlace(0.35, -19, 16, 1.6, (x, z) => put('cactus', x, z, 0.35, { seed: rng.int(0, 99) }));
+  }
+
+  // Bandits start around the fire and tents, well away from the player.
+  const enemies = [];
+  const roster = rosterFor(camp);
+  for (const type of roster) {
+    for (let t = 0; t < 60; t++) {
+      const near = rng.chance(0.65);
+      const x = near ? cf.x + rng.range(-6, 6) : rng.range(-H + 3, H - 3);
+      const z = near ? cf.z + rng.range(-5, 5) : rng.range(-H + 3, 0);
+      if (Math.hypot(x - PLAYER_SPAWN.x, z - PLAYER_SPAWN.z) < 16) continue;
+      if (!free(x, z, 0.5, 0.6)) continue;
+      if (enemies.some((e) => Math.hypot(e.x - x, e.z - z) < 1.6)) continue;
+      enemies.push({ type, x, z });
+      break;
+    }
+  }
+
+  const names = ['Coyote Wash', 'Dry Gulch', 'Rattler Flats', 'Buzzard Mesa', 'Red Hollow', 'Cinder Draw', 'Bone Creek', 'Dead Man\'s Bend', 'Copper Notch', 'Sidewinder Pass'];
+  return { props, enemies, campfire: cf, name: names[(seed + camp * 3) % names.length] };
+}
+
+/** Ground, cliffs and scatter: one merged static mesh plus invisible walls. */
+function buildScenery(game, seed) {
+  const rng = createRng(seed ^ 0x5eed);
+  const H = ARENA_HALF;
+
+  // Ground with color variation and dunes outside the arena.
+  const size = 170, seg = 85;
+  const ground = new THREE.PlaneGeometry(size, size, seg, seg).rotateX(-Math.PI / 2).toNonIndexed();
+  const pos = ground.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const cA = new THREE.Color(PAL.sand), cB = new THREE.Color(PAL.sandDark), cC = new THREE.Color(PAL.sandLight), c = new THREE.Color();
+  const noise = (x, z) => Math.sin(x * 0.21 + seed) * Math.cos(z * 0.17 - seed * 0.5) + Math.sin(x * 0.07 - z * 0.09) * 0.8;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const out = Math.max(Math.abs(x), Math.abs(z)) - (H + 3);
+    if (out > 0) pos.setY(i, Math.max(0, (noise(x, z) + 1.2) * Math.min(1, out / 10) * 2.2));
+  }
+  // Color per triangle (flat look).
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3;
+    const z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3;
+    const n = noise(x * 1.7, z * 1.7) * 0.5 + 0.5;
+    const r = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1 + 1) % 1;
+    c.copy(cA).lerp(n > 0.5 ? cB : cC, Math.abs(n - 0.5) * 1.2 + r * 0.12);
+    for (let k = 0; k < 3; k++) { col[(i + k) * 3] = c.r; col[(i + k) * 3 + 1] = c.g; col[(i + k) * 3 + 2] = c.b; }
+  }
+  ground.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  ground.computeVertexNormals();
+  const groundMesh = new THREE.Mesh(ground, MAT.solid);
+  groundMesh.receiveShadow = true;
+  game.levelGroup.add(groundMesh);
+
+  // Scenery: cliffs on three sides, low rocks along the south edge.
+  const s = new Shape();
+  const ring = (side, along, out) => {
+    if (side === 'n') return [along, -H - out];
+    if (side === 's') return [along, H + out];
+    if (side === 'w') return [-H - out, along];
+    return [H + out, along];
+  };
+  for (const side of ['n', 'w', 'e']) {
+    for (let a = -H - 6; a <= H + 6; a += rng.range(2.6, 3.6)) {
+      const [x, z] = ring(side, a, rng.range(1.2, 3.2));
+      const r = rng.range(2.2, 3.4);
+      s.rock(r, rng.chance(0.5) ? PAL.cliff : PAL.rock, x, r * 0.6, z, rng.range(1.1, 1.7), 0.3, rng.int(1, 999), rng.range(0, 6));
+      if (rng.chance(0.55)) {
+        const r2 = r * rng.range(0.5, 0.75);
+        s.rock(r2, PAL.rockLight, x + rng.range(-1, 1), r * 1.5 + r2 * 0.4, z + rng.range(-1, 1), rng.range(1, 1.4), 0.3, rng.int(1, 999));
+      }
+    }
+  }
+  for (let a = -H; a <= H; a += rng.range(1.6, 2.6)) {
+    const [x, z] = ring('s', a, rng.range(0.6, 1.6));
+    s.rock(rng.range(0.5, 0.9), PAL.rockDark, x, 0.25, z, 0.6, 0.3, rng.int(1, 999));
+  }
+  // Scatter: scrub, skulls and pebbles inside the arena (no collision).
+  for (let i = 0; i < 70; i++) {
+    const x = rng.range(-H, H), z = rng.range(-H, H);
+    const k = rng.next();
+    if (k < 0.55) {
+      for (let j = 0; j < 3; j++) s.cone(rng.range(0.06, 0.1), rng.range(0.25, 0.45), 3, rng.chance(0.5) ? PAL.cactusDark : 0x8c8a4a, x + rng.range(-0.2, 0.2), 0.15, z + rng.range(-0.2, 0.2), rng.range(-0.3, 0.3), 0, rng.range(-0.3, 0.3));
+    } else if (k < 0.62) {
+      s.box(0.22, 0.16, 0.26, PAL.bone, x, 0.08, z, 0, rng.range(0, 6), 0);
+      s.box(0.07, 0.07, 0.4, PAL.bone, x + 0.25, 0.04, z + 0.1, 0, rng.range(0, 6), 0);
+    } else {
+      s.rock(rng.range(0.1, 0.22), PAL.rockDark, x, 0.04, z, 0.5, 0.3, rng.int(1, 999));
+    }
+  }
+  // Distant mesas for depth.
+  for (let i = 0; i < 9; i++) {
+    const a = -Math.PI * 0.95 + (i / 8) * Math.PI * 0.9;
+    const d = rng.range(58, 70);
+    s.cyl(rng.range(5, 9), rng.range(7, 11), rng.range(6, 12), 7, PAL.cliff, Math.cos(a) * d, 3, Math.sin(a) * d - 8);
+  }
+  const scenery = new THREE.Mesh(s.build(), MAT.solid);
+  scenery.castShadow = true;
+  scenery.receiveShadow = true;
+  game.levelGroup.add(scenery);
+
+  // Physics: ground slab and invisible walls.
+  const ph = game.physics;
+  ph.fixedBox(0, -0.5, 0, 90, 0.5, 90, 0, game.groups.ground);
+  const wall = game.groups.world;
+  ph.fixedBox(0, 2, -H - 0.5, H + 1, 2, 0.5, 0, wall);
+  ph.fixedBox(0, 2, H + 0.5, H + 1, 2, 0.5, 0, wall);
+  ph.fixedBox(-H - 0.5, 2, 0, 0.5, 2, H + 1, 0, wall);
+  ph.fixedBox(H + 0.5, 2, 0, 0.5, 2, H + 1, 0, wall);
+}
+
+return { ARENA_HALF, PLAYER_SPAWN, rosterFor, generateCamp, buildScenery };
+})();
+
+// ---- src/game.js ----
+__m.game = (() => {
+// Game state and the run: camps, permadeath, saving, Dead Eye, hit-stop,
+// explosions, and the order everything updates in each tick.
+
+const { T } = __m.tuning;
+const { Physics, GROUPS } = __m.physics;
+const { PhysObj } = __m.physics;
+const { NavGrid } = __m.nav;
+const { FX } = __m.fx;
+const { MAT, PAL } = __m.models;
+const { Prop, Debris, sharedGeometries } = __m.props;
+const { Bandit, BANDIT_TYPES, lineGeo } = __m.enemy;
+const { Player } = __m.player;
+const { Projectiles } = __m.projectiles;
+const { generateCamp, buildScenery, ARENA_HALF, PLAYER_SPAWN } = __m.level;
+const { UNLOCKS, WEAPONS } = __m.weapons;
+const { randomSeed } = __m.rng;
+const SAVE_KEY = 'dustiron.run.v1';
+const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
+const scorchMat = new THREE.MeshLambertMaterial({ color: 0x3a2a20, transparent: true, opacity: 0.55, depthWrite: false });
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    return s && typeof s.seed === 'number' && Array.isArray(s.unlocked) ? s : null;
+  } catch { return null; }
+}
+
+function deleteSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+}
+
+class Game {
+  constructor({ render, rig, input, audio, ui }) {
+    this.render = render;
+    this.scene = render.scene;
+    this.rig = rig;
+    this.input = input;
+    this.audio = audio;
+    this.ui = ui;
+    this.fx = new FX(render.scene, render.flash);
+    this.groups = GROUPS;
+    this.arenaHalf = ARENA_HALF;
+    this.state = 'title';
+    this.time = 0;
+    this.realTime = 0;
+    this.intent = { move: { x: 0, z: 0 }, aim: null, fireHeld: false, firePressed: false, reload: false, dodgeUntil: -1, switchTo: null };
+    this.aimPoint = new THREE.Vector3();
+    this.enemies = [];
+    this.props = [];
+    this.corpses = [];
+    this.player = null;
+    this.physics = null;
+    this.levelGroup = null;
+    this.run = null;
+    this.hitStopT = 0;
+    this.slowmo = { scale: 1, t: 0, target: 1 };
+    this.clearT = -1;
+    this.deathT = -1;
+    this.saveT = 0;
+    this.navT = 0;
+    this.navDirty = true;
+    this.flanker = null;
+    this.camp = { x: 0, z: 0, t: 0 };
+    this.heartT = 0;
+
+    this.deadEye = {
+      meter: 0, active: false,
+      add(v) { if (!this.active) this.meter = Math.min(1, this.meter + v); },
+    };
+    this.tokens = {
+      holders: new Set(),
+      take(b) {
+        if (b.type === 'rusher') return true;
+        for (const h of this.holders) if (!h.alive) this.holders.delete(h);
+        if (this.holders.size >= T.enemy.tokens) return false;
+        this.holders.add(b);
+        return true;
+      },
+      release(b) { this.holders.delete(b); },
+    };
+  }
+
+  get stats() { return this.run; }
+
+  // ---------- run lifecycle ----------
+
+  newRun() {
+    deleteSave();
+    this.run = {
+      seed: randomSeed(), camp: 0, bounty: 0, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
+      hp: T.player.hp, unlocked: ['revolver'], weapon: 0, deadEye: 0, version: 1,
+    };
+    this.loadCamp();
+  }
+
+  continueRun(save) {
+    this.run = { ...save };
+    this.loadCamp();
+  }
+
+  loadCamp() {
+    this.unload();
+    const run = this.run;
+    this.levelGroup = new THREE.Group();
+    this.scene.add(this.levelGroup);
+    this.physics = new Physics();
+    this.enemyController = this.physics.characterController();
+    this.time = 0;
+
+    buildScenery(this, run.seed + run.camp);
+    const layout = generateCamp(run.seed, run.camp);
+    this.campName = layout.name;
+    this.debris = new Debris(this);
+    this.projectiles = new Projectiles(this);
+    this.props = layout.props.map((spec) => new Prop(this, spec.kind, spec));
+    this.player = new Player(this, PLAYER_SPAWN.x, PLAYER_SPAWN.z, run);
+    this.enemies = layout.enemies.map((e) => new Bandit(this, e.type, e.x, e.z, run.camp));
+    this.campStartBounty = run.bounty;
+    this.corpses = [];
+
+    this.nav = new NavGrid(ARENA_HALF, 0.5, 0.45);
+    this.nav.setStatic(this.props.filter((p) => !p.dynamic).map((p) => p.footprint()));
+    this.rebuildNav();
+
+    this.deadEye.meter = run.deadEye ?? 0;
+    this.deadEye.active = false;
+    this.tokens.holders.clear();
+    this.flanker = null;
+    this.hitStopT = 0;
+    this.slowmo = { scale: 1, t: 0, target: 1 };
+    this.clearT = -1;
+    this.deathT = -1;
+    this.camp = { x: PLAYER_SPAWN.x, z: PLAYER_SPAWN.z, t: 0 };
+    this.fx.clear();
+    Object.assign(this.intent, { firePressed: false, reload: false, dodgeUntil: -1, switchTo: null, aim: null });
+    this.rig.snap(PLAYER_SPAWN.x, PLAYER_SPAWN.z - 3);
+    this.state = 'playing';
+    this.ui.show(null);
+    const n = this.enemies.length;
+    this.ui.toast(`Camp ${run.camp + 1} · ${this.campName} · ${n} outlaws`, 3);
+    this.audio.setAmbience(0.13);
+    this.save();
+  }
+
+  unload() {
+    if (!this.levelGroup) return;
+    const shared = sharedGeometries();
+    shared.add(lineGeo);
+    shared.add(scorchGeo);
+    this.levelGroup.traverse((o) => {
+      if (!o.isMesh) return;
+      if (!shared.has(o.geometry)) o.geometry.dispose();
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) if (m !== MAT.solid && m !== MAT.glow && m !== scorchMat) m.dispose();
+    });
+    this.scene.remove(this.levelGroup);
+    this.levelGroup = null;
+    this.physics.free();
+    this.physics = null;
+    this.enemies = [];
+    this.props = [];
+    this.corpses = [];
+    this.player = null;
+    this.deadEye.active = false;
+    this.audio.setDeadEye(false);
+    this.ui.el.app.classList.remove('deadeye');
+  }
+
+  save() {
+    if (!this.run || !this.player || !this.player.alive) return;
+    const data = { ...this.run, hp: this.player.hp, weapon: this.player.gunIndex, deadEye: this.deadEye.meter };
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch { /* storage unavailable */ }
+  }
+
+  quitToTitle() {
+    this.save();
+    this.unload();
+    this.state = 'title';
+    this.audio.setAmbience(0);
+    this.ui.setContinue(loadSave());
+    this.ui.show('title');
+  }
+
+  pause(on) {
+    if (on && this.state === 'playing') { this.state = 'paused'; this.ui.show('pause'); this.save(); this.setDeadEye(false); }
+    else if (!on && this.state === 'paused') { this.state = 'playing'; this.ui.show(null); }
+  }
+
+  onCampCleared() {
+    const run = this.run, p = this.player;
+    const bonus = 25 * (run.camp + 1);
+    run.bounty += bonus;
+    const earned = run.bounty - this.campStartBounty;
+    const unlockKey = UNLOCKS[run.camp + 1];
+    let unlock = null;
+    if (unlockKey && !run.unlocked.includes(unlockKey)) { run.unlocked.push(unlockKey); unlock = `${WEAPONS[unlockKey].name} (press ${run.unlocked.length})`; }
+    const healed = Math.round(Math.min(T.player.healBetweenCamps, T.player.hp - p.hp));
+    run.hp = Math.min(T.player.hp, p.hp + healed);
+    run.weapon = p.gunIndex;
+    run.deadEye = this.deadEye.meter;
+    run.camp++;
+    this.state = 'cleared';
+    this.setDeadEye(false);
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(run)); } catch { /* storage unavailable */ }
+    this.audio.play('coin', { bus: 'ui', vol: 0.9 });
+    this.ui.showCleared({ name: this.campName, earned, total: run.bounty, healed, unlock });
+  }
+
+  onPlayerDied() {
+    deleteSave(); // Death is permanent: nothing to come back to.
+    this.state = 'dying';
+    this.deathT = 1.8;
+    this.slowmo = { scale: T.run.deathSlowmo, t: 1.2, target: T.run.deathSlowmo };
+    this.setDeadEye(false);
+    this.addTrauma(0.6);
+    this.tokens.holders.clear();
+  }
+
+  // ---------- events used by entities ----------
+
+  addTrauma(a) { this.rig.addTrauma(a); }
+  hitStop(t) { this.hitStopT = Math.max(this.hitStopT, t); }
+
+  onEnemyKilled(e, crit) {
+    const run = this.run;
+    run.kills++;
+    const b = BANDIT_TYPES[e.type].bounty;
+    run.bounty += b;
+    this.deadEye.add(T.deadEye.fillKill);
+    this.hitStop(T.hitStop.kill);
+    this.addTrauma(0.15);
+    this.ui.toast(crit ? `Sneak shot · +$${b}` : `+$${b}`, 1.2);
+    if (this.enemies.every((x) => !x.alive) && this.player.alive) {
+      this.slowmo = { scale: 0.3, t: T.run.killSlowmoTime, target: 0.3 };
+      this.clearT = T.run.clearDelay;
+    }
+  }
+
+  spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall) {
+    const { body } = this.physics.dynamic({
+      x, y: 0.92 * tall, z, ry: yaw, shape: { type: 'box', hx: 0.26, hy: 0.9 * tall, hz: 0.2 },
+      density: 1.4, friction: 0.9, restitution: 0.05, group: GROUPS.corpse, linDamp: 0.9, angDamp: 1.4,
+    });
+    body.setLinvel({ x: dirX * force, y: 1.8, z: dirZ * force }, true);
+    body.setAngvel({ x: dirZ * 5, y: (Math.random() - 0.5) * 2, z: -dirX * 5 }, true);
+    const obj = this.physics.track(new PhysObj(body, pivot));
+    this.corpses.push(obj);
+    return obj;
+  }
+
+  explode(x, z) {
+    const E = T.explosion;
+    this.fx.explosion(x, z);
+    this.audio.at('explosion', x, z, { vol: 1.5, reverb: 0.5, vary: 0.08 });
+    this.addTrauma(E.trauma);
+    this.hitStop(T.hitStop.explosion);
+    this.noise(x, z, 30);
+    const scorch = new THREE.Mesh(scorchGeo, scorchMat);
+    scorch.position.set(x, 0.015, z);
+    scorch.scale.setScalar(1.8);
+    scorch.rotation.y = Math.random() * 6;
+    this.levelGroup.add(scorch);
+
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const dx = e.x - x, dz = e.z - z, d = Math.hypot(dx, dz) || 0.01;
+      if (d > E.radius) continue;
+      const f = 1 - d / E.radius;
+      const res = e.onHit(E.damage * (0.35 + 0.65 * f), dx / d, dz / d, 1 + 4 * f);
+      if (res.killed) this.onEnemyKilled(e, false);
+    }
+    const P = this.player;
+    if (P && P.alive) {
+      const dx = P.x - x, dz = P.z - z, d = Math.hypot(dx, dz) || 0.01;
+      if (d < E.radius) {
+        const f = 1 - d / E.radius;
+        P.damage(E.damage * 0.75 * (0.35 + 0.65 * f), dx / d, dz / d);
+        P.vx += (dx / d) * 6 * f; P.vz += (dz / d) * 6 * f;
+      }
+    }
+    for (const p of this.props) {
+      if (!p.alive) continue;
+      const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz) || 0.01;
+      if (d > E.radius * 1.15) continue;
+      const f = Math.max(0, 1 - d / (E.radius * 1.15));
+      p.damage(E.damage * f, p.x - dx / d * 0.3, 0.5, p.z - dz / d * 0.3, dx / d, dz / d, E.impulse * f, 'chain');
+    }
+    const push = (body) => {
+      const t = body.translation();
+      const dx = t.x - x, dz = t.z - z, d = Math.hypot(dx, dz) || 0.01;
+      if (d > E.radius * 1.5) return;
+      const f = 1 - d / (E.radius * 1.5);
+      body.applyImpulse({ x: (dx / d) * 6 * f, y: 5 * f, z: (dz / d) * 6 * f }, true);
+    };
+    for (const it of this.debris.items) push(it.body);
+    for (const c of this.corpses) push(c.body);
+    this.navDirty = true;
+  }
+
+  /** Gunfire: bandits in range hear it. */
+  noise(x, z, range) {
+    for (const e of this.enemies) if (e.alive && Math.hypot(e.x - x, e.z - z) < range) e.hear(x, z, true);
+  }
+
+  /** A bandit that spots the player warns allies nearby. */
+  shout(from) {
+    for (const e of this.enemies) {
+      if (e === from || !e.alive || e.knows) continue;
+      if (Math.hypot(e.x - from.x, e.z - from.z) < 11) e.hear(from.lastSeenX, from.lastSeenZ);
+    }
+  }
+
+  coverClaimed(x, z, self) {
+    for (const e of this.enemies) {
+      if (e === self || !e.alive || !e.cover) continue;
+      if (Math.hypot(e.cover.x - x, e.cover.z - z) < 1.3) return true;
+    }
+    return false;
+  }
+
+  aliveFraction() {
+    if (!this.enemies.length) return 0;
+    return this.enemies.filter((e) => e.alive).length / this.enemies.length;
+  }
+
+  playerCamping() { return this.camp.t; }
+
+  rebuildNav() {
+    this.nav.rebuild(this.props.filter((p) => p.alive && p.dynamic).map((p) => p.footprint()));
+    this.navDirty = false;
+    this.navT = 0.5;
+  }
+
+  setDeadEye(on) {
+    const de = this.deadEye;
+    if (de.active === on) return;
+    de.active = on;
+    this.audio.setDeadEye(on);
+    this.ui.el.app.classList.toggle('deadeye', on);
+    if (on) { this.audio.play('deadEyeIn', { vol: 0.9, reverb: 0.4 }); this.heartT = 0; }
+  }
+
+  // ---------- per frame ----------
+
+  /** Reads input into intents. Runs once per frame before simulation ticks. */
+  updateIntent() {
+    const inp = this.input, it = this.intent;
+    if (inp.pressed('pause') && (this.state === 'playing' || this.state === 'paused')) this.pause(this.state === 'playing');
+    if (this.state !== 'playing' && this.state !== 'dying') {
+      it.fireHeld = false;
+      return;
+    }
+    it.move = inp.moveAxis();
+    this.rig.place(0);
+    const aim = this.rig.projectCursor(inp.mouse.ndcX, inp.mouse.ndcY);
+    if (aim) { this.aimPoint.copy(aim); it.aim = this.aimPoint; }
+    it.fireHeld = inp.fireHeld;
+    if (inp.firePressed) it.firePressed = true;
+    if (inp.pressed('reload')) it.reload = true;
+    if (inp.pressed('dodge')) it.dodgeUntil = this.realTime + T.dodge.buffer;
+    const p = this.player;
+    if (p) {
+      if (inp.pressed('weapon1')) it.switchTo = 0;
+      if (inp.pressed('weapon2')) it.switchTo = 1;
+      if (inp.pressed('weapon3')) it.switchTo = 2;
+      if (inp.pressed('nextWeapon')) it.switchTo = (p.gunIndex + 1) % p.guns.length;
+      const w = inp.takeWheel();
+      if (w) it.switchTo = (p.gunIndex + (w > 0 ? 1 : -1) + p.guns.length) % p.guns.length;
+    }
+
+    // Dead Eye is held, and drains in real time.
+    const de = this.deadEye;
+    const want = inp.held('deadEye') && this.state === 'playing' && p && p.alive;
+    if (want && !de.active && de.meter >= T.deadEye.minToStart) this.setDeadEye(true);
+    if (de.active && !want) this.setDeadEye(false);
+  }
+
+  /** The sim time scale for this frame. */
+  timeScale() {
+    if (this.state !== 'playing' && this.state !== 'dying') return 0;
+    if (this.hitStopT > 0) return 0;
+    const de = this.deadEye.active ? T.deadEye.timeScale : 1;
+    return de * this.slowmo.scale;
+  }
+
+  tick(dt, gunDt) {
+    this.time += dt;
+    if (this.state === 'playing') this.run.time += dt;
+    this.navT -= dt;
+    if (this.navDirty || this.navT <= 0) this.rebuildNav();
+
+    const p = this.player;
+    p.tick(dt, gunDt, this.intent);
+    if (p.alive) {
+      if (Math.hypot(p.x - this.camp.x, p.z - this.camp.z) > 2) { this.camp.x = p.x; this.camp.z = p.z; this.camp.t = 0; }
+      else this.camp.t += dt;
+    }
+    for (const e of this.enemies) e.tick(dt);
+    this.projectiles.tick(dt);
+    for (const pr of this.props) pr.tick(dt);
+    this.debris.tick(dt);
+    this.physics.step();
+  }
+
+  /** Real-time updates and rendering. */
+  frame(dt, alpha) {
+    this.realTime += dt;
+    if (this.hitStopT > 0) this.hitStopT -= dt;
+
+    if (this.slowmo.t > 0) {
+      this.slowmo.t -= dt;
+      if (this.slowmo.t <= 0) this.slowmo.target = 1;
+    }
+    this.slowmo.scale += (this.slowmo.target - this.slowmo.scale) * Math.min(1, dt * (this.slowmo.target < 1 ? 20 : 4));
+
+    const de = this.deadEye;
+    if (de.active) {
+      de.meter -= dt / T.deadEye.maxRealTime;
+      this.heartT -= dt;
+      if (this.heartT <= 0) { this.heartT = 0.75; this.audio.play('heartbeat', { vol: 0.8, reverb: 0 }); }
+      if (de.meter <= 0) { de.meter = 0; this.setDeadEye(false); }
+    }
+
+    if (this.clearT > 0 && this.state === 'playing') {
+      this.clearT -= dt;
+      if (this.clearT <= 0) this.onCampCleared();
+    }
+    if (this.deathT > 0) {
+      this.deathT -= dt;
+      if (this.deathT <= 0) { this.state = 'dead'; this.ui.showDead(this.run); this.audio.setAmbience(0.05); }
+    }
+    if (this.state === 'playing') {
+      this.saveT -= dt;
+      if (this.saveT <= 0) { this.saveT = T.run.saveInterval; this.save(); }
+    }
+
+    const p = this.player;
+    if (p) {
+      p.render(alpha, dt);
+      for (const e of this.enemies) e.render(alpha, dt);
+      for (const pr of this.props) pr.render(alpha, dt, this.realTime);
+      this.debris.render(alpha);
+      for (const c of this.corpses) c.render(alpha);
+      this.projectiles.render(alpha);
+      const focus = p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position;
+      this.rig.update(dt, focus, p.alive ? this.intent.aim : null);
+      this.render.focusShadow(this.rig.target.x, this.rig.target.z);
+      this.audio.setListener(this.rig.target.x, this.rig.target.z);
+      const fxScale = (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
+      if (this.state !== 'paused') this.fx.update(dt * fxScale);
+      this.ui.update(this, dt);
+    } else {
+      // Title backdrop: slow drift over empty desert.
+      this.rig.target.x = Math.sin(this.realTime * 0.05) * 6;
+      this.rig.update(dt, this.rig.target, null);
+      this.render.focusShadow(this.rig.target.x, this.rig.target.z);
+    }
+    this.render.renderer.render(this.scene, this.rig.camera);
+  }
+}
+
+return { loadSave, Game };
+})();
+
+// ---- src/main.js ----
+__m.main = (() => {
+// Boot and the fixed-timestep loop: the sim ticks at 60 Hz scaled by Dead
+// Eye, hit-stop and slow-mo; rendering interpolates between ticks.
+const { T } = __m.tuning;
+const { initPhysics } = __m.physics;
+const { createRenderContext } = __m.render;
+const { CameraRig } = __m.camera;
+const { Input } = __m.input;
+const { Audio } = __m.audio;
+const { UI } = __m.ui;
+const { Game, loadSave } = __m.game;
+async function openDebug(game) {
+  if (game.gui) { game.gui.show(game.gui._hidden); return; }
+  try {
+    const { default: GUI } = await import('lil-gui');
+    const gui = (game.gui = new GUI({ title: 'Tuning' }));
+    for (const [group, values] of Object.entries(T)) {
+      const f = gui.addFolder(group);
+      for (const key of Object.keys(values)) if (typeof values[key] === 'number') f.add(values, key);
+      f.close();
+    }
+  } catch (e) {
+    console.warn('Tuning panel unavailable', e);
+  }
+}
+
+async function boot() {
+  const ui = new UI();
+  ui.show('loading');
+  try {
+    await initPhysics();
+  } catch (e) {
+    ui.error(`Physics failed to load (${e && e.message ? e.message : e}). Reload the page. If it keeps failing, try a current Chrome, Edge, Firefox or Safari.`);
+    return;
+  }
+  const app = document.getElementById('app');
+  const render = createRenderContext(app);
+  const rig = new CameraRig();
+  const input = new Input(render.renderer.domElement);
+  const audio = new Audio();
+  const game = new Game({ render, rig, input, audio, ui });
+  window.dustiron = game;
+
+  const resize = () => render.resize(rig.camera);
+  resize();
+  addEventListener('resize', resize);
+
+  ui.bind({
+    newRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); game.newRun(); },
+    continueRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); },
+    resume: () => game.pause(false),
+    quitToTitle: () => game.quitToTitle(),
+    nextCamp: () => { audio.unlock(); game.loadCamp(); },
+  });
+  ui.setContinue(loadSave());
+  ui.show('title');
+
+  addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
+    else if (game.state === 'cleared' && (e.code === 'KeyE' || e.code === 'Enter')) game.loadCamp();
+    else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
+    else if (e.code === 'KeyM') audio.setMuted(!audio.muted);
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
+  addEventListener('blur', () => game.pause(true));
+
+  const step = 1 / T.sim.hz;
+  let acc = 0;
+  let last = performance.now();
+  let failed = false;
+  render.renderer.setAnimationLoop((now) => {
+    if (failed) return;
+    try {
+      let dt = (now - last) / 1000;
+      last = now;
+      dt = Math.min(Math.max(dt, 0), T.sim.maxFrame);
+      if (input.pressed('debug')) openDebug(game);
+      game.updateIntent();
+      const scale = game.timeScale();
+      if (scale > 0) {
+        acc += dt * scale;
+        let n = 0;
+        while (acc >= step && n < T.sim.maxTicksPerFrame) {
+          game.tick(step, step / scale);
+          acc -= step;
+          n++;
+        }
+        if (n === T.sim.maxTicksPerFrame) acc = 0;
+      }
+      game.frame(dt, acc / step);
+      input.endFrame();
+    } catch (e) {
+      failed = true;
+      console.error(e);
+      ui.error(`Something broke: ${e && e.message ? e.message : e}`);
+    }
+  });
+}
+
+boot();
+
+return {  };
+})();
+
+</script>

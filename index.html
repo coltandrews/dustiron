@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dust &amp; Iron</title>
+<meta name="description" content="A top-down western shooter. Clear bandit camps for bounty. One life.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="./src/style.css">
+<!-- Lets the game run from any static server without a build step. Vite ignores it. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "@dimforge/rapier3d-compat": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/+esm",
+    "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.20.0/+esm"
+  }
+}
+</script>
+</head>
+<body>
+<!-- @app-markup-start -->
+<div id="app" class="in-menu">
+  <div id="hud" hidden>
+    <div class="hud-tl">
+      <div class="meter hp" aria-label="Health">
+        <span class="meter-label">Health</span>
+        <div class="meter-track">
+          <div class="meter-ghost" id="hp-ghost"></div>
+          <div class="meter-fill" id="hp-fill"></div>
+          <div class="meter-ticks"><i></i><i></i><i></i></div>
+        </div>
+        <span class="meter-num" id="hp-text">100</span>
+      </div>
+      <div class="meter de" id="de-bar" aria-label="Dead Eye">
+        <span class="meter-label">Dead Eye <kbd>Shift</kbd></span>
+        <div class="meter-track"><div class="meter-fill" id="de-fill"></div></div>
+      </div>
+    </div>
+    <div class="hud-tc">
+      <div class="camp-no" id="camp-no">Camp 1</div>
+      <div class="camp-name" id="camp-name">Coyote Wash</div>
+      <div class="outlaws" id="outlaws">4 outlaws left</div>
+    </div>
+    <div class="hud-tr">
+      <span class="bounty-label">Bounty</span>
+      <span class="bounty" id="bounty">$0</span>
+    </div>
+    <div class="hud-br">
+      <div class="slots" id="slots"></div>
+      <div class="weapon-row">
+        <div class="ammo cylinder" id="ammo"></div>
+        <div class="weapon-name" id="weapon-name">Revolver</div>
+      </div>
+      <div class="reload-hint" id="reload-hint" hidden>Press <kbd>R</kbd> to reload</div>
+    </div>
+    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>Esc</kbd> pause</div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div id="reticle" aria-hidden="true">
+    <div class="ret-ring" id="ret-ring"><i></i><i></i><i></i><i></i></div>
+    <div class="ret-dot"></div>
+    <div class="ret-hit" id="ret-hit"><i></i><i></i><i></i><i></i></div>
+    <svg class="ret-reload-svg" viewBox="0 0 50 50"><circle id="ret-reload" cx="25" cy="25" r="22"></circle></svg>
+  </div>
+  <div id="vignette"></div>
+  <div id="hurt-dir"></div>
+
+  <section class="screen title" id="screen-title" hidden>
+    <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
+    <div class="card title-card">
+      <p class="eyebrow">A bounty run through outlaw country</p>
+      <h1>Dust <span>&amp;</span> Iron</h1>
+      <p class="lede">Clear bandit camps one after another and collect the bounty. You get one life: die and the run is over.</p>
+      <div class="actions">
+        <button id="btn-start" class="btn primary" type="button">Ride out</button>
+        <button id="btn-continue" class="btn" type="button" hidden>Continue run</button>
+      </div>
+      <p class="continue-info" id="continue-info" hidden></p>
+      <dl class="controls">
+        <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
+        <div><dt><kbd>Mouse</kbd></dt><dd>Aim</dd></div>
+        <div><dt><kbd>Click</kbd></dt><dd>Shoot</dd></div>
+        <div><dt><kbd>Space</kbd></dt><dd>Dodge roll</dd></div>
+        <div><dt><kbd>R</kbd></dt><dd>Reload</dd></div>
+        <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
+        <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
+        <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
+      </dl>
+      <p class="fine">Shots at bandits who haven't seen you deal double damage. Watch for aim lines: when one turns red, roll.</p>
+      <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-pause" hidden>
+    <div class="card small">
+      <h2>Paused</h2>
+      <p class="lede">Your run is saved. Closing the tab keeps your place at the start of this camp's fight.</p>
+      <div class="actions">
+        <button id="btn-resume" class="btn primary" type="button">Resume</button>
+        <button id="btn-quit" class="btn" type="button">Save and quit</button>
+      </div>
+      <p class="fine"><kbd>M</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-cleared" hidden>
+    <div class="card small poster">
+      <p class="eyebrow">Bounty collected</p>
+      <h2 id="cleared-title">Camp cleared</h2>
+      <div class="ledger" id="cleared-body"></div>
+      <div class="actions">
+        <button id="btn-next" class="btn primary" type="button">Ride to the next camp</button>
+      </div>
+      <p class="fine">or press <kbd>E</kbd></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-dead" hidden>
+    <div class="card small poster dead">
+      <p class="eyebrow">Run over</p>
+      <h2 id="dead-title">Shot down</h2>
+      <div class="ledger" id="dead-body"></div>
+      <div class="actions">
+        <button id="btn-restart" class="btn primary" type="button">Start a new run</button>
+      </div>
+      <p class="fine">or press <kbd>R</kbd></p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-loading">
+    <div class="loading"><span>Saddling up</span><i></i></div>
+  </section>
+
+  <section class="screen" id="screen-error" hidden>
+    <div class="card small">
+      <h2>The game couldn't start</h2>
+      <p class="lede" id="error-body"></p>
+    </div>
+  </section>
+</div>
+<!-- @app-markup-end -->
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
