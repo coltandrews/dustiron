@@ -142,6 +142,25 @@ kbd {
 .poster::before { content: ''; position: absolute; inset: 10px; border: 1.5px solid rgba(28, 19, 15, 0.45); pointer-events: none; }
 .poster.dead h2 { color: var(--blood); }
 
+/* Survey map */
+.card.map-card { width: min(720px, 100%); padding: 22px clamp(16px, 4vw, 32px); }
+.map-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 16px; margin-bottom: 12px; }
+.map-head h2 { margin: 2px 0 0; }
+.map-sub { margin: 0; font-size: 15px; font-weight: 600; color: #6b5440; font-variant-numeric: tabular-nums; }
+.map-wrap { display: grid; place-items: center; min-width: 0; }
+#map-canvas { display: block; max-width: 100%; box-shadow: 0 0 0 1.5px rgba(28, 19, 15, 0.35); }
+.map-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 14px 0 16px; padding: 0; font-size: 14px; font-weight: 600; }
+.map-legend li { display: flex; align-items: center; gap: 6px; }
+.map-legend i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink); }
+.map-legend .lg-you { border: 0; background: #2f5d8a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.map-legend .lg-outlaw { background: var(--blood); border-radius: 50%; }
+.map-legend .lg-seen { border: 1.5px dashed var(--blood); border-radius: 50%; }
+.map-legend .lg-cover { background: #d9bf92; }
+.map-legend .lg-tnt { width: 14px; height: 14px; border: 0; background: #f2a23c; clip-path: polygon(50% 0, 61% 30%, 93% 25%, 70% 50%, 93% 75%, 61% 70%, 50% 100%, 39% 70%, 7% 75%, 30% 50%, 7% 25%, 39% 30%); }
+.map-legend .lg-fire { background: #e8762e; border-radius: 50%; }
+.map-card .actions { justify-content: center; }
+.map-card .fine { text-align: center; }
+
 /* Title backdrop */
 .screen.title { background: linear-gradient(#3b2333 0%, #8f4632 38%, #e28a4d 62%, #f2c27f 76%, #c88a52 76.2%, #9a6038 100%); }
 .dusk { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }

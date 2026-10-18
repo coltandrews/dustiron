@@ -146,6 +146,25 @@ kbd {
 .poster::before { content: ''; position: absolute; inset: 10px; border: 1.5px solid rgba(28, 19, 15, 0.45); pointer-events: none; }
 .poster.dead h2 { color: var(--blood); }
 
+/* Survey map */
+.card.map-card { width: min(720px, 100%); padding: 22px clamp(16px, 4vw, 32px); }
+.map-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 16px; margin-bottom: 12px; }
+.map-head h2 { margin: 2px 0 0; }
+.map-sub { margin: 0; font-size: 15px; font-weight: 600; color: #6b5440; font-variant-numeric: tabular-nums; }
+.map-wrap { display: grid; place-items: center; min-width: 0; }
+#map-canvas { display: block; max-width: 100%; box-shadow: 0 0 0 1.5px rgba(28, 19, 15, 0.35); }
+.map-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 14px 0 16px; padding: 0; font-size: 14px; font-weight: 600; }
+.map-legend li { display: flex; align-items: center; gap: 6px; }
+.map-legend i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ink); }
+.map-legend .lg-you { border: 0; background: #2f5d8a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.map-legend .lg-outlaw { background: var(--blood); border-radius: 50%; }
+.map-legend .lg-seen { border: 1.5px dashed var(--blood); border-radius: 50%; }
+.map-legend .lg-cover { background: #d9bf92; }
+.map-legend .lg-tnt { width: 14px; height: 14px; border: 0; background: #f2a23c; clip-path: polygon(50% 0, 61% 30%, 93% 25%, 70% 50%, 93% 75%, 61% 70%, 50% 100%, 39% 70%, 7% 75%, 30% 50%, 7% 25%, 39% 30%); }
+.map-legend .lg-fire { background: #e8762e; border-radius: 50%; }
+.map-card .actions { justify-content: center; }
+.map-card .fine { text-align: center; }
+
 /* Title backdrop */
 .screen.title { background: linear-gradient(#3b2333 0%, #8f4632 38%, #e28a4d 62%, #f2c27f 76%, #c88a52 76.2%, #9a6038 100%); }
 .dusk { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -222,7 +241,7 @@ kbd {
       </div>
       <div class="reload-hint" id="reload-hint" hidden>Press <kbd>R</kbd> to reload</div>
     </div>
-    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>Esc</kbd> pause</div>
+    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</div>
     <div class="toast" id="toast"></div>
   </div>
 
@@ -254,7 +273,9 @@ kbd {
         <div><dt><kbd>R</kbd></dt><dd>Reload</dd></div>
         <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
         <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
+        <div><dt><kbd>M</kbd></dt><dd>Map</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
+        <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
       </dl>
       <p class="fine">Shots at bandits who haven't seen you deal double damage. Watch for aim lines: when one turns red, roll.</p>
       <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
@@ -269,7 +290,32 @@ kbd {
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
       </div>
-      <p class="fine"><kbd>M</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
+      <p class="fine"><kbd>N</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-map" hidden>
+    <div class="card map-card">
+      <div class="map-head">
+        <div>
+          <p class="eyebrow">Survey map</p>
+          <h2 id="map-title">Camp</h2>
+        </div>
+        <p class="map-sub" id="map-sub"></p>
+      </div>
+      <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the camp"></canvas></div>
+      <ul class="map-legend">
+        <li><i class="lg-you"></i>You</li>
+        <li><i class="lg-outlaw"></i>Outlaw in sight</li>
+        <li><i class="lg-seen"></i>Last seen</li>
+        <li><i class="lg-cover"></i>Cover</li>
+        <li><i class="lg-tnt"></i>Explosive barrel</li>
+        <li><i class="lg-fire"></i>Campfire</li>
+      </ul>
+      <div class="actions">
+        <button id="btn-map-close" class="btn primary" type="button">Back to the fight</button>
+      </div>
+      <p class="fine"><kbd>M</kbd> or <kbd>Esc</kbd> closes the map. The fight is paused while it's open.</p>
     </div>
   </section>
 
@@ -734,6 +780,7 @@ const BINDINGS = {
   weapon2: ['Digit2'],
   weapon3: ['Digit3'],
   pause: ['Escape', 'KeyP'],
+  map: ['KeyM', 'Tab'],
   debug: ['Backquote'],
 };
 
@@ -1035,7 +1082,7 @@ class UI {
       campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
       weaponName: $('weapon-name'), ammo: $('ammo'), slots: $('slots'), reloadHint: $('reload-hint'),
       vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'),
-      screens: { title: $('screen-title'), pause: $('screen-pause'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
+      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       clearedTitle: $('cleared-title'), clearedBody: $('cleared-body'), deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
@@ -1057,6 +1104,7 @@ class UI {
     on('btn-quit', handlers.quitToTitle);
     on('btn-next', handlers.nextCamp);
     on('btn-restart', handlers.newRun);
+    on('btn-map-close', handlers.closeMap);
   }
 
   show(name) {
@@ -2505,6 +2553,7 @@ class Bandit {
     this.flash = 0;
     this.zig = rand(0, 6);
     this.accuracy = 1 + campIndex * T.enemy.accuracyPerCamp;
+    this.spottedX = x; this.spottedZ = z; this.spottedT = -99; // last time the player saw this bandit
 
     const ph = game.physics;
     const cap = ph.kinematicCapsule(x, z, T.player.halfHeight, T.player.radius, GROUPS.enemy, this);
@@ -2693,6 +2742,7 @@ class Bandit {
       g.projectiles.spawn(mz.x, mz.z, Math.sin(a), Math.cos(a), def.bulletSpeed, def.dmg, def.pellets > 1 ? def.fireRange * 1.4 : 45);
     }
     this.ammo--;
+    this.markSpotted(); // muzzle flashes give away a shooter's position
     g.fx.muzzle(mz.x, mz.y, mz.z, Math.sin(this.aimYaw), Math.cos(this.aimYaw), def.pellets > 1);
     g.audio.at('enemyShot', this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: def.gun === 'rifle' ? 1.12 : def.gun === 'shotgun' ? 0.8 : 0.92 });
     g.addTrauma(0.04);
@@ -2719,6 +2769,10 @@ class Bandit {
   }
 
   hideAimLine() { this.aimLine.visible = false; }
+
+  markSpotted() {
+    this.spottedX = this.x; this.spottedZ = this.z; this.spottedT = this.game.time;
+  }
 
   /** @returns {{killed:boolean, crit:boolean}} */
   onHit(dmg, dirX, dirZ, knock) {
@@ -3676,6 +3730,212 @@ function buildScenery(game, seed) {
 return { ARENA_HALF, PLAYER_SPAWN, rosterFor, generateCamp, buildScenery };
 })();
 
+// ---- src/map.js ----
+__m.map = (() => {
+// Survey map of the current camp, drawn on a 2D canvas. M opens it and
+// pauses the fight. Outlaws only appear once you've had eyes on them.
+
+const C = {
+  paper: '#efdcbb', wash: '#e8d0a8', ink: '#1c130f', inkSoft: '#5b4434', grid: 'rgba(28,19,15,0.09)',
+  cover: '#d9bf92', wood: '#8c5a34', rust: '#b4532e', blood: '#b3291f', green: '#5f7d3d',
+  rock: '#b98563', fire: '#f2a23c', ember: '#e8762e', you: '#2f5d8a',
+};
+
+const SEEN_NOW = 0.6;      // seconds: counts as "in sight"
+const SEEN_MEMORY = 25;    // seconds: last-known marker fades out after this
+
+class MapView {
+  constructor() {
+    this.canvas = document.getElementById('map-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.title = document.getElementById('map-title');
+    this.sub = document.getElementById('map-sub');
+  }
+
+  draw(game) {
+    const cv = this.canvas, ctx = this.ctx;
+    const wrap = cv.parentElement;
+    const size = Math.max(220, Math.floor(Math.min(wrap.clientWidth, innerHeight - 270)));
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.style.width = cv.style.height = size + 'px';
+    cv.width = cv.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const H = game.arenaHalf;
+    const pad = 16;
+    const k = (size - pad * 2) / (H * 2);
+    const X = (x) => pad + (x + H) * k;
+    const Y = (z) => pad + (z + H) * k;
+
+    // Ground, grid, border.
+    ctx.fillStyle = C.paper;
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = C.wash;
+    ctx.fillRect(X(-H), Y(-H), H * 2 * k, H * 2 * k);
+    ctx.strokeStyle = C.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let v = -H + 4; v < H; v += 4) {
+      ctx.moveTo(X(v), Y(-H)); ctx.lineTo(X(v), Y(H));
+      ctx.moveTo(X(-H), Y(v)); ctx.lineTo(X(H), Y(v));
+    }
+    ctx.stroke();
+
+    // Cliff hachures on the north, west and east edges.
+    ctx.strokeStyle = C.inkSoft;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    const tick = 7;
+    for (let v = -H; v <= H; v += 1.2) {
+      ctx.moveTo(X(v), Y(-H)); ctx.lineTo(X(v), Y(-H) - tick);
+      ctx.moveTo(X(-H), Y(v)); ctx.lineTo(X(-H) - tick, Y(v));
+      ctx.moveTo(X(H), Y(v)); ctx.lineTo(X(H) + tick, Y(v));
+    }
+    ctx.stroke();
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(X(-H), Y(-H), H * 2 * k, H * 2 * k);
+
+    // Props.
+    const rect = (x, z, hx, hz, ry, fill, stroke = C.ink, lw = 1.2) => {
+      ctx.save();
+      ctx.translate(X(x), Y(z));
+      ctx.rotate(-ry);
+      ctx.fillStyle = fill;
+      ctx.fillRect(-hx * k, -hz * k, hx * 2 * k, hz * 2 * k);
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.strokeRect(-hx * k, -hz * k, hx * 2 * k, hz * 2 * k); }
+      ctx.restore();
+    };
+    const circle = (x, z, r, fill, stroke = C.ink, lw = 1.2) => {
+      ctx.beginPath();
+      ctx.arc(X(x), Y(z), Math.max(1.5, r * k), 0, Math.PI * 2);
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+    };
+
+    for (const p of game.props) {
+      if (!p.alive) continue;
+      const x = p.x, z = p.z;
+      switch (p.kind) {
+        case 'crate': rect(x, z, 0.55, 0.55, p.yaw(), C.cover); break;
+        case 'barrel': circle(x, z, 0.42, C.wood); break;
+        case 'tnt': {
+          // Starburst so explosives never read as an outlaw marker.
+          const r0 = Math.max(4, 0.75 * k), r1 = r0 * 0.5;
+          ctx.beginPath();
+          for (let i = 0; i < 16; i++) {
+            const a = (i / 16) * Math.PI * 2, r = i % 2 ? r1 : r0;
+            ctx[i ? 'lineTo' : 'moveTo'](X(x) + Math.cos(a) * r, Y(z) + Math.sin(a) * r);
+          }
+          ctx.closePath();
+          ctx.fillStyle = C.fire; ctx.fill();
+          ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.stroke();
+          break;
+        }
+        case 'fence': rect(x, z, 1.1, 0.07, p.ry, C.ink, null); break;
+        case 'wagon': rect(x, z, 1.05, 1.6, p.ry, C.cover, C.ink, 1.6); break;
+        case 'tent': {
+          rect(x, z, 1.25, 1.25, p.ry, '#f1e2c4', C.ink, 1.4);
+          ctx.save();
+          ctx.translate(X(x), Y(z)); ctx.rotate(-p.ry);
+          ctx.strokeStyle = C.inkSoft; ctx.lineWidth = 1;
+          const s = 1.25 * k;
+          ctx.beginPath(); ctx.moveTo(-s, -s); ctx.lineTo(s, s); ctx.moveTo(s, -s); ctx.lineTo(-s, s); ctx.stroke();
+          ctx.restore();
+          break;
+        }
+        case 'rock': circle(x, z, p.radius, C.rock, C.inkSoft, 1); break;
+        case 'cactus': circle(x, z, 0.32, C.green, null); break;
+        case 'campfire':
+          circle(x, z, 1.6, 'rgba(240,138,58,0.16)', null);
+          circle(x, z, 0.7, C.ember, C.ink, 1.2);
+          break;
+      }
+    }
+
+    // Fallen outlaws.
+    ctx.strokeStyle = C.inkSoft;
+    ctx.lineWidth = 1.6;
+    for (const e of game.enemies) {
+      if (e.alive || !e.corpse) continue;
+      const m = e.corpse.mesh.position, s = 4;
+      ctx.beginPath();
+      ctx.moveTo(X(m.x) - s, Y(m.z) - s); ctx.lineTo(X(m.x) + s, Y(m.z) + s);
+      ctx.moveTo(X(m.x) + s, Y(m.z) - s); ctx.lineTo(X(m.x) - s, Y(m.z) + s);
+      ctx.stroke();
+    }
+
+    // Outlaws you have spotted.
+    let inSight = 0, remembered = 0;
+    ctx.font = `700 ${Math.max(9, Math.round(k * 0.9))}px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const e of game.enemies) {
+      if (!e.alive) continue;
+      const age = game.time - e.spottedT;
+      if (age < SEEN_NOW) {
+        inSight++;
+        circle(e.x, e.z, 0.95, null, C.paper, 3);
+        circle(e.x, e.z, 0.7, C.blood, C.ink, 1.4);
+        ctx.strokeStyle = C.blood; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(X(e.x), Y(e.z));
+        ctx.lineTo(X(e.x + Math.sin(e.yaw) * 1.3), Y(e.z + Math.cos(e.yaw) * 1.3));
+        ctx.stroke();
+      } else if (age < SEEN_MEMORY) {
+        remembered++;
+        ctx.globalAlpha = Math.max(0.35, 1 - age / SEEN_MEMORY);
+        ctx.setLineDash([3, 3]);
+        circle(e.spottedX, e.spottedZ, 0.6, 'rgba(179,41,31,0.12)', C.blood, 1.4);
+        ctx.setLineDash([]);
+        ctx.fillStyle = C.blood;
+        ctx.fillText('?', X(e.spottedX), Y(e.spottedZ) + 0.5);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // You.
+    const P = game.player;
+    if (P && P.alive) {
+      const px = X(P.x), pz = Y(P.z), r = Math.max(7, k * 0.75);
+      const dx = Math.sin(P.yaw), dz = Math.cos(P.yaw);
+      ctx.beginPath();
+      ctx.moveTo(px + dx * r * 1.4, pz + dz * r * 1.4);
+      ctx.lineTo(px - dz * r * 0.8 - dx * r * 0.7, pz + dx * r * 0.8 - dz * r * 0.7);
+      ctx.lineTo(px + dz * r * 0.8 - dx * r * 0.7, pz - dx * r * 0.8 - dz * r * 0.7);
+      ctx.closePath();
+      ctx.fillStyle = C.you; ctx.fill();
+      ctx.strokeStyle = C.paper; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = `700 11px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
+      ctx.fillStyle = C.you;
+      ctx.fillText('YOU', px, pz + r * 2.1);
+    }
+
+    // Compass and scale bar.
+    ctx.fillStyle = C.ink;
+    ctx.font = `16px 'Rye', Georgia, serif`;
+    ctx.fillText('N', X(H) - 14, Y(-H) + 22);
+    ctx.beginPath();
+    ctx.moveTo(X(H) - 14, Y(-H) + 6); ctx.lineTo(X(H) - 19, Y(-H) + 12); ctx.lineTo(X(H) - 9, Y(-H) + 12);
+    ctx.closePath(); ctx.fill();
+    const bx = X(-H) + 10, by = Y(H) - 12;
+    ctx.fillRect(bx, by, 5 * k, 3);
+    ctx.font = `600 11px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText('5 m', bx + 5 * k + 6, by + 2);
+
+    const alive = game.enemies.filter((e) => e.alive).length;
+    const unknown = alive - inSight - remembered;
+    this.title.textContent = game.campName;
+    const parts = [`Camp ${game.run.camp + 1}`, alive === 1 ? '1 outlaw left' : `${alive} outlaws left`];
+    if (unknown > 0) parts.push(`${unknown} unaccounted for`);
+    this.sub.textContent = parts.join(' · ');
+  }
+}
+
+return { MapView };
+})();
+
 // ---- src/game.js ----
 __m.game = (() => {
 // Game state and the run: camps, permadeath, saving, Dead Eye, hit-stop,
@@ -3694,6 +3954,7 @@ const { Projectiles } = __m.projectiles;
 const { generateCamp, buildScenery, ARENA_HALF, PLAYER_SPAWN } = __m.level;
 const { UNLOCKS, WEAPONS } = __m.weapons;
 const { randomSeed } = __m.rng;
+const { MapView } = __m.map;
 const SAVE_KEY = 'dustiron.run.v1';
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
 const scorchMat = new THREE.MeshLambertMaterial({ color: 0x3a2a20, transparent: true, opacity: 0.55, depthWrite: false });
@@ -3720,6 +3981,8 @@ class Game {
     this.audio = audio;
     this.ui = ui;
     this.fx = new FX(render.scene, render.flash);
+    this.mapView = new MapView();
+    this.spotT = 0;
     this.groups = GROUPS;
     this.arenaHalf = ARENA_HALF;
     this.state = 'title';
@@ -3866,6 +4129,32 @@ class Game {
   pause(on) {
     if (on && this.state === 'playing') { this.state = 'paused'; this.ui.show('pause'); this.save(); this.setDeadEye(false); }
     else if (!on && this.state === 'paused') { this.state = 'playing'; this.ui.show(null); }
+  }
+
+  openMap() {
+    if (this.state !== 'playing') return;
+    this.state = 'map';
+    this.setDeadEye(false);
+    this.input.fireHeld = false;
+    this.ui.show('map');
+    this.mapView.draw(this);
+    this.audio.play('uiClick', { bus: 'ui' });
+  }
+
+  closeMap() {
+    if (this.state !== 'map') return;
+    this.state = 'playing';
+    this.ui.show(null);
+  }
+
+  /** Marks outlaws the player can currently see, for the map. */
+  updateSpotting() {
+    const P = this.player;
+    if (!P.alive) return;
+    for (const e of this.enemies) {
+      if (!e.alive || Math.hypot(e.x - P.x, e.z - P.z) > 26) continue;
+      if (this.physics.los(P.x, P.z, e.x, e.z)) e.markSpotted();
+    }
   }
 
   onCampCleared() {
@@ -4027,6 +4316,8 @@ class Game {
   /** Reads input into intents. Runs once per frame before simulation ticks. */
   updateIntent() {
     const inp = this.input, it = this.intent;
+    if (this.state === 'map' && (inp.pressed('map') || inp.pressed('pause'))) { this.closeMap(); return; }
+    if (this.state === 'playing' && inp.pressed('map')) { this.openMap(); return; }
     if (inp.pressed('pause') && (this.state === 'playing' || this.state === 'paused')) this.pause(this.state === 'playing');
     if (this.state !== 'playing' && this.state !== 'dying') {
       it.fireHeld = false;
@@ -4078,6 +4369,8 @@ class Game {
       else this.camp.t += dt;
     }
     for (const e of this.enemies) e.tick(dt);
+    this.spotT -= dt;
+    if (this.spotT <= 0) { this.spotT = 0.2; this.updateSpotting(); }
     this.projectiles.tick(dt);
     for (const pr of this.props) pr.tick(dt);
     this.debris.tick(dt);
@@ -4188,7 +4481,7 @@ async function boot() {
   const game = new Game({ render, rig, input, audio, ui });
   window.dustiron = game;
 
-  const resize = () => render.resize(rig.camera);
+  const resize = () => { render.resize(rig.camera); if (game.state === 'map') game.mapView.draw(game); };
   resize();
   addEventListener('resize', resize);
 
@@ -4196,6 +4489,7 @@ async function boot() {
     newRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); game.newRun(); },
     continueRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); },
     resume: () => game.pause(false),
+    closeMap: () => game.closeMap(),
     quitToTitle: () => game.quitToTitle(),
     nextCamp: () => { audio.unlock(); game.loadCamp(); },
   });
@@ -4207,7 +4501,7 @@ async function boot() {
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'cleared' && (e.code === 'KeyE' || e.code === 'Enter')) game.loadCamp();
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
-    else if (e.code === 'KeyM') audio.setMuted(!audio.muted);
+    else if (e.code === 'KeyN') audio.setMuted(!audio.muted);
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));

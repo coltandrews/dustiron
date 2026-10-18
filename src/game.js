@@ -14,6 +14,7 @@ import { Projectiles } from './projectiles.js';
 import { generateCamp, buildScenery, ARENA_HALF, PLAYER_SPAWN } from './level.js';
 import { UNLOCKS, WEAPONS } from './weapons.js';
 import { randomSeed } from './rng.js';
+import { MapView } from './map.js';
 
 const SAVE_KEY = 'dustiron.run.v1';
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
@@ -41,6 +42,8 @@ export class Game {
     this.audio = audio;
     this.ui = ui;
     this.fx = new FX(render.scene, render.flash);
+    this.mapView = new MapView();
+    this.spotT = 0;
     this.groups = GROUPS;
     this.arenaHalf = ARENA_HALF;
     this.state = 'title';
@@ -187,6 +190,32 @@ export class Game {
   pause(on) {
     if (on && this.state === 'playing') { this.state = 'paused'; this.ui.show('pause'); this.save(); this.setDeadEye(false); }
     else if (!on && this.state === 'paused') { this.state = 'playing'; this.ui.show(null); }
+  }
+
+  openMap() {
+    if (this.state !== 'playing') return;
+    this.state = 'map';
+    this.setDeadEye(false);
+    this.input.fireHeld = false;
+    this.ui.show('map');
+    this.mapView.draw(this);
+    this.audio.play('uiClick', { bus: 'ui' });
+  }
+
+  closeMap() {
+    if (this.state !== 'map') return;
+    this.state = 'playing';
+    this.ui.show(null);
+  }
+
+  /** Marks outlaws the player can currently see, for the map. */
+  updateSpotting() {
+    const P = this.player;
+    if (!P.alive) return;
+    for (const e of this.enemies) {
+      if (!e.alive || Math.hypot(e.x - P.x, e.z - P.z) > 26) continue;
+      if (this.physics.los(P.x, P.z, e.x, e.z)) e.markSpotted();
+    }
   }
 
   onCampCleared() {
@@ -348,6 +377,8 @@ export class Game {
   /** Reads input into intents. Runs once per frame before simulation ticks. */
   updateIntent() {
     const inp = this.input, it = this.intent;
+    if (this.state === 'map' && (inp.pressed('map') || inp.pressed('pause'))) { this.closeMap(); return; }
+    if (this.state === 'playing' && inp.pressed('map')) { this.openMap(); return; }
     if (inp.pressed('pause') && (this.state === 'playing' || this.state === 'paused')) this.pause(this.state === 'playing');
     if (this.state !== 'playing' && this.state !== 'dying') {
       it.fireHeld = false;
@@ -399,6 +430,8 @@ export class Game {
       else this.camp.t += dt;
     }
     for (const e of this.enemies) e.tick(dt);
+    this.spotT -= dt;
+    if (this.spotT <= 0) { this.spotT = 0.2; this.updateSpotting(); }
     this.projectiles.tick(dt);
     for (const pr of this.props) pr.tick(dt);
     this.debris.tick(dt);

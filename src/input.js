@@ -14,6 +14,7 @@ export const BINDINGS = {
   weapon2: ['Digit2'],
   weapon3: ['Digit3'],
   pause: ['Escape', 'KeyP'],
+  map: ['KeyM', 'Tab'],
   debug: ['Backquote'],
 };
 

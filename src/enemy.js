@@ -77,6 +77,7 @@ export class Bandit {
     this.flash = 0;
     this.zig = rand(0, 6);
     this.accuracy = 1 + campIndex * T.enemy.accuracyPerCamp;
+    this.spottedX = x; this.spottedZ = z; this.spottedT = -99; // last time the player saw this bandit
 
     const ph = game.physics;
     const cap = ph.kinematicCapsule(x, z, T.player.halfHeight, T.player.radius, GROUPS.enemy, this);
@@ -265,6 +266,7 @@ export class Bandit {
       g.projectiles.spawn(mz.x, mz.z, Math.sin(a), Math.cos(a), def.bulletSpeed, def.dmg, def.pellets > 1 ? def.fireRange * 1.4 : 45);
     }
     this.ammo--;
+    this.markSpotted(); // muzzle flashes give away a shooter's position
     g.fx.muzzle(mz.x, mz.y, mz.z, Math.sin(this.aimYaw), Math.cos(this.aimYaw), def.pellets > 1);
     g.audio.at('enemyShot', this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: def.gun === 'rifle' ? 1.12 : def.gun === 'shotgun' ? 0.8 : 0.92 });
     g.addTrauma(0.04);
@@ -291,6 +293,10 @@ export class Bandit {
   }
 
   hideAimLine() { this.aimLine.visible = false; }
+
+  markSpotted() {
+    this.spottedX = this.x; this.spottedZ = this.z; this.spottedT = this.game.time;
+  }
 
   /** @returns {{killed:boolean, crit:boolean}} */
   onHit(dmg, dirX, dirZ, knock) {

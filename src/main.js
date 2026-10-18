@@ -41,7 +41,7 @@ async function boot() {
   const game = new Game({ render, rig, input, audio, ui });
   window.dustiron = game;
 
-  const resize = () => render.resize(rig.camera);
+  const resize = () => { render.resize(rig.camera); if (game.state === 'map') game.mapView.draw(game); };
   resize();
   addEventListener('resize', resize);
 
@@ -49,6 +49,7 @@ async function boot() {
     newRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); game.newRun(); },
     continueRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); },
     resume: () => game.pause(false),
+    closeMap: () => game.closeMap(),
     quitToTitle: () => game.quitToTitle(),
     nextCamp: () => { audio.unlock(); game.loadCamp(); },
   });
@@ -60,7 +61,7 @@ async function boot() {
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'cleared' && (e.code === 'KeyE' || e.code === 'Enter')) game.loadCamp();
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
-    else if (e.code === 'KeyM') audio.setMuted(!audio.muted);
+    else if (e.code === 'KeyN') audio.setMuted(!audio.muted);
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));

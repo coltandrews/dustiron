@@ -56,7 +56,7 @@
       </div>
       <div class="reload-hint" id="reload-hint" hidden>Press <kbd>R</kbd> to reload</div>
     </div>
-    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>Esc</kbd> pause</div>
+    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Click</kbd> shoot · <kbd>Space</kbd> roll · <kbd>R</kbd> reload · <kbd>Shift</kbd> Dead Eye · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</div>
     <div class="toast" id="toast"></div>
   </div>
 
@@ -88,7 +88,9 @@
         <div><dt><kbd>R</kbd></dt><dd>Reload</dd></div>
         <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
         <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
+        <div><dt><kbd>M</kbd></dt><dd>Map</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
+        <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
       </dl>
       <p class="fine">Shots at bandits who haven't seen you deal double damage. Watch for aim lines: when one turns red, roll.</p>
       <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
@@ -103,7 +105,32 @@
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
       </div>
-      <p class="fine"><kbd>M</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
+      <p class="fine"><kbd>N</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-map" hidden>
+    <div class="card map-card">
+      <div class="map-head">
+        <div>
+          <p class="eyebrow">Survey map</p>
+          <h2 id="map-title">Camp</h2>
+        </div>
+        <p class="map-sub" id="map-sub"></p>
+      </div>
+      <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the camp"></canvas></div>
+      <ul class="map-legend">
+        <li><i class="lg-you"></i>You</li>
+        <li><i class="lg-outlaw"></i>Outlaw in sight</li>
+        <li><i class="lg-seen"></i>Last seen</li>
+        <li><i class="lg-cover"></i>Cover</li>
+        <li><i class="lg-tnt"></i>Explosive barrel</li>
+        <li><i class="lg-fire"></i>Campfire</li>
+      </ul>
+      <div class="actions">
+        <button id="btn-map-close" class="btn primary" type="button">Back to the fight</button>
+      </div>
+      <p class="fine"><kbd>M</kbd> or <kbd>Esc</kbd> closes the map. The fight is paused while it's open.</p>
     </div>
   </section>
 

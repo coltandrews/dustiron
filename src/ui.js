@@ -10,7 +10,7 @@ export class UI {
       campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
       weaponName: $('weapon-name'), ammo: $('ammo'), slots: $('slots'), reloadHint: $('reload-hint'),
       vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'),
-      screens: { title: $('screen-title'), pause: $('screen-pause'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
+      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), cleared: $('screen-cleared'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       clearedTitle: $('cleared-title'), clearedBody: $('cleared-body'), deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
@@ -32,6 +32,7 @@ export class UI {
     on('btn-quit', handlers.quitToTitle);
     on('btn-next', handlers.nextCamp);
     on('btn-restart', handlers.newRun);
+    on('btn-map-close', handlers.closeMap);
   }
 
   show(name) {
