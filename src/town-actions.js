@@ -192,6 +192,7 @@ export class TownActions {
       text,
       actions,
       mode: browsing ? 'shop' : 'talk',
+      npcSpeech: Boolean(npc) && !browsing && !this.view?.offer && !this.view?.posters,
     }, (id) => this.act(id));
   }
 
@@ -234,7 +235,7 @@ export class TownActions {
     else if (id.startsWith('lead:') && npc === 'martha') {
       const def = quest(defs, id.slice(5)), s = life.quests[def.id];
       if (life.bounty < LEAD_PRICE) result = { ok: false, message: `You need $${LEAD_PRICE}.` };
-      else { life.bounty -= LEAD_PRICE; s.lead = true; result = { ok: true, message: `"${def.title.replace('Wanted: ', '')}? Look closer in — I marked it on your map."` }; }
+      else { life.bounty -= LEAD_PRICE; s.lead = true; result = { ok: true, message: `${def.title.replace('Wanted: ', '')}? Look closer in — I marked it on your map.` }; }
     } else if (id === 'rumor' && npc === 'mae') {
       const next = rumorOrder(life).find((place) => !life.rumors.includes(place.id));
       if (!next || life.bounty < RUMOR_PRICE) result = { ok: false, message: 'Nothing new tonight.' };
@@ -248,8 +249,8 @@ export class TownActions {
       if (choice === 'bandage') { life.items.bandage--; }
       g.questEvent({ type: 'talk', npc: 'eli', choice });
       if (choice === 'bandage') { life.known[this.current.site.id] = 'helped'; g.worldPoints.removeNpc('eli'); this.close(); g.save(); return; }
-      result = { ok: true, message: 'He presses a folded letter into your hand.' };
-    } else if (id === 'amos:parcel') { g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Amos takes the parcel and nods. "Tell Nora thanks."' }; }
+      result = { ok: true, message: 'Take this letter to Clara. Please.' };
+    } else if (id === 'amos:parcel') { g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Tell Nora thanks.' }; }
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');

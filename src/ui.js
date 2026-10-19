@@ -173,14 +173,14 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null, npcSpeech = false }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
     screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
     this.el.interactionTitle.textContent = title;
-    this.renderInteractionText(text, mode, blackjack);
+    this.renderInteractionText(text, mode, blackjack, npcSpeech);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
@@ -232,11 +232,16 @@ export class UI {
     (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
   }
 
-  renderInteractionText(text, mode, blackjack = null) {
+  renderInteractionText(text, mode, blackjack = null, npcSpeech = false) {
     const box = this.el.interactionText;
     box.replaceChildren();
     if (mode !== 'blackjack') {
-      box.textContent = text;
+      if (npcSpeech) {
+        const quote = document.createElement('q');
+        quote.className = 'npc-speech';
+        quote.textContent = text;
+        box.appendChild(quote);
+      } else box.textContent = text;
       return;
     }
     this.renderBlackjackTable(box, blackjack?.state, blackjack?.balance, text);

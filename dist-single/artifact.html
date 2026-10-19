@@ -203,6 +203,9 @@ kbd {
 #screen-interaction[data-mode="talk"] #interaction-text {
   margin: 0; max-width: 46ch; color: #fff2da; font-size: clamp(17px, 1.6vw, 20px); line-height: 1.45; white-space: pre-line;
 }
+#screen-interaction[data-mode="talk"] .npc-speech {
+  display: block; font-style: italic; quotes: "“" "”" "‘" "’";
+}
 #screen-interaction[data-mode="talk"] .dialog-menu {
   pointer-events: auto; position: absolute; right: max(28px, var(--edge-r)); bottom: max(34px, var(--edge-b));
   width: min(390px, 38vw); max-height: 62vh; overflow-y: auto; padding: 12px 0;
@@ -2570,14 +2573,14 @@ class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null, npcSpeech = false }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
     screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
     this.el.interactionTitle.textContent = title;
-    this.renderInteractionText(text, mode, blackjack);
+    this.renderInteractionText(text, mode, blackjack, npcSpeech);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
@@ -2629,11 +2632,16 @@ class UI {
     (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
   }
 
-  renderInteractionText(text, mode, blackjack = null) {
+  renderInteractionText(text, mode, blackjack = null, npcSpeech = false) {
     const box = this.el.interactionText;
     box.replaceChildren();
     if (mode !== 'blackjack') {
-      box.textContent = text;
+      if (npcSpeech) {
+        const quote = document.createElement('q');
+        quote.className = 'npc-speech';
+        quote.textContent = text;
+        box.appendChild(quote);
+      } else box.textContent = text;
       return;
     }
     this.renderBlackjackTable(box, blackjack?.state, blackjack?.balance, text);
@@ -9265,6 +9273,7 @@ class TownActions {
       text,
       actions,
       mode: browsing ? 'shop' : 'talk',
+      npcSpeech: Boolean(npc) && !browsing && !this.view?.offer && !this.view?.posters,
     }, (id) => this.act(id));
   }
 
@@ -9307,7 +9316,7 @@ class TownActions {
     else if (id.startsWith('lead:') && npc === 'martha') {
       const def = quest(defs, id.slice(5)), s = life.quests[def.id];
       if (life.bounty < LEAD_PRICE) result = { ok: false, message: `You need $${LEAD_PRICE}.` };
-      else { life.bounty -= LEAD_PRICE; s.lead = true; result = { ok: true, message: `"${def.title.replace('Wanted: ', '')}? Look closer in — I marked it on your map."` }; }
+      else { life.bounty -= LEAD_PRICE; s.lead = true; result = { ok: true, message: `${def.title.replace('Wanted: ', '')}? Look closer in — I marked it on your map.` }; }
     } else if (id === 'rumor' && npc === 'mae') {
       const next = rumorOrder(life).find((place) => !life.rumors.includes(place.id));
       if (!next || life.bounty < RUMOR_PRICE) result = { ok: false, message: 'Nothing new tonight.' };
@@ -9321,8 +9330,8 @@ class TownActions {
       if (choice === 'bandage') { life.items.bandage--; }
       g.questEvent({ type: 'talk', npc: 'eli', choice });
       if (choice === 'bandage') { life.known[this.current.site.id] = 'helped'; g.worldPoints.removeNpc('eli'); this.close(); g.save(); return; }
-      result = { ok: true, message: 'He presses a folded letter into your hand.' };
-    } else if (id === 'amos:parcel') { g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Amos takes the parcel and nods. "Tell Nora thanks."' }; }
+      result = { ok: true, message: 'Take this letter to Clara. Please.' };
+    } else if (id === 'amos:parcel') { g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Tell Nora thanks.' }; }
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');
