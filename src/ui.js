@@ -15,6 +15,26 @@ const interactionLabels = {
   stable: 'Stable yard',
 };
 
+const shopItemArt = {
+  ammo: `<svg viewBox="0 0 88 58" role="img" aria-label="Ammunition"><g transform="rotate(-10 44 29)"><path d="M22 43V17h9v26zM39 43V13h9v30zM56 43V18h9v25z" fill="#b7742f" stroke="#2c1b12" stroke-width="2"/><path d="M22 17l4.5-8 4.5 8M39 13l4.5-8 4.5 8M56 18l4.5-8 4.5 8" fill="#d8b35e" stroke="#2c1b12" stroke-width="2"/><path d="M19 43h15v6H19zM36 43h15v6H36zM53 43h15v6H53z" fill="#d5a24d" stroke="#2c1b12" stroke-width="2"/></g></svg>`,
+  shotgun: `<svg viewBox="0 0 88 58" role="img" aria-label="Shotgun"><g transform="rotate(-13 44 29)" stroke="#251710" stroke-width="2" stroke-linejoin="round"><path d="M8 35l23-8 34 1v7l-35 1-13 11H7l7-8z" fill="#7d4728"/><path d="M31 25h44v5H31zM32 32h43v5H31z" fill="#343231"/><path d="M69 24h12v14H69z" fill="#b58b45"/><path d="M30 29l10 2-9 6-8-3z" fill="#a66a37"/></g></svg>`,
+  rifle: `<svg viewBox="0 0 88 58" role="img" aria-label="Rifle"><g transform="rotate(-11 44 29)" stroke="#251710" stroke-width="2" stroke-linejoin="round"><path d="M6 35l26-10 29 4v7l-30-1-15 11H6l8-8z" fill="#a86631"/><path d="M31 26h50v6H31z" fill="#333332"/><path d="M43 21h18v6H43z" fill="#c19b4c"/><path d="M48 37l5 10h-8l-4-11z" fill="#6a3b25"/></g></svg>`,
+  bandage: `<svg viewBox="0 0 88 58" role="img" aria-label="Bandage"><g stroke="#3b2a1d" stroke-width="2"><ellipse cx="32" cy="30" rx="19" ry="20" fill="#ead8ae"/><ellipse cx="32" cy="30" rx="8" ry="9" fill="#9e7147"/><path d="M32 10h27c10 0 16 8 16 18v17H32c11-5 12-27 0-35z" fill="#d5bd8d"/><path d="M50 11v34M62 13v32" fill="none" stroke="#b58e5c"/><path d="M31 21c6 2 7 14 0 18" fill="none" stroke="#f3e5c3" stroke-width="3"/></g></svg>`,
+  heal: `<svg viewBox="0 0 88 58" role="img" aria-label="Doctor treatment"><g stroke="#2f2018" stroke-width="2" stroke-linejoin="round"><path d="M17 24h54l5 27H12z" fill="#78543b"/><path d="M28 24v-7c0-6 4-9 9-9h14c6 0 9 3 9 9v7h-8v-6c0-2-1-3-3-3H39c-2 0-3 1-3 3v6z" fill="#3e3029"/><path d="M12 33h64v7H12z" fill="#9d744c"/><path d="M39 27h10v18H39zM35 31h18v10H35z" fill="#d9c28e" stroke="#633128"/></g></svg>`,
+  map: `<svg viewBox="0 0 88 58" role="img" aria-label="Trail map"><g stroke="#38261b" stroke-width="2" stroke-linejoin="round"><path d="M13 13l19-6 23 7 20-6v38l-20 6-23-7-19 6z" fill="#dec58f"/><path d="M32 7v38M55 14v38" fill="none" stroke="#a47746"/><path d="M20 39c11-16 18 3 27-13S66 14 70 18" fill="none" stroke="#9e3c2c" stroke-width="3" stroke-dasharray="4 3"/><path d="M62 31l4-7 4 7-4 3z" fill="#496953"/><circle cx="23" cy="22" r="3" fill="#bd8c3d"/></g></svg>`,
+  coat: `<svg viewBox="0 0 88 58" role="img" aria-label="Trail coat"><g stroke="#2b1b16" stroke-width="2" stroke-linejoin="round"><path d="M31 9l13 6 13-6 13 11-9 12-5-4 5 25H27l5-25-5 4-9-12z" fill="#765369"/><path d="M36 12l8 3-6 10 6 27M52 12l-8 3 6 10-6 27" fill="#a97b8e"/><path d="M33 34h8v7h-9M55 34h-8v7h9" fill="#523a48"/><circle cx="44" cy="29" r="2" fill="#d1a44d"/></g></svg>`,
+  drink: `<svg viewBox="0 0 88 58" role="img" aria-label="Whiskey"><g stroke="#2c1a12" stroke-width="2" stroke-linejoin="round"><path d="M24 8h18v8l-4 7v28H16V23l4-7V8z" fill="#81512f"/><path d="M20 29h14v14H20z" fill="#d2b574"/><path d="M22 8h18v7H22z" fill="#c39a4a"/><path d="M52 27h24l-3 22H55z" fill="#d9b45c" fill-opacity=".65"/><path d="M55 35h18l-2 14H57z" fill="#bd6b2f"/><path d="M51 27h26" stroke="#e8d2a4" stroke-width="3"/></g></svg>`,
+};
+
+function makeShopItemArt(itemId) {
+  if (!shopItemArt[itemId]) return null;
+  const art = document.createElement('span');
+  art.className = 'choice-art';
+  art.innerHTML = shopItemArt[itemId];
+  art.setAttribute('aria-hidden', 'true');
+  return art;
+}
+
 export class UI {
   constructor() {
     this.el = {
@@ -135,13 +155,15 @@ export class UI {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
+      if (action.itemId) button.classList.add('shop-choice');
       const key = document.createElement('span');
       key.className = 'choice-key';
       key.textContent = action.id === 'close' ? '×' : String(index + 1);
       const label = document.createElement('span');
       label.className = 'choice-text';
       label.textContent = action.label;
-      button.append(key, label);
+      const art = makeShopItemArt(action.itemId);
+      button.append(key, ...(art ? [art] : []), label);
       button.dataset.action = action.id;
       button.disabled = Boolean(action.disabled);
       if (!button.disabled && action.id === focusedId) preferredFocus = button;

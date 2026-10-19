@@ -211,7 +211,12 @@ kbd {
 .dialog-menu .choice-label { color: #d9a64d; }
 .interaction-actions { flex-direction: column; flex-wrap: nowrap; }
 .interaction-actions .btn { display: grid; grid-template-columns: 30px 1fr; align-items: center; width: 100%; padding: 10px 12px; text-align: left; line-height: 1.2; }
+.interaction-actions .shop-choice { grid-template-columns: 28px 68px minmax(0, 1fr); min-height: 72px; padding: 7px 11px 7px 8px; }
 .choice-key { display: grid; place-items: center; width: 21px; height: 21px; color: #2a180f; background: #d8ae62; border: 1px solid #f5d991; font-size: 12px; box-shadow: 0 2px 0 #160d09; }
+.choice-art { display: grid; place-items: center; width: 60px; height: 50px; overflow: hidden; background: radial-gradient(circle at 42% 35%, #c79959, #76502f 72%); border: 1px solid #d6aa61; border-radius: 4px; box-shadow: inset 0 0 12px rgba(39, 21, 12, 0.55), 0 3px 0 #1b0f0a; }
+.choice-art svg { width: 58px; height: 44px; filter: drop-shadow(0 3px 2px rgba(20, 10, 6, 0.42)); }
+.interaction-actions .shop-choice:disabled { opacity: 0.68; filter: grayscale(0.25); }
+.shop-choice:disabled .choice-art { opacity: 0.92; }
 .interaction-actions .interaction-close { margin-top: 7px; color: #cbb99c; background: linear-gradient(#3e2a1d, #261811); border-color: #78562f; }
 .dialog-menu .fine { margin-top: 12px; color: #9f8968; text-align: center; }
 .dialog-menu .fine kbd { background: #c8aa77; color: #21130d; }
@@ -332,6 +337,8 @@ kbd {
   .dialog-copy h2 { font-size: 25px; }
   .dialog-menu { padding: 12px; }
   .interaction-actions { grid-template-columns: minmax(0, 1fr); }
+  .interaction-actions .shop-choice { grid-template-columns: 25px 58px minmax(0, 1fr); min-height: 64px; }
+  .choice-art { width: 52px; height: 43px; }
   #screen-interaction[data-mode="blackjack"] .interaction-card { width: 100%; }
   #screen-interaction[data-mode="blackjack"] .dialog-copy { padding: 20px 16px; }
   .hand-row { grid-template-columns: 52px 1fr 38px; gap: 7px; }
@@ -1279,6 +1286,26 @@ const interactionLabels = {
   stable: 'Stable yard',
 };
 
+const shopItemArt = {
+  ammo: `<svg viewBox="0 0 88 58" role="img" aria-label="Ammunition"><g transform="rotate(-10 44 29)"><path d="M22 43V17h9v26zM39 43V13h9v30zM56 43V18h9v25z" fill="#b7742f" stroke="#2c1b12" stroke-width="2"/><path d="M22 17l4.5-8 4.5 8M39 13l4.5-8 4.5 8M56 18l4.5-8 4.5 8" fill="#d8b35e" stroke="#2c1b12" stroke-width="2"/><path d="M19 43h15v6H19zM36 43h15v6H36zM53 43h15v6H53z" fill="#d5a24d" stroke="#2c1b12" stroke-width="2"/></g></svg>`,
+  shotgun: `<svg viewBox="0 0 88 58" role="img" aria-label="Shotgun"><g transform="rotate(-13 44 29)" stroke="#251710" stroke-width="2" stroke-linejoin="round"><path d="M8 35l23-8 34 1v7l-35 1-13 11H7l7-8z" fill="#7d4728"/><path d="M31 25h44v5H31zM32 32h43v5H31z" fill="#343231"/><path d="M69 24h12v14H69z" fill="#b58b45"/><path d="M30 29l10 2-9 6-8-3z" fill="#a66a37"/></g></svg>`,
+  rifle: `<svg viewBox="0 0 88 58" role="img" aria-label="Rifle"><g transform="rotate(-11 44 29)" stroke="#251710" stroke-width="2" stroke-linejoin="round"><path d="M6 35l26-10 29 4v7l-30-1-15 11H6l8-8z" fill="#a86631"/><path d="M31 26h50v6H31z" fill="#333332"/><path d="M43 21h18v6H43z" fill="#c19b4c"/><path d="M48 37l5 10h-8l-4-11z" fill="#6a3b25"/></g></svg>`,
+  bandage: `<svg viewBox="0 0 88 58" role="img" aria-label="Bandage"><g stroke="#3b2a1d" stroke-width="2"><ellipse cx="32" cy="30" rx="19" ry="20" fill="#ead8ae"/><ellipse cx="32" cy="30" rx="8" ry="9" fill="#9e7147"/><path d="M32 10h27c10 0 16 8 16 18v17H32c11-5 12-27 0-35z" fill="#d5bd8d"/><path d="M50 11v34M62 13v32" fill="none" stroke="#b58e5c"/><path d="M31 21c6 2 7 14 0 18" fill="none" stroke="#f3e5c3" stroke-width="3"/></g></svg>`,
+  heal: `<svg viewBox="0 0 88 58" role="img" aria-label="Doctor treatment"><g stroke="#2f2018" stroke-width="2" stroke-linejoin="round"><path d="M17 24h54l5 27H12z" fill="#78543b"/><path d="M28 24v-7c0-6 4-9 9-9h14c6 0 9 3 9 9v7h-8v-6c0-2-1-3-3-3H39c-2 0-3 1-3 3v6z" fill="#3e3029"/><path d="M12 33h64v7H12z" fill="#9d744c"/><path d="M39 27h10v18H39zM35 31h18v10H35z" fill="#d9c28e" stroke="#633128"/></g></svg>`,
+  map: `<svg viewBox="0 0 88 58" role="img" aria-label="Trail map"><g stroke="#38261b" stroke-width="2" stroke-linejoin="round"><path d="M13 13l19-6 23 7 20-6v38l-20 6-23-7-19 6z" fill="#dec58f"/><path d="M32 7v38M55 14v38" fill="none" stroke="#a47746"/><path d="M20 39c11-16 18 3 27-13S66 14 70 18" fill="none" stroke="#9e3c2c" stroke-width="3" stroke-dasharray="4 3"/><path d="M62 31l4-7 4 7-4 3z" fill="#496953"/><circle cx="23" cy="22" r="3" fill="#bd8c3d"/></g></svg>`,
+  coat: `<svg viewBox="0 0 88 58" role="img" aria-label="Trail coat"><g stroke="#2b1b16" stroke-width="2" stroke-linejoin="round"><path d="M31 9l13 6 13-6 13 11-9 12-5-4 5 25H27l5-25-5 4-9-12z" fill="#765369"/><path d="M36 12l8 3-6 10 6 27M52 12l-8 3 6 10-6 27" fill="#a97b8e"/><path d="M33 34h8v7h-9M55 34h-8v7h9" fill="#523a48"/><circle cx="44" cy="29" r="2" fill="#d1a44d"/></g></svg>`,
+  drink: `<svg viewBox="0 0 88 58" role="img" aria-label="Whiskey"><g stroke="#2c1a12" stroke-width="2" stroke-linejoin="round"><path d="M24 8h18v8l-4 7v28H16V23l4-7V8z" fill="#81512f"/><path d="M20 29h14v14H20z" fill="#d2b574"/><path d="M22 8h18v7H22z" fill="#c39a4a"/><path d="M52 27h24l-3 22H55z" fill="#d9b45c" fill-opacity=".65"/><path d="M55 35h18l-2 14H57z" fill="#bd6b2f"/><path d="M51 27h26" stroke="#e8d2a4" stroke-width="3"/></g></svg>`,
+};
+
+function makeShopItemArt(itemId) {
+  if (!shopItemArt[itemId]) return null;
+  const art = document.createElement('span');
+  art.className = 'choice-art';
+  art.innerHTML = shopItemArt[itemId];
+  art.setAttribute('aria-hidden', 'true');
+  return art;
+}
+
 class UI {
   constructor() {
     this.el = {
@@ -1399,13 +1426,15 @@ class UI {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
+      if (action.itemId) button.classList.add('shop-choice');
       const key = document.createElement('span');
       key.className = 'choice-key';
       key.textContent = action.id === 'close' ? '×' : String(index + 1);
       const label = document.createElement('span');
       label.className = 'choice-text';
       label.textContent = action.label;
-      button.append(key, label);
+      const art = makeShopItemArt(action.itemId);
+      button.append(key, ...(art ? [art] : []), label);
       button.dataset.action = action.id;
       button.disabled = Boolean(action.disabled);
       if (!button.disabled && action.id === focusedId) preferredFocus = button;
@@ -4542,19 +4571,51 @@ function saloonInterior(game, room) {
   counter(game, room.root, room.center, 12, -4.5, 0x6c3429);
   const s = new Shape();
   shelf(s, room.center.x, room.center.z - 6.5, 0x4f7a62, PAL.brass);
-  // Blackjack table and four working chairs.
-  s.cyl(2.2, 2.2, 0.22, 16, 0x285a44, room.center.x, 0.88, room.center.z + 1.1);
-  s.cyl(1.25, 1.55, 0.8, 10, PAL.woodDark, room.center.x, 0.42, room.center.z + 1.1);
-  for (const [dx, dz, yaw] of [[-3.1, 0, Math.PI / 2], [3.1, 0, -Math.PI / 2], [-1.5, 2.7, Math.PI], [1.5, 2.7, Math.PI]]) {
-    chair(s, room.center.x + dx, room.center.z + 1.1 + dz, yaw);
-    room.points.push({ id: `saloon-seat-${dx}-${dz}`, label: 'Sit down', kind: 'seat', x: room.center.x + dx, z: room.center.z + 1.1 + dz, yaw });
+  const tableX = room.center.x, tableZ = room.center.z + 1.1;
+  // A low-poly card table with a wood rail, felt inset, chips, cards, and four legs.
+  s.cyl(2.42, 2.42, 0.18, 12, PAL.woodDark, tableX, 0.84, tableZ);
+  s.cyl(2.18, 2.18, 0.09, 12, 0x285a44, tableX, 0.96, tableZ);
+  s.add(new THREE.TorusGeometry(2.28, 0.13, 6, 12), PAL.woodLight, tableX, 1.01, tableZ, Math.PI / 2);
+  for (const [dx, dz] of [[-1.05, -0.82], [1.05, -0.82], [-1.05, 0.82], [1.05, 0.82]]) {
+    s.cyl(0.18, 0.25, 0.82, 7, PAL.woodDark, tableX + dx, 0.42, tableZ + dz);
+    s.box(0.55, 0.12, 0.12, PAL.brass, tableX + dx * 0.65, 0.35, tableZ + dz * 0.65, 0, Math.atan2(dx, dz));
   }
-  // Piano and pot-belly stove.
-  s.box(3.1, 1.65, 1.05, 0x342622, room.center.x - 6.8, 0.83, room.center.z - 2);
-  s.box(3.25, 0.22, 1.18, 0x241a18, room.center.x - 6.8, 1.67, room.center.z - 2);
-  s.box(2.8, 1.25, 0.12, 0x493026, room.center.x - 6.8, 2.15, room.center.z - 2.46);
-  s.box(2.35, 0.5, 0.1, 0x2b201d, room.center.x - 6.8, 2.25, room.center.z - 2.38);
-  for (let i = 0; i < 9; i++) s.box(0.25, 0.08, 0.65, i % 2 ? PAL.black : PAL.bone, room.center.x - 7.8 + i * 0.27, 1.25, room.center.z - 1.35);
+  for (const [x, z, color, count] of [[-0.55, -0.5, PAL.red, 3], [0.55, -0.5, PAL.brass, 2], [-0.8, 0.48, 0x4d6d72, 2]]) {
+    for (let i = 0; i < count; i++) s.cyl(0.13, 0.13, 0.055, 10, color, tableX + x, 1.07 + i * 0.056, tableZ + z);
+  }
+  for (const [x, z, yaw] of [[-0.22, -0.85, -0.08], [0.22, -0.78, 0.12], [-0.3, 0.72, 0.08], [0.24, 0.8, -0.1]]) {
+    s.box(0.34, 0.025, 0.48, PAL.bone, tableX + x, 1.075, tableZ + z, 0, yaw);
+    s.box(0.22, 0.015, 0.32, x < 0 ? PAL.red : PAL.black, tableX + x, 1.093, tableZ + z, 0, yaw);
+  }
+  s.box(1.3, 0.07, 0.46, PAL.woodDark, tableX, 1.075, tableZ - 1.18);
+  for (let i = -2; i <= 2; i++) s.cyl(0.09, 0.09, 0.06, 8, i % 2 ? PAL.red : PAL.brass, tableX + i * 0.2, 1.145, tableZ - 1.18);
+
+  const chairs = [[-3.1, 0, Math.PI / 2, true], [3.1, 0, -Math.PI / 2, true], [-1.5, 2.7, Math.PI, false], [1.5, 2.7, Math.PI, false]];
+  for (const [dx, dz, yaw, occupied] of chairs) {
+    const x = tableX + dx, z = tableZ + dz;
+    chair(s, x, z, yaw);
+    if (occupied) saloonPatron(room, x, z, yaw, dx < 0 ? 'Ada Crow' : 'Wes Mercer', dx < 0);
+    else room.points.push({ id: `saloon-seat-${dx}-${dz}`, label: 'Sit down', kind: 'seat', x, z, yaw });
+  }
+
+  // Upright piano against the side wall, with a stool and visible keys.
+  const pianoX = room.center.x - 8.38, pianoZ = room.center.z - 2.1;
+  s.box(3.35, 1.48, 0.78, 0x342622, pianoX, 0.76, pianoZ, 0, Math.PI / 2);
+  s.box(3.3, 1.72, 0.42, 0x493026, pianoX - 0.19, 1.72, pianoZ, 0, Math.PI / 2);
+  s.box(3.5, 0.2, 0.72, 0x241a18, pianoX + 0.2, 1.62, pianoZ, 0, Math.PI / 2);
+  s.box(2.62, 0.7, 0.08, 0x2b201d, pianoX + 0.23, 2.05, pianoZ, 0, Math.PI / 2);
+  s.box(2.24, 0.42, 0.06, 0x5d3928, pianoX + 0.28, 2.05, pianoZ, 0, Math.PI / 2);
+  for (let i = 0; i < 11; i++) {
+    const z = pianoZ - 1.32 + i * 0.264;
+    s.box(0.23, 0.075, 0.58, PAL.bone, pianoX + 0.46, 1.52, z, 0, Math.PI / 2);
+    if ([0, 1, 3, 4, 6, 8, 9].includes(i)) s.box(0.13, 0.1, 0.36, PAL.black, pianoX + 0.5, 1.6, z + 0.105, 0, Math.PI / 2);
+  }
+  for (const z of [pianoZ - 1.28, pianoZ + 1.28]) s.box(0.22, 1.42, 0.22, PAL.woodDark, pianoX + 0.38, 0.73, z);
+  s.box(0.46, 0.08, 0.16, PAL.brass, pianoX + 0.56, 0.23, pianoZ, 0, Math.PI / 2);
+  s.cyl(0.62, 0.62, 0.16, 10, PAL.woodLight, room.center.x - 6.7, 0.7, pianoZ);
+  for (const z of [pianoZ - 0.32, pianoZ + 0.32]) s.cyl(0.08, 0.11, 0.65, 7, PAL.woodDark, room.center.x - 6.7, 0.34, z);
+
+  // Pot-belly stove.
   s.cyl(0.65, 0.75, 1.25, 10, PAL.iron, room.center.x + 6.7, 0.7, room.center.z - 1.5);
   s.cyl(0.18, 0.18, 2.4, 8, PAL.iron, room.center.x + 6.7, 2.45, room.center.z - 1.5);
   wallLantern(s, room.center.x - 3.8, 3.45, room.center.z - 6.6);
@@ -4566,6 +4627,23 @@ function saloonInterior(game, room) {
   }
   room.root.add(meshOf(s));
   room.points.push({ id: 'blackjack', label: 'Blackjack', kind: 'blackjack', x: room.center.x, z: room.center.z + 3.25 });
+}
+
+function saloonPatron(room, x, z, yaw, name, blueShirt) {
+  const look = { shirt: blueShirt ? 0x486a73 : 0x8b5338, vest: blueShirt ? 0x6b442d : 0x4b3b31,
+    hat: blueShirt ? 0x9a7447 : 0x3e3028, band: PAL.brass, pants: blueShirt ? 0x3c4448 : 0x514338 };
+  const model = addRollPivot(makeCharacter(look));
+  showGun(model, null);
+  const mug = new Shape();
+  mug.cyl(0.12, 0.14, 0.24, 8, PAL.brass, 0.34, 1.08, 0.48);
+  mug.cyl(0.105, 0.105, 0.03, 8, 0xb8652f, 0.34, 1.195, 0.48);
+  mug.add(new THREE.TorusGeometry(0.12, 0.035, 5, 8), PAL.brass, 0.45, 1.08, 0.48);
+  model.root.add(meshOf(mug));
+  const npc = { id: `saloon-patron-${name.toLowerCase().replace(/\s+/g, '-')}`, name, x, z, yaw, seated: true, model,
+    animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
+  model.root.position.set(x, 0, z);
+  room.root.add(model.root);
+  room.npcs.push(npc);
 }
 
 function stableInterior(game, room) {
@@ -4619,13 +4697,18 @@ function buildInteriors(game, parent, sites) {
 function updateInteriorNpcs(room, player, dt) {
   if (!room) return;
   for (const npc of room.npcs) {
-    if (player && Math.hypot(player.x - npc.x, player.z - npc.z) < 4) {
+    if (!npc.seated && player && Math.hypot(player.x - npc.x, player.z - npc.z) < 4) {
       npc.yaw = turnToward(npc.yaw, Math.atan2(player.x - npc.x, player.z - npc.z), dt * 4);
     }
     npc.model.root.rotation.y = npc.yaw;
     npc.animation.dt = dt;
     animateCharacter(npc.model, npc.animation);
-    npc.model.arm.rotation.x = 1.1;
+    if (npc.seated) {
+      npc.model.legs[0].rotation.x = -1.25;
+      npc.model.legs[1].rotation.x = -1.25;
+      npc.model.body.position.y -= 0.2;
+      npc.model.arm.rotation.x = 0.62;
+    } else npc.model.arm.rotation.x = 1.1;
   }
 }
 
@@ -5436,7 +5519,7 @@ class TownActions {
       actions = stock[point.kind].map((id) => {
         const item = CATALOGUE[id];
         const owned = life.unlocked.includes(id) || (id === 'coat' && life.coat) || (id === 'map' && life.hasMap);
-        return { id: `buy:${id}`, label: `${item.name} · $${item.price}${owned ? ' · Owned' : ''}`,
+        return { id: `buy:${id}`, itemId: id, label: `${item.name} · $${item.price}${owned ? ' · Owned' : ''}`,
           disabled: owned || life.bounty < item.price || (id === 'heal' && life.hp >= 100) };
       });
     } else if (point.kind === 'bounty') {

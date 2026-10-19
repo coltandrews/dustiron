@@ -161,6 +161,7 @@ test('bounty, shopping, save, death, and a new life share one consistent record'
   game.frontier.exit();
 
   openAt(game, enterStore(game, 'guns'));
+  assert.equal(game.ui.menu.actions.find((item) => item.id === 'buy:shotgun').itemId, 'shotgun');
   choose(game, 'buy:shotgun');
   assert.equal(game.run.bounty, paid - CATALOGUE.shotgun.price);
   assert.equal(game.player.guns.length, 2);

@@ -178,19 +178,51 @@ function saloonInterior(game, room) {
   counter(game, room.root, room.center, 12, -4.5, 0x6c3429);
   const s = new Shape();
   shelf(s, room.center.x, room.center.z - 6.5, 0x4f7a62, PAL.brass);
-  // Blackjack table and four working chairs.
-  s.cyl(2.2, 2.2, 0.22, 16, 0x285a44, room.center.x, 0.88, room.center.z + 1.1);
-  s.cyl(1.25, 1.55, 0.8, 10, PAL.woodDark, room.center.x, 0.42, room.center.z + 1.1);
-  for (const [dx, dz, yaw] of [[-3.1, 0, Math.PI / 2], [3.1, 0, -Math.PI / 2], [-1.5, 2.7, Math.PI], [1.5, 2.7, Math.PI]]) {
-    chair(s, room.center.x + dx, room.center.z + 1.1 + dz, yaw);
-    room.points.push({ id: `saloon-seat-${dx}-${dz}`, label: 'Sit down', kind: 'seat', x: room.center.x + dx, z: room.center.z + 1.1 + dz, yaw });
+  const tableX = room.center.x, tableZ = room.center.z + 1.1;
+  // A low-poly card table with a wood rail, felt inset, chips, cards, and four legs.
+  s.cyl(2.42, 2.42, 0.18, 12, PAL.woodDark, tableX, 0.84, tableZ);
+  s.cyl(2.18, 2.18, 0.09, 12, 0x285a44, tableX, 0.96, tableZ);
+  s.add(new THREE.TorusGeometry(2.28, 0.13, 6, 12), PAL.woodLight, tableX, 1.01, tableZ, Math.PI / 2);
+  for (const [dx, dz] of [[-1.05, -0.82], [1.05, -0.82], [-1.05, 0.82], [1.05, 0.82]]) {
+    s.cyl(0.18, 0.25, 0.82, 7, PAL.woodDark, tableX + dx, 0.42, tableZ + dz);
+    s.box(0.55, 0.12, 0.12, PAL.brass, tableX + dx * 0.65, 0.35, tableZ + dz * 0.65, 0, Math.atan2(dx, dz));
   }
-  // Piano and pot-belly stove.
-  s.box(3.1, 1.65, 1.05, 0x342622, room.center.x - 6.8, 0.83, room.center.z - 2);
-  s.box(3.25, 0.22, 1.18, 0x241a18, room.center.x - 6.8, 1.67, room.center.z - 2);
-  s.box(2.8, 1.25, 0.12, 0x493026, room.center.x - 6.8, 2.15, room.center.z - 2.46);
-  s.box(2.35, 0.5, 0.1, 0x2b201d, room.center.x - 6.8, 2.25, room.center.z - 2.38);
-  for (let i = 0; i < 9; i++) s.box(0.25, 0.08, 0.65, i % 2 ? PAL.black : PAL.bone, room.center.x - 7.8 + i * 0.27, 1.25, room.center.z - 1.35);
+  for (const [x, z, color, count] of [[-0.55, -0.5, PAL.red, 3], [0.55, -0.5, PAL.brass, 2], [-0.8, 0.48, 0x4d6d72, 2]]) {
+    for (let i = 0; i < count; i++) s.cyl(0.13, 0.13, 0.055, 10, color, tableX + x, 1.07 + i * 0.056, tableZ + z);
+  }
+  for (const [x, z, yaw] of [[-0.22, -0.85, -0.08], [0.22, -0.78, 0.12], [-0.3, 0.72, 0.08], [0.24, 0.8, -0.1]]) {
+    s.box(0.34, 0.025, 0.48, PAL.bone, tableX + x, 1.075, tableZ + z, 0, yaw);
+    s.box(0.22, 0.015, 0.32, x < 0 ? PAL.red : PAL.black, tableX + x, 1.093, tableZ + z, 0, yaw);
+  }
+  s.box(1.3, 0.07, 0.46, PAL.woodDark, tableX, 1.075, tableZ - 1.18);
+  for (let i = -2; i <= 2; i++) s.cyl(0.09, 0.09, 0.06, 8, i % 2 ? PAL.red : PAL.brass, tableX + i * 0.2, 1.145, tableZ - 1.18);
+
+  const chairs = [[-3.1, 0, Math.PI / 2, true], [3.1, 0, -Math.PI / 2, true], [-1.5, 2.7, Math.PI, false], [1.5, 2.7, Math.PI, false]];
+  for (const [dx, dz, yaw, occupied] of chairs) {
+    const x = tableX + dx, z = tableZ + dz;
+    chair(s, x, z, yaw);
+    if (occupied) saloonPatron(room, x, z, yaw, dx < 0 ? 'Ada Crow' : 'Wes Mercer', dx < 0);
+    else room.points.push({ id: `saloon-seat-${dx}-${dz}`, label: 'Sit down', kind: 'seat', x, z, yaw });
+  }
+
+  // Upright piano against the side wall, with a stool and visible keys.
+  const pianoX = room.center.x - 8.38, pianoZ = room.center.z - 2.1;
+  s.box(3.35, 1.48, 0.78, 0x342622, pianoX, 0.76, pianoZ, 0, Math.PI / 2);
+  s.box(3.3, 1.72, 0.42, 0x493026, pianoX - 0.19, 1.72, pianoZ, 0, Math.PI / 2);
+  s.box(3.5, 0.2, 0.72, 0x241a18, pianoX + 0.2, 1.62, pianoZ, 0, Math.PI / 2);
+  s.box(2.62, 0.7, 0.08, 0x2b201d, pianoX + 0.23, 2.05, pianoZ, 0, Math.PI / 2);
+  s.box(2.24, 0.42, 0.06, 0x5d3928, pianoX + 0.28, 2.05, pianoZ, 0, Math.PI / 2);
+  for (let i = 0; i < 11; i++) {
+    const z = pianoZ - 1.32 + i * 0.264;
+    s.box(0.23, 0.075, 0.58, PAL.bone, pianoX + 0.46, 1.52, z, 0, Math.PI / 2);
+    if ([0, 1, 3, 4, 6, 8, 9].includes(i)) s.box(0.13, 0.1, 0.36, PAL.black, pianoX + 0.5, 1.6, z + 0.105, 0, Math.PI / 2);
+  }
+  for (const z of [pianoZ - 1.28, pianoZ + 1.28]) s.box(0.22, 1.42, 0.22, PAL.woodDark, pianoX + 0.38, 0.73, z);
+  s.box(0.46, 0.08, 0.16, PAL.brass, pianoX + 0.56, 0.23, pianoZ, 0, Math.PI / 2);
+  s.cyl(0.62, 0.62, 0.16, 10, PAL.woodLight, room.center.x - 6.7, 0.7, pianoZ);
+  for (const z of [pianoZ - 0.32, pianoZ + 0.32]) s.cyl(0.08, 0.11, 0.65, 7, PAL.woodDark, room.center.x - 6.7, 0.34, z);
+
+  // Pot-belly stove.
   s.cyl(0.65, 0.75, 1.25, 10, PAL.iron, room.center.x + 6.7, 0.7, room.center.z - 1.5);
   s.cyl(0.18, 0.18, 2.4, 8, PAL.iron, room.center.x + 6.7, 2.45, room.center.z - 1.5);
   wallLantern(s, room.center.x - 3.8, 3.45, room.center.z - 6.6);
@@ -202,6 +234,23 @@ function saloonInterior(game, room) {
   }
   room.root.add(meshOf(s));
   room.points.push({ id: 'blackjack', label: 'Blackjack', kind: 'blackjack', x: room.center.x, z: room.center.z + 3.25 });
+}
+
+function saloonPatron(room, x, z, yaw, name, blueShirt) {
+  const look = { shirt: blueShirt ? 0x486a73 : 0x8b5338, vest: blueShirt ? 0x6b442d : 0x4b3b31,
+    hat: blueShirt ? 0x9a7447 : 0x3e3028, band: PAL.brass, pants: blueShirt ? 0x3c4448 : 0x514338 };
+  const model = addRollPivot(makeCharacter(look));
+  showGun(model, null);
+  const mug = new Shape();
+  mug.cyl(0.12, 0.14, 0.24, 8, PAL.brass, 0.34, 1.08, 0.48);
+  mug.cyl(0.105, 0.105, 0.03, 8, 0xb8652f, 0.34, 1.195, 0.48);
+  mug.add(new THREE.TorusGeometry(0.12, 0.035, 5, 8), PAL.brass, 0.45, 1.08, 0.48);
+  model.root.add(meshOf(mug));
+  const npc = { id: `saloon-patron-${name.toLowerCase().replace(/\s+/g, '-')}`, name, x, z, yaw, seated: true, model,
+    animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
+  model.root.position.set(x, 0, z);
+  room.root.add(model.root);
+  room.npcs.push(npc);
 }
 
 function stableInterior(game, room) {
@@ -255,12 +304,17 @@ export function buildInteriors(game, parent, sites) {
 export function updateInteriorNpcs(room, player, dt) {
   if (!room) return;
   for (const npc of room.npcs) {
-    if (player && Math.hypot(player.x - npc.x, player.z - npc.z) < 4) {
+    if (!npc.seated && player && Math.hypot(player.x - npc.x, player.z - npc.z) < 4) {
       npc.yaw = turnToward(npc.yaw, Math.atan2(player.x - npc.x, player.z - npc.z), dt * 4);
     }
     npc.model.root.rotation.y = npc.yaw;
     npc.animation.dt = dt;
     animateCharacter(npc.model, npc.animation);
-    npc.model.arm.rotation.x = 1.1;
+    if (npc.seated) {
+      npc.model.legs[0].rotation.x = -1.25;
+      npc.model.legs[1].rotation.x = -1.25;
+      npc.model.body.position.y -= 0.2;
+      npc.model.arm.rotation.x = 0.62;
+    } else npc.model.arm.rotation.x = 1.1;
   }
 }

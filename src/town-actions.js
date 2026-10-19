@@ -72,7 +72,7 @@ export class TownActions {
       actions = stock[point.kind].map((id) => {
         const item = CATALOGUE[id];
         const owned = life.unlocked.includes(id) || (id === 'coat' && life.coat) || (id === 'map' && life.hasMap);
-        return { id: `buy:${id}`, label: `${item.name} · $${item.price}${owned ? ' · Owned' : ''}`,
+        return { id: `buy:${id}`, itemId: id, label: `${item.name} · $${item.price}${owned ? ' · Owned' : ''}`,
           disabled: owned || life.bounty < item.price || (id === 'heal' && life.hp >= 100) };
       });
     } else if (point.kind === 'bounty') {
