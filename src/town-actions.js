@@ -39,6 +39,7 @@ export class TownActions {
   pointRange(point) {
     if (['seat', 'blackjack'].includes(point.kind)) return 1.15;
     if (point.kind === 'door') return 2.2;
+    if (point.kind === 'npc' || npcOf(point)) return 1.2;
     return 2.6;
   }
 
@@ -62,7 +63,8 @@ export class TownActions {
       const held = points.find((point) => this.pointKey(point) === this.nearbyKey);
       if (held) {
         const distance = Math.hypot(held.x - g.player.x, held.z - g.player.z);
-        if (distance < this.pointRange(held) + 0.45) return held;
+        const margin = (held.kind === 'npc' || npcOf(held)) ? 0.1 : 0.45;
+        if (distance < this.pointRange(held) + margin) return held;
       }
       this.nearbyKey = null;
     }

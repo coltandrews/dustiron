@@ -394,12 +394,12 @@ test('an interaction prompt keeps its target until the player moves away', (t) =
   const first = { id: 'first', kind: 'npc', x: 0, z: 0 };
   const second = { id: 'second', kind: 'npc', x: 0.2, z: 0 };
   game.frontier.interactions = () => [first, second];
-  place(game, 0, 2.5);
+  place(game, 0, 1.1);
   assert.equal(game.townActions.nearest(), first);
 
-  place(game, 0.2, 2.45);
+  place(game, 0.2, 1.05);
   assert.equal(game.townActions.nearest(), first);
 
-  place(game, 0, 3.1);
+  place(game, 0, 1.35);
   assert.equal(game.townActions.nearest(), null);
 });
