@@ -387,3 +387,19 @@ test('holding interact dismounts a horse and releasing it cancels the hold', (t)
   assert.equal(game.horse.mounted, false);
   assert.equal(game.rig.ride, 0);
 });
+
+test('an interaction prompt keeps its target until the player moves away', (t) => {
+  const game = makeGame(t);
+  startLife(game, 0.2468);
+  const first = { id: 'first', kind: 'npc', x: 0, z: 0 };
+  const second = { id: 'second', kind: 'npc', x: 0.2, z: 0 };
+  game.frontier.interactions = () => [first, second];
+  place(game, 0, 2.5);
+  assert.equal(game.townActions.nearest(), first);
+
+  place(game, 0.2, 2.45);
+  assert.equal(game.townActions.nearest(), first);
+
+  place(game, 0, 3.1);
+  assert.equal(game.townActions.nearest(), null);
+});

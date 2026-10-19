@@ -95,9 +95,9 @@ export class Prop {
       this.mesh.add(baseMesh);
 
       const lid = new Shape();
-      lid.box(1.42, 0.2, 0.84, PAL.woodLight, 0, 0, 0.4);
-      lid.box(1.48, 0.08, 0.9, PAL.woodDark, 0, 0.06, 0.4);
-      for (const x of [-0.6, 0.6]) lid.box(0.1, 0.25, 0.9, PAL.iron, x, 0, 0.4);
+      lid.box(1.42, 0.16, 0.84, PAL.woodLight, 0, 0, 0.4);
+      lid.box(1.46, 0.05, 0.88, PAL.woodDark, 0, 0.105, 0.4);
+      for (const x of [-0.6, 0.6]) lid.box(0.1, 0.04, 0.92, PAL.iron, x, 0.15, 0.4);
       this.lid = new THREE.Group();
       this.lid.position.set(0, 0.7, -0.42);
       this.lid.add(new THREE.Mesh(cachedGeo('supply-lid', () => lid), this.material));

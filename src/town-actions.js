@@ -32,7 +32,15 @@ export function npcOf(point) {
 }
 
 export class TownActions {
-  constructor(game) { this.game = game; this.current = null; this.view = null; this.cameraDistance = null; }
+  constructor(game) { this.game = game; this.current = null; this.view = null; this.cameraDistance = null; this.nearbyKey = null; }
+
+  pointKey(point) { return point ? `${point.kind}:${point.id}` : null; }
+
+  pointRange(point) {
+    if (['seat', 'blackjack'].includes(point.kind)) return 1.15;
+    if (point.kind === 'door') return 2.2;
+    return 2.6;
+  }
 
   points() {
     const g = this.game, list = [];
@@ -48,14 +56,23 @@ export class TownActions {
 
   nearest() {
     const g = this.game;
-    if (!g.player?.alive || !g.frontier) return null;
+    if (!g.player?.alive || !g.frontier) { this.nearbyKey = null; return null; }
+    const points = this.points().filter((point) => !(point.kind === 'door' && g.horse?.mounted));
+    if (this.nearbyKey) {
+      const held = points.find((point) => this.pointKey(point) === this.nearbyKey);
+      if (held) {
+        const distance = Math.hypot(held.x - g.player.x, held.z - g.player.z);
+        if (distance < this.pointRange(held) + 0.45) return held;
+      }
+      this.nearbyKey = null;
+    }
     let best = null, distance = 3.2;
-    for (const point of this.points()) {
-      if (point.kind === 'door' && g.horse?.mounted) continue;
+    for (const point of points) {
       const d = Math.hypot(point.x - g.player.x, point.z - g.player.z);
-      const range = ['seat', 'blackjack'].includes(point.kind) ? 1.15 : point.kind === 'door' ? 2.2 : point.kind === 'mount' ? 2.6 : 2.6;
+      const range = this.pointRange(point);
       if (d < range && d < distance) { best = point; distance = d; }
     }
+    this.nearbyKey = this.pointKey(best);
     return best;
   }
 
