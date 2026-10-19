@@ -4,7 +4,7 @@ import { PAL, Shape } from './models.js';
 import { patron } from './townsfolk.js';
 import {
   FLOOR, barrel, bottle, chair, counter, frame, hayBale, mug, pad, place, roundTable, sack, saddle, shelfUnit,
-  stool, wallLantern,
+  stool, wallLantern, waterTrough,
 } from './furniture.js';
 
 const BACK = -6.95, LEFT = -8.95, RIGHT = 8.95, R = Math.PI / 2;
@@ -231,9 +231,8 @@ function stable(kit) {
   for (const [x, z] of [[-5.9, 4.6], [-6.5, 5.1], [-5.4, 5.3]]) put((s) => sack(s), x, z, x);
   put((s) => {
     pad(s, 0.9, 2.6);
-    s.box(0.7, 0.55, 2.4, PAL.woodDark, 0, FLOOR + 0.42, 0); s.box(0.56, 0.05, 2.26, PAL.water, 0, FLOOR + 0.62, 0);
-    for (const z of [-1.0, 1.0]) s.box(0.8, 0.16, 0.16, PAL.wood, 0, FLOOR + 0.08, z);
-  }, RIGHT - 0.5, 4.4); solid(RIGHT - 0.5, 4.4, 0.36, 1.22, 0, 0.8);
+    waterTrough(s, 2.4, 0.8);
+  }, RIGHT - 0.5, 4.4); solid(RIGHT - 0.5, 4.4, 0.4, 1.2, 0, 0.75);
   put((s) => { barrel(s, 0.34, 0.9); }, 3.4, 4.9);
   put((s) => { for (let i = 0; i < 5; i++) s.add(new THREE.TorusGeometry(0.11, 0.03, 4, 8, Math.PI * 1.4), PAL.iron, -0.6 + i * 0.3, 2.6, 0.05, 0, 0, -Math.PI * 0.7); }, 0, BACK + 0.02);
   for (const x of [-2.4, 2.4]) put((s) => wallLantern(s, 2.8), x, BACK + 0.02);

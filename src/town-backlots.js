@@ -7,7 +7,7 @@ import { createRng } from './rng.js';
 import { blot, blotMesh } from './decals.js';
 import { window } from './facade.js';
 import { horse } from './interior-social.js';
-import { place } from './furniture.js';
+import { place, waterTrough } from './furniture.js';
 
 function rearDoor(s, z, double = false) {
   const xs = double ? [-0.55, 0.55] : [0];
@@ -127,7 +127,7 @@ function yards(game, group) {
   place(s, horse(new Shape(), 0x5a3a28, 0x1e1712, false), -34.5, 0, 5.5, 0.6);
   place(s, horse(new Shape(), 0xb39274, 0xefe4cf, false), -36, 0, 10, 2.4);
   game.physics.fixedCylinder(-34.5, 1, 5.5, 1, 1.1, GROUPS.world); game.physics.fixedCylinder(-36, 1, 10, 1, 1.1, GROUPS.world);
-  s.box(0.9, 0.6, 2.6, PAL.woodDark, -31.4, 0.3, 3); s.box(0.7, 0.08, 2.3, PAL.water, -31.4, 0.58, 3);
+  const corralTrough = new Shape(); waterTrough(corralTrough, 2.6, 0.9, 0); place(s, corralTrough, -31.4, 0, 3);
   game.physics.fixedBox(-31.4, 0.3, 3, 0.45, 0.3, 1.3, 0, GROUPS.world);
   shade.push(blot(-34.7, 7, 4.5, 7.5, 0x9a6f48, 0.55));
   // Water tower on four legs behind the forge yard.
@@ -210,8 +210,7 @@ function street(game, group, doors) {
   }
   // Water troughs by the saloon and the livery.
   for (const [x, z] of [[6.0, 13.2], [-6.0, 10.4]]) {
-    s.box(1.0, 0.7, 2.6, PAL.woodDark, x, 0.35, z); s.box(0.8, 0.08, 2.4, PAL.water, x, 0.66, z);
-    for (const dz of [-1, 1]) s.box(1.1, 0.12, 0.14, PAL.iron, x, 0.5, z + dz);
+    const trough = new Shape(); waterTrough(trough, 2.6, 1.0, 0); place(s, trough, x, 0, z);
     game.physics.fixedBox(x, 0.35, z, 0.5, 0.35, 1.3, 0, GROUPS.world);
   }
   // Barrels and a bench under a porch, a few sacks by the stable.

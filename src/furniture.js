@@ -47,6 +47,32 @@ export function barrel(s, r = 0.36, h = 0.95, body = PAL.wood, lid = PAL.woodDar
   return s;
 }
 
+/** An open water trough that runs along the local z axis. */
+export function waterTrough(s, length = 2.6, width = 0.9, y = FLOOR) {
+  const halfW = width / 2, halfL = length / 2;
+  const wall = 0.1, rim = 0.07, top = y + 0.7;
+
+  // Keep the water clear of all wood faces. The gap prevents depth flicker.
+  s.box(width - wall * 2, 0.1, length - wall * 2, PAL.woodDark, 0, y + 0.27, 0);
+  for (const side of [-1, 1]) {
+    s.box(wall, 0.48, length, PAL.wood, side * (halfW - wall / 2), y + 0.46, 0);
+    s.box(rim, 0.08, length + 0.06, PAL.woodLight, side * (halfW - rim / 2), top, 0);
+  }
+  for (const side of [-1, 1]) {
+    s.box(width - wall * 2, 0.48, wall, PAL.wood, 0, y + 0.46, side * (halfL - wall / 2));
+    s.box(width, 0.08, rim, PAL.woodLight, 0, top, side * (halfL - rim / 2));
+  }
+  s.box(width - wall * 2 - 0.06, 0.035, length - wall * 2 - 0.06, PAL.water, 0, y + 0.53, 0);
+
+  // Two trestles hold the basin above the ground. Iron straps strengthen the sides.
+  for (const z of [-halfL * 0.58, halfL * 0.58]) {
+    s.box(width + 0.12, 0.12, 0.16, PAL.woodDark, 0, y + 0.16, z);
+    for (const x of [-halfW * 0.68, halfW * 0.68]) s.box(0.12, 0.28, 0.12, PAL.woodDark, x, y + 0.14, z);
+    for (const x of [-halfW - 0.012, halfW + 0.012]) s.box(0.035, 0.44, 0.055, PAL.iron, x, y + 0.45, z);
+  }
+  return s;
+}
+
 /** A shop counter facing +z (the customer side) with panels, overhanging top and a brass foot rail. */
 export function counter(s, w, color, top = PAL.woodDark, h = 1.05) {
   pad(s, w + 0.4, 1.3);
