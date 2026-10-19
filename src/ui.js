@@ -56,6 +56,7 @@ export class UI {
     this.toastT = 0;
     this.hintT = 12;
     this.promptPoint = new THREE.Vector3();
+    this.promptScreen = { key: null, x: 0, y: 0 };
     this.el.screens.interaction.addEventListener('keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
       if (/^Digit[1-9]$/.test(event.code)) {
@@ -458,14 +459,31 @@ export class UI {
     e.interactionHint.classList.toggle('dismount-hint', dismount);
     e.interactionHint.style.setProperty('--hold-progress', `${(game.horse?.dismountProgress(game.realTime) ?? 0) * 100}%`);
     e.interactionHint.style.opacity = dismount ? game.horse.dismountHintOpacity(game.realTime) : '';
-    if (doorEntry) {
+    if (doorEntry || npcTalk) {
       const point = game.townActions.nearest();
-      const projected = point ? this.promptPoint.set(point.x, 1.35, point.z).project(game.rig.camera) : null;
+      const position = npcTalk && point?.model?.root ? point.model.root.position : point;
+      const projected = position ? this.promptPoint.set(position.x, npcTalk ? position.y + 2.55 : 1.35, position.z).project(game.rig.camera) : null;
       if (projected) {
-        e.interactionHint.style.left = `${(projected.x + 1) * 50}%`;
-        e.interactionHint.style.top = `${(1 - projected.y) * 50}%`;
+        const canvas = game.render.renderer.domElement;
+        const width = canvas.clientWidth || canvas.width;
+        const height = canvas.clientHeight || canvas.height;
+        const targetX = (projected.x + 1) * width * 0.5;
+        const targetY = (1 - projected.y) * height * 0.5;
+        const key = `${npcTalk ? 'npc' : 'door'}:${game.townActions.pointKey(point)}`;
+        if (this.promptScreen.key !== key) {
+          this.promptScreen.key = key;
+          this.promptScreen.x = targetX;
+          this.promptScreen.y = targetY;
+        } else {
+          const follow = 1 - Math.exp(-Math.min(dt, 0.05) * 12);
+          this.promptScreen.x += (targetX - this.promptScreen.x) * follow;
+          this.promptScreen.y += (targetY - this.promptScreen.y) * follow;
+        }
+        e.interactionHint.style.left = `${Math.round(this.promptScreen.x)}px`;
+        e.interactionHint.style.top = `${Math.round(this.promptScreen.y)}px`;
       }
     } else {
+      this.promptScreen.key = null;
       e.interactionHint.style.left = '';
       e.interactionHint.style.top = '';
     }
