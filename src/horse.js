@@ -24,6 +24,7 @@ export class Horse {
     this.called = false;
     this.sprinting = false;
     this.dismountHoldStart = null;
+    this.dismountHintUntil = 0;
     this.bob = 0;
     const s = new Shape();
     horseShape(s, this.breed.coat, this.breed.mane, true);
@@ -48,6 +49,7 @@ export class Horse {
     if (this.mounted || !p.alive) return false;
     this.mounted = true; this.called = false;
     this.dismountHoldStart = null;
+    this.dismountHintUntil = this.game.realTime + T.horse.dismountHint;
     p.bandageT = -1;
     this.game.rig.ride = 6;
     this.game.tips.done('mount');
@@ -94,6 +96,15 @@ export class Horse {
   dismountProgress(now) {
     if (this.dismountHoldStart === null) return 0;
     return Math.min(1, Math.max(0, (now - this.dismountHoldStart) / T.horse.dismountHold));
+  }
+
+  showDismountHint(now) {
+    return this.mounted && (now < this.dismountHintUntil + T.horse.dismountHintFade || this.dismountHoldStart !== null);
+  }
+
+  dismountHintOpacity(now) {
+    if (this.dismountHoldStart !== null) return 1;
+    return Math.min(1, Math.max(0, (this.dismountHintUntil + T.horse.dismountHintFade - now) / T.horse.dismountHintFade));
   }
 
   whistle() {

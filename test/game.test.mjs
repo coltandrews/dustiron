@@ -354,6 +354,10 @@ test('holding interact dismounts a horse and releasing it cancels the hold', (t)
   game.run.horse = { owned: false, stamina: 0.7, away: false };
   game.spawnHorse();
   game.horse.mount();
+  assert.equal(game.horse.showDismountHint(4.99), true);
+  assert.ok(Math.abs(game.horse.dismountHintOpacity(5) - 1) < 0.001);
+  assert.ok(Math.abs(game.horse.dismountHintOpacity(5.3) - 0.5) < 0.001);
+  assert.equal(game.horse.showDismountHint(5.6), false);
 
   game.input.pressed = (action) => action === 'mount';
   game.updateIntent();
@@ -372,12 +376,13 @@ test('holding interact dismounts a horse and releasing it cancels the hold', (t)
   assert.equal(game.horse.dismountHoldStart, null);
 
   held = true;
-  game.realTime = 1;
+  game.realTime = 6;
   game.updateIntent();
-  game.realTime = 1.64;
+  assert.equal(game.horse.showDismountHint(game.realTime), true);
+  game.realTime = 6.64;
   game.updateIntent();
   assert.equal(game.horse.mounted, true);
-  game.realTime = 1.66;
+  game.realTime = 6.66;
   game.updateIntent();
   assert.equal(game.horse.mounted, false);
   assert.equal(game.rig.ride, 0);
