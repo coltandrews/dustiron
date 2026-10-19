@@ -355,6 +355,11 @@ test('holding interact dismounts a horse and releasing it cancels the hold', (t)
   game.spawnHorse();
   game.horse.mount();
 
+  game.input.pressed = (action) => action === 'mount';
+  game.updateIntent();
+  assert.equal(game.horse.mounted, true);
+  game.input.pressed = () => false;
+
   let held = true;
   game.input.held = (action) => action === 'interact' && held;
   game.updateIntent();
