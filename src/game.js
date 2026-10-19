@@ -608,7 +608,7 @@ export class Game {
     if (p) {
       const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
       this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
-      this.interactionHint = this.townActions.hint() || this.lootHint();
+      this.interactionHint = this.horse?.mounted ? 'Hold [E] to get off' : (this.townActions.hint() || this.lootHint());
       this.frontier.render(alpha);
       const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);

@@ -21,13 +21,23 @@ export function updateIntent(game) {
     return;
   }
   const p = g.player;
+  if (g.state === 'playing' && g.horse?.mounted) {
+    const dismountHeld = inp.held('interact');
+    if (g.horse.updateDismount(dismountHeld, g.realTime)) return;
+    if (dismountHeld) {
+      it.move = { x: 0, z: 0 };
+      it.fireHeld = false;
+      g.sprintHeld = false;
+      return;
+    }
+  }
   if (g.state === 'playing' && inp.pressed('interact')) {
     if (g.townActions.nearest()) { g.townActions.open(); g.tips.done('talk'); return; }
     if (g.lootNearest()) return;
   }
   if (g.state === 'playing' && inp.pressed('bandage')) g.useBandage();
   if (g.state === 'playing' && inp.pressed('mount') && g.horse) {
-    if (g.horse.mounted) g.horse.dismount();
+    if (g.horse.mounted) g.ui.toast('Hold E to get off');
     else if (Math.hypot(g.horse.x - p.x, g.horse.z - p.z) < 2.6) g.horse.mount();
     else g.ui.toast('Walk up to your horse first, or whistle with V');
   }

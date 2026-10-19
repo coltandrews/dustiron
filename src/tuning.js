@@ -41,7 +41,7 @@ export const T = {
 
   dodge: { duration: 0.35, distance: 4.5, iframes: 0.25, cooldown: 0.75, recovery: 0.12, buffer: 0.15 },
 
-  horse: { rentalSpeed: 1.7, ownedSpeed: 2.05, sprint: 1.35, staminaDrain: 0.12, staminaRegen: 0.06, whistleRange: 70, fearHit: 12 },
+  horse: { rentalSpeed: 1.7, ownedSpeed: 2.05, sprint: 1.35, staminaDrain: 0.12, staminaRegen: 0.06, whistleRange: 70, fearHit: 12, dismountHold: 0.65 },
 
   deadEye: { timeScale: 0.3, maxRealTime: 4, fillHit: 0.08, fillKill: 0.2, minToStart: 0.1, damageMult: 1.5 },
 

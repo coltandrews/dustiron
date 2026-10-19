@@ -1,4 +1,4 @@
-// A rented or owned horse: mount and dismount with F, whistle with V, sprint
+// A rented or owned horse: mount with F, hold E to dismount, whistle with V, sprint
 // with Shift while riding. Horses carry stamina, spook under heavy fire and
 // never enter buildings. Riding uses the player's own collider.
 import { T } from './tuning.js';
@@ -23,6 +23,7 @@ export class Horse {
     this.mounted = false;
     this.called = false;
     this.sprinting = false;
+    this.dismountHoldStart = null;
     this.bob = 0;
     const s = new Shape();
     horseShape(s, this.breed.coat, this.breed.mane, true);
@@ -46,6 +47,7 @@ export class Horse {
     const p = this.game.player;
     if (this.mounted || !p.alive) return false;
     this.mounted = true; this.called = false;
+    this.dismountHoldStart = null;
     p.bandageT = -1;
     this.game.rig.ride = 6;
     this.game.tips.done('mount');
@@ -57,6 +59,7 @@ export class Horse {
     const g = this.game, p = g.player;
     if (!this.mounted) return false;
     this.mounted = false;
+    this.dismountHoldStart = null;
     g.rig.ride = 0;
     const sides = [[Math.cos(p.yaw), -Math.sin(p.yaw)], [-Math.cos(p.yaw), Math.sin(p.yaw)], [-Math.sin(p.yaw), -Math.cos(p.yaw)]];
     for (const [sx, sz] of sides) {
@@ -75,6 +78,22 @@ export class Horse {
       g.endRental();
     }
     return true;
+  }
+
+  /** Holds the dismount action long enough to prevent accidental exits. */
+  updateDismount(held, now) {
+    if (!this.mounted || !held) {
+      this.dismountHoldStart = null;
+      return false;
+    }
+    if (this.dismountHoldStart === null) this.dismountHoldStart = now;
+    if (now - this.dismountHoldStart < T.horse.dismountHold) return false;
+    return this.dismount();
+  }
+
+  dismountProgress(now) {
+    if (this.dismountHoldStart === null) return 0;
+    return Math.min(1, Math.max(0, (now - this.dismountHoldStart) / T.horse.dismountHold));
   }
 
   whistle() {

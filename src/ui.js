@@ -451,7 +451,10 @@ export class UI {
     if (e.tracker && tracker !== this.trackerHtml) { this.trackerHtml = tracker; e.tracker.innerHTML = tracker; }
     e.interactionHint.textContent = game.interactionHint || '';
     const doorEntry = game.interactionHint === 'Press [E] to Enter';
+    const dismount = game.horse?.mounted && game.interactionHint === 'Hold [E] to get off';
     e.interactionHint.classList.toggle('door-entry', doorEntry);
+    e.interactionHint.classList.toggle('dismount-hint', dismount);
+    e.interactionHint.style.setProperty('--hold-progress', `${(game.horse?.dismountProgress(game.realTime) ?? 0) * 100}%`);
     if (doorEntry) {
       const door = game.townActions.nearest();
       const projected = door ? this.doorPoint.set(door.x, 1.35, door.z).project(game.rig.camera) : null;

@@ -347,3 +347,33 @@ test('store doors, room saves, seats, and the walk-out exit keep one player stat
   assert.equal(game.run.interior, null);
   assert.ok(Math.abs(game.player.x - site.outsideX) < 0.01);
 });
+
+test('holding interact dismounts a horse and releasing it cancels the hold', (t) => {
+  const game = makeGame(t);
+  startLife(game, 0.34567);
+  game.run.horse = { owned: false, stamina: 0.7, away: false };
+  game.spawnHorse();
+  game.horse.mount();
+
+  let held = true;
+  game.input.held = (action) => action === 'interact' && held;
+  game.updateIntent();
+  game.realTime = 0.4;
+  game.updateIntent();
+  assert.equal(game.horse.mounted, true);
+
+  held = false;
+  game.updateIntent();
+  assert.equal(game.horse.dismountHoldStart, null);
+
+  held = true;
+  game.realTime = 1;
+  game.updateIntent();
+  game.realTime = 1.64;
+  game.updateIntent();
+  assert.equal(game.horse.mounted, true);
+  game.realTime = 1.66;
+  game.updateIntent();
+  assert.equal(game.horse.mounted, false);
+  assert.equal(game.rig.ride, 0);
+});
