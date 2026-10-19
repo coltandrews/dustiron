@@ -67,7 +67,7 @@ export function bearing(from, to) {
   return ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(((a + 360) % 360) / 45) % 8];
 }
 
-/** Per-second checks: landmark visits, quest timers, new places and tips. */
+/** Per-second checks: landmark visits, quest timers and new places. */
 export function tickProgress(game) {
   const run = game.run, p = game.player;
   if (!p?.alive) return;
@@ -84,7 +84,6 @@ export function tickProgress(game) {
   }
   for (const [id, until] of Object.entries(run.effects)) if (until <= run.time) delete run.effects[id];
   if (!effectActive(run, 'meal')) run.mealHeal = 0;
-  game.tips.tick();
 }
 
 /** Medicine chest pickup. */

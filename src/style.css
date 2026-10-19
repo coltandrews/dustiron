@@ -81,8 +81,6 @@ kbd {
 .ammo.row i { width: 9px; height: 26px; border-radius: 4px 4px 2px 2px; background: linear-gradient(var(--brass) 0 38%, var(--rust) 38%); box-shadow: inset 0 0 0 1px rgba(28, 19, 15, 0.5); }
 .ammo.row i.spent { background: rgba(28, 19, 15, 0.7); box-shadow: inset 0 0 0 1.5px rgba(239, 220, 187, 0.35); }
 
-.hint { position: absolute; left: var(--edge-l); bottom: var(--edge-b); max-width: 52vw; padding: 8px 14px; border-radius: 2px; background: rgba(34, 22, 15, 0.82); font-size: 14px; opacity: 0; transition: opacity 0.6s; }
-.hint.show { opacity: 1; }
 .interaction-hint { position: absolute; left: 50%; bottom: max(135px, 18vh); transform: translateX(-50%); max-width: min(500px, 80vw); padding: 8px 16px; border: 1px solid #8a6234; border-radius: 2px; background: rgba(34, 22, 15, 0.92); color: var(--paper); font-size: 16px; font-weight: 600; text-align: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
 .interaction-hint.dismount-hint::after { content: ''; display: block; width: var(--hold-progress); height: 2px; margin-top: 5px; background: #fff; transition: width 50ms linear; }
 .interaction-hint.door-entry { bottom: auto; padding: 8px 18px; border: 0; background: transparent; color: #fff; font-family: 'Rye', Georgia, serif; font-size: clamp(18px, 2vw, 26px); font-weight: 400; letter-spacing: 0.025em; text-shadow: 0 2px 2px #1a0f09, 0 0 7px #1a0f09, 0 0 14px #1a0f09; box-shadow: none; clip-path: none; }
@@ -424,17 +422,6 @@ kbd {
 .map-sub { margin: 0; color: #cdb894; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .map-wrap { display: grid; place-items: center; min-width: 0; padding: 6px; background: #e6d0a6; border: 1px solid #5a3d22; }
 #map-canvas { display: block; max-width: 100%; }
-.map-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 14px 0; padding: 0; font-size: 14px; font-weight: 600; color: #e3d1b1; }
-.map-legend li { display: flex; align-items: center; gap: 6px; }
-.map-legend i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid #e3d1b1; }
-.map-legend .lg-you { border: 0; background: #6f9cc8; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.map-legend .lg-town { background: #e3d1b1; }
-.map-legend .lg-seen { border: 1.5px dashed #d0864a; border-radius: 50%; }
-.map-legend .lg-camp { border: 0; background: #d0864a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.map-legend .lg-unknown { background: #9f8057; border-color: #9f8057; }
-.map-legend .lg-place { border: 0; border-radius: 50%; background: #e3d1b1; }
-.map-legend .lg-rumor { border: 1.5px dashed #cdb894; border-radius: 50%; }
-.map-legend .lg-mark { border: 0; background: linear-gradient(45deg, transparent 42%, #6f9cc8 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, #6f9cc8 42% 58%, transparent 58%); }
 #map-canvas { cursor: crosshair; }
 .map-card .actions { justify-content: center; }
 .map-card .fine { text-align: center; }
@@ -448,11 +435,10 @@ kbd {
 .loading { display: flex; align-items: center; gap: 14px; font: 26px/1 var(--display); color: var(--paper); }
 .loading i { width: 18px; height: 18px; border: 3px solid var(--brass); border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
-/* Story notes, first-life tips and the job tracker sit at the edges of the view. */
+/* Story notes and the job tracker sit at the edges of the view. */
 .notes { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); display: grid; gap: 6px; justify-items: center; width: min(560px, 80vw); pointer-events: none; }
 .note { padding: 7px 14px; border: 1px solid #8a6234; border-radius: 2px; background: rgba(34, 22, 15, 0.9); color: var(--paper); font-size: 15px; font-weight: 600; text-align: center; transition: opacity 0.5s; }
 .note.gone { opacity: 0; }
-.tip { position: absolute; left: 50%; bottom: max(80px, 12vh); transform: translateX(-50%); padding: 7px 14px; border-radius: 2px; background: rgba(34, 22, 15, 0.82); color: #e3d1b1; font-size: 15px; }
 .tracker { position: absolute; left: var(--edge-l); top: calc(var(--edge-t) + 96px); width: min(270px, 40vw); display: grid; gap: 6px; font-size: 13px; color: #e3d1b1; text-shadow: 0 1px 2px rgba(20, 12, 8, 0.8); }
 .tracker b { display: block; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #c9a15c; }
 .choice-detail { display: block; margin-top: 3px; font-size: 13px; font-weight: 500; color: #bfa983; }
@@ -516,11 +502,10 @@ kbd {
   .card.map-card { width: 100%; padding: 20px 14px; }
   .camp-name { font-size: 17px; }
   .hud-tc { top: calc(var(--edge-t) + 70px); }
-  .hint { display: none; }
   .bounty { font-size: 24px; }
 }
 @media (hover: none) and (pointer: coarse) { .mobile-note { display: block; color: var(--blood); font-weight: 700; } }
 @media (prefers-reduced-motion: reduce) {
-  .ammo.cylinder, .toast, .hint, #game-canvas { transition: none; }
+  .ammo.cylinder, .toast, #game-canvas { transition: none; }
   .loading i, .reload-hint, .meter.hp .meter-fill.low { animation: none; }
 }

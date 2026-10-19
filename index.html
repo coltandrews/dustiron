@@ -59,10 +59,8 @@
     </div>
     <div class="interaction-hint" id="interaction-hint" hidden></div>
     <div class="npc-talk-hint" id="npc-talk-hint" hidden></div>
-    <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>E</kbd> talk · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</div>
     <div class="toast" id="toast"></div>
     <div class="notes" id="notes" aria-live="polite"></div>
-    <div class="tip" id="tip" hidden></div>
     <div class="tracker" id="tracker"></div>
   </div>
 
@@ -133,16 +131,6 @@
         <p class="map-sub" id="map-sub"></p>
       </div>
       <div class="map-wrap"><canvas id="map-canvas" role="img" aria-label="Map of the frontier"></canvas></div>
-      <ul class="map-legend">
-        <li><i class="lg-you"></i>You</li>
-        <li><i class="lg-town"></i>Town</li>
-        <li><i class="lg-camp"></i>Known camp</li>
-        <li><i class="lg-seen"></i>Bounty search area</li>
-        <li><i class="lg-unknown"></i>Unexplored land</li>
-        <li><i class="lg-place"></i>Known place</li>
-        <li><i class="lg-rumor"></i>Rumor</li>
-        <li><i class="lg-mark"></i>Your mark (click the map)</li>
-      </ul>
       <div class="actions">
         <button id="btn-map-close" class="btn primary" type="button">Close</button>
       </div>

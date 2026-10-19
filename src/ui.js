@@ -38,14 +38,14 @@ export class UI {
       hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
       campName: $('camp-name'), bounty: $('bounty'),
       weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
-      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'), npcTalkHint: $('npc-talk-hint'),
+      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), interactionHint: $('interaction-hint'), npcTalkHint: $('npc-talk-hint'),
       screens: { journal: $('screen-journal'), title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
-      notes: $('notes'), tip: $('tip'), tracker: $('tracker'),
+      notes: $('notes'), tracker: $('tracker'),
       journal: $('journal-body'), journalTabs: $('journal-tabs'),
     };
     this.ammoKey = '';
@@ -54,7 +54,6 @@ export class UI {
     this.hpGhost = 100;
     this.hurtT = 0;
     this.toastT = 0;
-    this.hintT = 12;
     this.promptPoint = new THREE.Vector3();
     this.talkPrompt = { candidate: '', candidateT: 0, shown: '', holdT: 0 };
     this.el.screens.interaction.addEventListener('keydown', (event) => {
@@ -141,13 +140,6 @@ export class UI {
     while (box.children.length > 3) box.lastChild.remove();
     setTimeout(() => note.classList.add('gone'), 5200);
     setTimeout(() => note.remove(), 5800);
-  }
-
-  setTip(html) {
-    if (!this.el.tip || this.tipHtml === html) return;
-    this.tipHtml = html;
-    this.el.tip.innerHTML = html;
-    this.el.tip.hidden = !html;
   }
 
   emptyClick() {
@@ -513,7 +505,6 @@ export class UI {
     e.vignette.style.opacity = Math.max(this.hurtT * 1.4, low);
 
     if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) e.toast.classList.remove('show'); }
-    if (this.hintT > 0) { this.hintT -= dt; e.hint.classList.toggle('show', this.hintT > 0); }
   }
 
   updateTalkPrompt(text, dt, active) {
