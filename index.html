@@ -76,22 +76,20 @@
     <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
     <div class="card title-card">
       <div class="title-brand">
-        <div class="title-star" aria-hidden="true"><i></i></div>
         <p class="eyebrow">One life on the frontier</p>
         <h1>Dust <span>&amp;</span> Iron</h1>
-        <div class="title-rule" aria-hidden="true"><i></i><b>DI</b><i></i></div>
         <p class="lede">Start in town. Talk to residents, take bounties, and explore the land. Return for supplies and payment. Death removes your money, gear, and map. Your next life starts on new land.</p>
       </div>
-      <div class="title-menu">
-        <p class="menu-label">Choose your trail</p>
-        <div class="actions">
+      <div class="title-menu panel">
+        <p class="eyebrow menu-label">Your trail</p>
+        <div class="actions stack">
           <button id="btn-start" class="btn primary" type="button">Start a new life</button>
           <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
         </div>
         <p class="continue-info" id="continue-info" hidden></p>
       </div>
-      <div class="title-guide">
-        <p class="guide-label">Field guide</p>
+      <div class="title-guide panel">
+        <p class="eyebrow">Controls</p>
         <dl class="controls">
         <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
         <div><dt><kbd>Mouse</kbd></dt><dd>Aim</dd></div>
@@ -115,11 +113,10 @@
 
   <section class="screen" id="screen-pause" hidden>
     <div class="card small pause-card">
-      <div class="pause-seal" aria-hidden="true"><span>DI</span></div>
-      <p class="eyebrow">Trail menu</p>
-      <h2>Game paused</h2>
+      <p class="eyebrow">Paused</p>
+      <h2>Take a breath</h2>
       <p class="lede" id="save-status">Your life is saved. You can return to this position with your current supplies and progress.</p>
-      <div class="actions">
+      <div class="actions stack">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
       </div>
@@ -129,7 +126,6 @@
 
   <section class="screen" id="screen-map" hidden>
     <div class="card map-card">
-      <div class="map-roll top" aria-hidden="true"></div>
       <div class="map-head">
         <div>
           <p class="eyebrow">Survey map</p>
@@ -149,17 +145,14 @@
         <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
       </div>
       <p class="fine">Travel to reveal land. Buy a map to see roads. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
-      <div class="map-roll bottom" aria-hidden="true"></div>
     </div>
   </section>
 
   <section class="screen interaction-screen" id="screen-interaction" hidden>
-    <div class="interaction-card" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
-      <div class="dialog-portrait" aria-hidden="true"><span id="interaction-mark">DI</span></div>
+    <div class="interaction-card panel" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
       <div class="dialog-copy">
         <p class="eyebrow" id="interaction-eyebrow">Town resident</p>
         <h2 id="interaction-title"></h2>
-        <div class="dialog-rule" aria-hidden="true"></div>
         <div class="lede" id="interaction-text"></div>
       </div>
       <div class="dialog-menu">
@@ -171,8 +164,7 @@
   </section>
 
   <section class="screen" id="screen-dead" hidden>
-    <div class="card small poster dead">
-      <div class="dead-stamp" aria-hidden="true">Dead</div>
+    <div class="card small dead">
       <p class="eyebrow">Last ride</p>
       <h2 id="dead-title">Shot down</h2>
       <div class="ledger" id="dead-body"></div>

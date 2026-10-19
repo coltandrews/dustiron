@@ -47,7 +47,7 @@ export class UI {
       screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
-      interactionEyebrow: $('interaction-eyebrow'), interactionMark: $('interaction-mark'),
+      interactionEyebrow: $('interaction-eyebrow'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
@@ -145,7 +145,6 @@ export class UI {
     screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Choose your play' : shopModes.includes(mode) ? 'Available' : 'Your reply';
     this.el.interactionTitle.textContent = title;
     this.el.interactionEyebrow.textContent = interactionLabels[mode] ?? interactionLabels.resident;
-    this.el.interactionMark.textContent = title.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'DI';
     this.renderInteractionText(text, mode);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
@@ -161,7 +160,7 @@ export class UI {
       if (action.itemId) button.classList.add('shop-choice');
       const key = document.createElement('span');
       key.className = 'choice-key';
-      key.textContent = action.id === 'close' ? '×' : String(index + 1);
+      key.textContent = action.id === 'close' ? 'Esc' : String(index + 1);
       const label = document.createElement('span');
       label.className = 'choice-text';
       label.textContent = action.label;

@@ -3,6 +3,7 @@ import { NavGrid } from './nav.js';
 import { generateCamp } from './level.js';
 import { Prop } from './props.js';
 import { Bandit } from './enemy.js';
+import { campDecor } from './camp-decor.js';
 
 const ENEMY_FIELDS = ['hp', 'x', 'z', 'yaw', 'ammo', 'reloadT', 'cooldown', 'knows', 'canSee',
   'lastSeenX', 'lastSeenZ', 'lastSeenT', 'state', 'stateT', 'aimT', 'aimYaw', 'burstLeft', 'burstT',
@@ -15,6 +16,7 @@ export function buildEncounters(game) {
     saved.cleared ??= false;
     const layout = generateCamp(game.run.seed + index * 104729, camp.difficulty);
     const encounter = { ...camp, enemies: [], props: [], nav: new NavGrid(32, 0.5, 0.45, camp) };
+    if (game.levelGroup) campDecor(game, camp, layout, game.run.seed + index * 104729);
     const oldProps = new Map((saved.props ?? []).map((p) => [p.id, p]));
     layout.props.forEach((spec, i) => {
       const id = `${camp.id}:prop:${i}`, old = oldProps.get(id);

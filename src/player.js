@@ -125,9 +125,11 @@ export class Player {
     this.controller.computeColliderMovement(this.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.playerMove);
     const mv = this.controller.computedMovement();
     this.x += mv.x; this.z += mv.z;
-    const lim = g.arenaHalf - 0.6;
-    this.x = Math.max(-lim, Math.min(lim, this.x));
-    this.z = Math.max(-lim, Math.min(lim, this.z));
+    if (!g.frontier?.inside) {
+      const lim = g.arenaHalf - 0.6;
+      this.x = Math.max(-lim, Math.min(lim, this.x));
+      this.z = Math.max(-lim, Math.min(lim, this.z));
+    }
     this.body.setNextKinematicTranslation({ x: this.x, y: this.bodyY, z: this.z });
     this.speedNow = Math.hypot(mv.x, mv.z) / dt;
 
