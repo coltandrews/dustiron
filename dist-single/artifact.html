@@ -61,9 +61,7 @@ kbd {
 .meter.de.active .meter-fill { background: #ffd27a; }
 
 .hud-tc { position: absolute; top: var(--edge-t); left: 50%; transform: translateX(-50%); text-align: center; }
-.camp-no { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-2); }
-.camp-name { font: 22px/1.1 var(--display); color: var(--paper); margin-top: 2px; white-space: nowrap; }
-.outlaws { font-size: 15px; font-weight: 600; color: var(--brass); margin-top: 2px; }
+.camp-name { font: 22px/1.1 var(--display); color: var(--paper); white-space: nowrap; }
 
 .hud-tr { position: absolute; top: var(--edge-t); right: var(--edge-r); text-align: right; display: grid; }
 .bounty-label { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper-2); }
@@ -131,7 +129,6 @@ kbd {
 .card h1 { margin: 4px 0 10px; font: clamp(42px, 9vw, 72px)/0.95 var(--display); }
 .card h1 span { color: #d0864a; }
 .card h2, .panel h2 { margin: 2px 0 12px; font: clamp(24px, 4vw, 32px)/1.1 var(--display); color: #f2dfbd; }
-.eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #c9a15c; }
 .lede { margin: 0 0 18px; font-size: 16px; line-height: 1.45; max-width: 54ch; color: #e3d1b1; }
 .rule { height: 1px; margin: 0 0 14px; background: #6f4d2a; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -160,9 +157,7 @@ kbd {
 .mesa.m3 { left: 80%; width: 26%; height: 19%; background: #4d2620; clip-path: polygon(0 100%, 10% 30%, 30% 26%, 36% 0, 80% 4%, 92% 50%, 100% 100%); }
 .title-card { z-index: 1; align-self: center; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 26px clamp(28px, 7vw, 90px); width: min(1120px, 100%); margin: auto; padding: clamp(18px, 4vw, 48px); background: none; border: 0; box-shadow: none; }
 .title-brand { align-self: end; max-width: 640px; text-shadow: 0 3px 1px #2a140e, 0 6px 22px rgba(0, 0, 0, 0.6); }
-.title-brand .eyebrow { color: #ffce78; }
-.title-brand h1 { margin: 6px 0 12px; font-size: clamp(64px, 9vw, 120px); color: #f5dfb9; letter-spacing: -0.03em; }
-.title-brand .lede { margin: 0; font-size: clamp(16px, 1.7vw, 19px); color: #f4e4c7; }
+.title-brand h1 { margin: 0; font-size: clamp(64px, 9vw, 120px); color: #f5dfb9; letter-spacing: -0.03em; }
 .title-menu { align-self: center; }
 .menu-label { margin: 0 0 12px; }
 .title-guide { grid-column: 1 / -1; width: 100%; padding: 16px 20px; }
@@ -241,17 +236,14 @@ kbd {
   transform: rotate(-0.25deg);
 }
 #screen-interaction[data-mode="shop"] .dialog-copy {
-  display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 3px 20px;
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 20px;
   padding: 18px 26px 14px; border-bottom: 2px solid rgba(91, 57, 29, 0.4);
 }
 #screen-interaction[data-mode="shop"] .dialog-copy h2 {
-  grid-column: 1; grid-row: 1 / 3; margin: 0; color: #321e12; font: clamp(28px, 3vw, 40px)/1 var(--display);
-}
-#screen-interaction[data-mode="shop"] .dialog-copy .eyebrow {
-  grid-column: 2; grid-row: 1; color: #74451f; text-align: right;
+  grid-column: 1; margin: 0; color: #321e12; font: clamp(28px, 3vw, 40px)/1 var(--display);
 }
 #screen-interaction[data-mode="shop"] #interaction-text {
-  grid-column: 2; grid-row: 2; margin: 0; color: #51341f; font-size: 15px; text-align: right; white-space: pre-line;
+  grid-column: 2; margin: 0; max-width: 34ch; color: #51341f; font-size: 15px; text-align: right; white-space: pre-line;
 }
 #screen-interaction[data-mode="shop"] .dialog-menu { min-height: 0; padding: 18px 22px 20px; overflow-y: auto; }
 #screen-interaction[data-mode="shop"] .interaction-actions {
@@ -300,8 +292,7 @@ kbd {
 #screen-interaction[data-mode="blackjack"] .dialog-copy {
   display: grid; align-content: center; height: 100%; padding: 42px 28px 126px; box-sizing: border-box; overflow: visible;
 }
-#screen-interaction[data-mode="blackjack"] .dialog-copy > h2,
-#screen-interaction[data-mode="blackjack"] .dialog-copy > .eyebrow { display: none; }
+#screen-interaction[data-mode="blackjack"] .dialog-copy > h2 { display: none; }
 #screen-interaction[data-mode="blackjack"] #interaction-text { display: grid; place-items: center; max-width: none; height: 100%; }
 #screen-interaction[data-mode="blackjack"] .dialog-menu {
   position: absolute; z-index: 3; inset: auto 24px 20px; padding: 0; overflow: visible;
@@ -432,11 +423,10 @@ kbd {
 .journal-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
 .journal-body { overflow-y: auto; display: grid; gap: 10px; margin-bottom: 14px; padding-right: 4px; }
 .job { padding: 12px 14px; border: 1px solid #5a3d22; background: rgba(0, 0, 0, 0.18); }
-.job h3 { margin: 2px 0 6px; font: 20px/1.15 var(--display); color: #f2dfbd; }
+.job h3 { margin: 0 0 6px; font: 20px/1.15 var(--display); color: #f2dfbd; }
 .job-step { margin: 0 0 6px; font-weight: 700; color: #f0c978; }
 .job-complete .job-step { color: #9fd08a; }
 .job-failed, .job-turnedIn { opacity: 0.6; }
-.job-text { margin: 0 0 8px; color: #e3d1b1; }
 .job-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 4px 14px; margin: 0; font-size: 14px; }
 .job-facts dt { color: #c9a15c; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
 .job-facts dd { margin: 0; }
@@ -524,9 +514,7 @@ kbd {
       </div>
     </div>
     <div class="hud-tc">
-      <div class="camp-no" id="camp-no">Safe town</div>
       <div class="camp-name" id="camp-name">Town</div>
-      <div class="outlaws" id="outlaws">Weapons holstered</div>
     </div>
     <div class="hud-tr">
       <span class="bounty-label">Money</span>
@@ -564,7 +552,6 @@ kbd {
     <div class="card title-card">
       <div class="title-brand">
         <h1>Dust <span>&amp;</span> Iron</h1>
-        <p class="lede">Take work. Ride out. Make it home.</p>
       </div>
       <div class="title-menu panel">
         <div class="actions stack">
@@ -637,7 +624,6 @@ kbd {
   <section class="screen interaction-screen" id="screen-interaction" hidden>
     <div class="interaction-card panel" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
       <div class="dialog-copy">
-        <p class="eyebrow" id="interaction-eyebrow" hidden></p>
         <h2 id="interaction-title"></h2>
         <div class="lede" id="interaction-text"></div>
       </div>
@@ -2217,10 +2203,10 @@ const EFFECTS = {
 };
 
 const CATALOGUE = {
-  'ammo-pistol': { name: 'Revolver rounds ×12', price: 5, kind: 'ammo', ammo: 'pistol', text: 'Twelve rounds for the revolver.' },
-  'ammo-heavy': { name: 'Heavy rounds ×12', price: 7, kind: 'ammo', ammo: 'heavy', text: 'Twelve rounds for the heavy revolver.' },
-  'ammo-rifle': { name: 'Rifle cartridges ×10', price: 8, kind: 'ammo', ammo: 'rifle', text: 'Ten cartridges for the repeater or the rifle.' },
-  'ammo-shells': { name: 'Shotgun shells ×8', price: 7, kind: 'ammo', ammo: 'shells', text: 'Eight shells for the shotgun.' },
+  'ammo-pistol': { name: 'Revolver rounds ×12', price: 5, kind: 'ammo', ammo: 'pistol', text: '' },
+  'ammo-heavy': { name: 'Heavy rounds ×12', price: 7, kind: 'ammo', ammo: 'heavy', text: '' },
+  'ammo-rifle': { name: 'Rifle cartridges ×10', price: 8, kind: 'ammo', ammo: 'rifle', text: 'Repeater and rifle.' },
+  'ammo-shells': { name: 'Shotgun shells ×8', price: 7, kind: 'ammo', ammo: 'shells', text: '' },
   heavy: { name: 'Heavy revolver', price: 55, kind: 'gun', text: 'Slow and strong. Heavy kick. Five rounds.' },
   repeater: { name: 'Repeater', price: 90, kind: 'gun', text: 'Lever rifle for middle range. Fast, but eats cartridges.' },
   shotgun: { name: 'Shotgun', price: 70, kind: 'gun', text: 'Two barrels. Deadly up close, weak past ten paces.' },
@@ -2344,10 +2330,8 @@ function el(tag, cls, text) {
 
 function jobCard(life, def) {
   const s = life.quests[def.id], card = el('article', `job job-${s.status}`);
-  card.append(el('p', 'eyebrow', `${def.type === 'bounty' ? 'Bounty' : 'Job'} · from ${NPCS[def.giver]}`));
   card.append(el('h3', '', def.title));
   card.append(el('p', 'job-step', objective(life, def)));
-  card.append(el('p', 'job-text', def.summary));
   const pay = def.type === 'bounty' && def.want === 'either' ? `$${def.reward.money} dead · $${def.aliveReward} alive` : `$${s.paid ?? def.reward.money}`;
   const facts = [['Pay', pay], ['Area', `${direction(def.area.x, def.area.z)} of town${s.lead ? ' (lead bought)' : ''}`], ['Turn in', NPCS[def.turnIn]]];
   if (def.fail) facts.push(['Watch for', def.fail]);
@@ -2365,7 +2349,7 @@ function renderJournal(ui, game, tab = ui.journalTab ?? 'jobs') {
   if (tab === 'jobs') {
     const jobs = game.questDefs.filter((d) => life.quests[d.id].status !== 'offered')
       .sort((a, b) => ORDER[life.quests[a.id].status] - ORDER[life.quests[b.id].status]);
-    if (!jobs.length) box.append(el('p', 'lede', 'No jobs yet. The sheriff keeps a wanted board, and townsfolk ask for help. Talk to people with E.'));
+    if (!jobs.length) box.append(el('p', 'lede', 'No jobs yet.'));
     for (const def of jobs) box.append(jobCard(life, def));
     return;
   }
@@ -2449,13 +2433,12 @@ class UI {
     this.el = {
       app: $('app'), hud: $('hud'), reticle: $('reticle'), hit: $('ret-hit'), ring: $('ret-ring'), reload: $('ret-reload'),
       hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
-      campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
+      campName: $('camp-name'), bounty: $('bounty'),
       weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
       vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'),
       screens: { journal: $('screen-journal'), title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
-      interactionEyebrow: $('interaction-eyebrow'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
@@ -2587,17 +2570,13 @@ class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '', blackjack = null }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
     screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
     this.el.interactionTitle.textContent = title;
-    if (this.el.interactionEyebrow) {
-      this.el.interactionEyebrow.textContent = eyebrow;
-      this.el.interactionEyebrow.hidden = !this.el.interactionEyebrow.textContent;
-    }
     this.renderInteractionText(text, mode, blackjack);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
@@ -2805,9 +2784,7 @@ class UI {
     e.deBar.classList.toggle('ready', de.meter >= 0.999 && !de.active);
 
     const inTown = game.inTown();
-    e.campNo.textContent = inTown ? 'Safe town' : 'The frontier';
     e.campName.textContent = game.locationName;
-    e.outlaws.textContent = inTown ? 'Weapons holstered' : 'Return to town for payment';
     e.bounty.textContent = `$${game.run.bounty}`;
     const b = game.run.items.bandage;
     e.bandages.textContent = p.bandaging ? `Wrapping a bandage… ${Math.round(p.bandageT / 1.6 * 100)}%` : `${b} bandage${b === 1 ? '' : 's'} · H`;
@@ -2847,6 +2824,7 @@ class UI {
     if (slotsKey !== this.slotsKey) {
       this.slotsKey = slotsKey;
       e.slots.innerHTML = p.guns.map((g, i) => `<span class="${i === p.gunIndex ? 'on' : ''}"><kbd>${i + 1}</kbd>${g.def.name}</span>`).join('');
+      e.slots.hidden = p.guns.length < 2;
     }
 
     // Reticle follows the cursor; ring shows spread, arc shows reload.
@@ -9083,22 +9061,13 @@ const { lootSite, readGrave, takeMedicine } = __m.progress;
 const { captivePoint, restrain } = __m.enemy_captive;
 const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant' };
 const BROWSE_LABEL = {
-  guns: 'Ask to see weapons and ammunition',
-  doctor: 'Ask to see medicine and treatment',
-  saloon: 'Ask what is for sale',
-  clothes: 'Ask to see clothing',
-  maps: 'Ask to see maps',
-  stable: 'Ask to see horses and supplies',
-  merchant: 'Ask to see his goods',
-};
-const SHOP_PROMPT = {
-  guns: 'Choose what you need.',
-  doctor: 'What can I get you?',
-  saloon: 'What will it be?',
-  clothes: 'Take a look.',
-  maps: 'These are the trails I know.',
-  stable: 'Have a look.',
-  merchant: 'See anything useful?',
+  guns: 'Show me your weapons',
+  doctor: 'I need medicine',
+  saloon: 'What do you have?',
+  clothes: 'Show me your clothing',
+  maps: 'Show me your maps',
+  stable: 'Show me the horses',
+  merchant: 'Show me your goods',
 };
 const LEAD_PRICE = 5, RUMOR_PRICE = 3;
 
@@ -9222,7 +9191,8 @@ class TownActions {
     let text = '', actions = [];
     const browsing = Boolean(this.view?.shop && shop);
     if (browsing) {
-      text = message || SHOP_PROMPT[shop];
+      const result = message.replace(/\.$/, '');
+      text = result ? `${result} · $${life.bounty} left` : `$${life.bounty}`;
       actions = [...this.shopActions(shop), { id: 'back', label: 'Back to conversation' }];
     } else if (this.view?.offer) {
       const def = quest(defs, this.view.offer);
@@ -9271,7 +9241,6 @@ class TownActions {
       text,
       actions,
       mode: browsing ? 'shop' : 'talk',
-      eyebrow: browsing ? `Cash $${life.bounty}` : '',
     }, (id) => this.act(id));
   }
 

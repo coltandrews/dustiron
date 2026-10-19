@@ -15,10 +15,8 @@ function el(tag, cls, text) {
 
 function jobCard(life, def) {
   const s = life.quests[def.id], card = el('article', `job job-${s.status}`);
-  card.append(el('p', 'eyebrow', `${def.type === 'bounty' ? 'Bounty' : 'Job'} · from ${NPCS[def.giver]}`));
   card.append(el('h3', '', def.title));
   card.append(el('p', 'job-step', objective(life, def)));
-  card.append(el('p', 'job-text', def.summary));
   const pay = def.type === 'bounty' && def.want === 'either' ? `$${def.reward.money} dead · $${def.aliveReward} alive` : `$${s.paid ?? def.reward.money}`;
   const facts = [['Pay', pay], ['Area', `${direction(def.area.x, def.area.z)} of town${s.lead ? ' (lead bought)' : ''}`], ['Turn in', NPCS[def.turnIn]]];
   if (def.fail) facts.push(['Watch for', def.fail]);
@@ -36,7 +34,7 @@ export function renderJournal(ui, game, tab = ui.journalTab ?? 'jobs') {
   if (tab === 'jobs') {
     const jobs = game.questDefs.filter((d) => life.quests[d.id].status !== 'offered')
       .sort((a, b) => ORDER[life.quests[a.id].status] - ORDER[life.quests[b.id].status]);
-    if (!jobs.length) box.append(el('p', 'lede', 'No jobs yet. The sheriff keeps a wanted board, and townsfolk ask for help. Talk to people with E.'));
+    if (!jobs.length) box.append(el('p', 'lede', 'No jobs yet.'));
     for (const def of jobs) box.append(jobCard(life, def));
     return;
   }

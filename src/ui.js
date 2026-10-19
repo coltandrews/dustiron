@@ -36,13 +36,12 @@ export class UI {
     this.el = {
       app: $('app'), hud: $('hud'), reticle: $('reticle'), hit: $('ret-hit'), ring: $('ret-ring'), reload: $('ret-reload'),
       hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
-      campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
+      campName: $('camp-name'), bounty: $('bounty'),
       weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
       vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'),
       screens: { journal: $('screen-journal'), title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
-      interactionEyebrow: $('interaction-eyebrow'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
@@ -174,17 +173,13 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '', blackjack = null }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
     screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
     this.el.interactionTitle.textContent = title;
-    if (this.el.interactionEyebrow) {
-      this.el.interactionEyebrow.textContent = eyebrow;
-      this.el.interactionEyebrow.hidden = !this.el.interactionEyebrow.textContent;
-    }
     this.renderInteractionText(text, mode, blackjack);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
@@ -392,9 +387,7 @@ export class UI {
     e.deBar.classList.toggle('ready', de.meter >= 0.999 && !de.active);
 
     const inTown = game.inTown();
-    e.campNo.textContent = inTown ? 'Safe town' : 'The frontier';
     e.campName.textContent = game.locationName;
-    e.outlaws.textContent = inTown ? 'Weapons holstered' : 'Return to town for payment';
     e.bounty.textContent = `$${game.run.bounty}`;
     const b = game.run.items.bandage;
     e.bandages.textContent = p.bandaging ? `Wrapping a bandage… ${Math.round(p.bandageT / 1.6 * 100)}%` : `${b} bandage${b === 1 ? '' : 's'} · H`;
@@ -434,6 +427,7 @@ export class UI {
     if (slotsKey !== this.slotsKey) {
       this.slotsKey = slotsKey;
       e.slots.innerHTML = p.guns.map((g, i) => `<span class="${i === p.gunIndex ? 'on' : ''}"><kbd>${i + 1}</kbd>${g.def.name}</span>`).join('');
+      e.slots.hidden = p.guns.length < 2;
     }
 
     // Reticle follows the cursor; ring shows spread, arc shows reload.

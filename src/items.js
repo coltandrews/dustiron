@@ -22,10 +22,10 @@ export const EFFECTS = {
 };
 
 export const CATALOGUE = {
-  'ammo-pistol': { name: 'Revolver rounds ×12', price: 5, kind: 'ammo', ammo: 'pistol', text: 'Twelve rounds for the revolver.' },
-  'ammo-heavy': { name: 'Heavy rounds ×12', price: 7, kind: 'ammo', ammo: 'heavy', text: 'Twelve rounds for the heavy revolver.' },
-  'ammo-rifle': { name: 'Rifle cartridges ×10', price: 8, kind: 'ammo', ammo: 'rifle', text: 'Ten cartridges for the repeater or the rifle.' },
-  'ammo-shells': { name: 'Shotgun shells ×8', price: 7, kind: 'ammo', ammo: 'shells', text: 'Eight shells for the shotgun.' },
+  'ammo-pistol': { name: 'Revolver rounds ×12', price: 5, kind: 'ammo', ammo: 'pistol', text: '' },
+  'ammo-heavy': { name: 'Heavy rounds ×12', price: 7, kind: 'ammo', ammo: 'heavy', text: '' },
+  'ammo-rifle': { name: 'Rifle cartridges ×10', price: 8, kind: 'ammo', ammo: 'rifle', text: 'Repeater and rifle.' },
+  'ammo-shells': { name: 'Shotgun shells ×8', price: 7, kind: 'ammo', ammo: 'shells', text: '' },
   heavy: { name: 'Heavy revolver', price: 55, kind: 'gun', text: 'Slow and strong. Heavy kick. Five rounds.' },
   repeater: { name: 'Repeater', price: 90, kind: 'gun', text: 'Lever rifle for middle range. Fast, but eats cartridges.' },
   shotgun: { name: 'Shotgun', price: 70, kind: 'gun', text: 'Two barrels. Deadly up close, weak past ten paces.' },

@@ -12,22 +12,13 @@ import { captivePoint, restrain } from './enemy-captive.js';
 
 const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant' };
 const BROWSE_LABEL = {
-  guns: 'Ask to see weapons and ammunition',
-  doctor: 'Ask to see medicine and treatment',
-  saloon: 'Ask what is for sale',
-  clothes: 'Ask to see clothing',
-  maps: 'Ask to see maps',
-  stable: 'Ask to see horses and supplies',
-  merchant: 'Ask to see his goods',
-};
-const SHOP_PROMPT = {
-  guns: 'Choose what you need.',
-  doctor: 'What can I get you?',
-  saloon: 'What will it be?',
-  clothes: 'Take a look.',
-  maps: 'These are the trails I know.',
-  stable: 'Have a look.',
-  merchant: 'See anything useful?',
+  guns: 'Show me your weapons',
+  doctor: 'I need medicine',
+  saloon: 'What do you have?',
+  clothes: 'Show me your clothing',
+  maps: 'Show me your maps',
+  stable: 'Show me the horses',
+  merchant: 'Show me your goods',
 };
 const LEAD_PRICE = 5, RUMOR_PRICE = 3;
 
@@ -151,7 +142,8 @@ export class TownActions {
     let text = '', actions = [];
     const browsing = Boolean(this.view?.shop && shop);
     if (browsing) {
-      text = message || SHOP_PROMPT[shop];
+      const result = message.replace(/\.$/, '');
+      text = result ? `${result} · $${life.bounty} left` : `$${life.bounty}`;
       actions = [...this.shopActions(shop), { id: 'back', label: 'Back to conversation' }];
     } else if (this.view?.offer) {
       const def = quest(defs, this.view.offer);
@@ -200,7 +192,6 @@ export class TownActions {
       text,
       actions,
       mode: browsing ? 'shop' : 'talk',
-      eyebrow: browsing ? `Cash $${life.bounty}` : '',
     }, (id) => this.act(id));
   }
 
