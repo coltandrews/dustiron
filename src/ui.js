@@ -92,7 +92,10 @@ export class UI {
     const playing = name === null || name === 'interaction' || name === 'dead' || name === 'journal';
     this.el.hud.hidden = !playing;
     this.el.app.classList.toggle('in-menu', name !== null);
-    this.el.app.classList.toggle('blackjack-open', name === 'interaction' && this.el.screens.interaction.dataset.mode === 'blackjack');
+    const interactionMode = name === 'interaction' ? this.el.screens.interaction.dataset.mode : '';
+    this.el.app.classList.toggle('blackjack-open', interactionMode === 'blackjack');
+    this.el.app.classList.toggle('talk-open', interactionMode === 'talk');
+    this.el.app.classList.toggle('shop-open', interactionMode === 'shop');
   }
 
   error(message) {
@@ -188,17 +191,28 @@ export class UI {
     let preferredFocus = null;
     box.replaceChildren();
     const menuActions = [...actions.filter((item) => item.id !== 'close'), {
-      id: 'close', label: mode === 'blackjack' ? 'Leave the table' : shopModes.includes(mode) ? 'Leave the counter' : 'Goodbye',
+      id: 'close', label: mode === 'blackjack' ? 'Leave the table' : shopModes.includes(mode) ? 'Leave shop' : 'Goodbye',
     }];
     for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
       const betChip = action.id.startsWith('blackjack:deal:');
       button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${betChip ? ' bet-chip' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
+      if (mode === 'talk' && action.id !== 'close') button.classList.add('talk-choice');
+      if (mode === 'shop' && action.id === 'back') button.classList.add('shop-back');
       if (action.itemId) button.classList.add('shop-choice');
       const label = document.createElement('span');
       label.className = 'choice-text';
-      label.textContent = action.label;
+      const name = document.createElement('span');
+      name.className = 'choice-name';
+      name.textContent = action.label;
+      label.append(name);
+      if (action.price) {
+        const price = document.createElement('span');
+        price.className = 'choice-price';
+        price.textContent = action.price;
+        label.append(price);
+      }
       if (action.detail) {
         const detail = document.createElement('small');
         detail.className = 'choice-detail';

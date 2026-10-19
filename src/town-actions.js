@@ -11,6 +11,24 @@ import { lootSite, readGrave, takeMedicine } from './progress.js';
 import { captivePoint, restrain } from './enemy-captive.js';
 
 const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant' };
+const BROWSE_LABEL = {
+  guns: 'Ask to see weapons and ammunition',
+  doctor: 'Ask to see medicine and treatment',
+  saloon: 'Ask what is for sale',
+  clothes: 'Ask to see clothing',
+  maps: 'Ask to see maps',
+  stable: 'Ask to see horses and supplies',
+  merchant: 'Ask to see his goods',
+};
+const SHOP_PROMPT = {
+  guns: 'Choose what you need.',
+  doctor: 'What can I get you?',
+  saloon: 'What will it be?',
+  clothes: 'Take a look.',
+  maps: 'These are the trails I know.',
+  stable: 'Have a look.',
+  merchant: 'See anything useful?',
+};
 const LEAD_PRICE = 5, RUMOR_PRICE = 3;
 
 /** The NPC id behind an interaction point, or null for objects. */
@@ -82,10 +100,13 @@ export class TownActions {
     if (point.kind === 'restrain') { if (restrain(point.enemy)) g.save(); return; }
     this.current = point;
     this.view = null;
+    this.cameraDistance = g.rig.targetDistance;
     if (point.kind === 'blackjack') {
       g.frontier.sit(point);
-      this.cameraDistance = g.rig.targetDistance;
       g.rig.targetDistance = 14;
+    } else {
+      g.rig.targetDistance = 16;
+      g.frontier.setCameraFocus?.({ x: (g.player.x + point.x) / 2, z: (g.player.z + point.z) / 2 });
     }
     g.state = 'interaction';
     g.setDeadEye(false);
@@ -96,6 +117,7 @@ export class TownActions {
   }
 
   close() {
+    this.game.frontier.setCameraFocus?.(null);
     if (this.cameraDistance !== null) {
       this.game.rig.targetDistance = this.cameraDistance;
       this.cameraDistance = null;
@@ -111,7 +133,14 @@ export class TownActions {
     const life = this.game.run;
     return (SHOPS[shop] ?? []).map((id) => {
       const item = CATALOGUE[id], reason = cannotBuy(life, id, shop);
-      return { id: `buy:${id}`, itemId: id.startsWith('ammo') ? 'ammo' : id, label: `${item.name} · $${priceOf(id, shop)}`, detail: reason ?? item.text, disabled: !!reason };
+      return {
+        id: `buy:${id}`,
+        itemId: id.startsWith('ammo') ? 'ammo' : id,
+        label: item.name,
+        price: `$${priceOf(id, shop)}`,
+        detail: reason ?? item.text,
+        disabled: !!reason,
+      };
     });
   }
 
@@ -120,7 +149,11 @@ export class TownActions {
     if (point.kind === 'blackjack') return this.drawBlackjack(message);
     const npc = npcOf(point), shop = SHOP_OF[npc];
     let text = '', actions = [];
-    if (this.view?.offer) {
+    const browsing = Boolean(this.view?.shop && shop);
+    if (browsing) {
+      text = message || SHOP_PROMPT[shop];
+      actions = [...this.shopActions(shop), { id: 'back', label: 'Back to conversation' }];
+    } else if (this.view?.offer) {
       const def = quest(defs, this.view.offer);
       text = offerText(life, def);
       actions = [{ id: `accept:${def.id}`, label: 'Take the job' }, { id: 'back', label: 'Not now' }];
@@ -159,12 +192,15 @@ export class TownActions {
       }
       if (npc === 'amos' && life.quests.delivery?.parcel && life.quests.delivery.status === 'active') actions.push({ id: 'amos:parcel', label: 'Hand over Nora\'s parcel' });
       if (npc === 'juan' && life.quests.medicine?.carrying && life.quests.medicine.status === 'complete') actions.push({ id: 'sell-medicine', label: 'Sell him the medicine chest · $40' });
-      if (shop) actions.push(...this.shopActions(shop));
+      if (shop) actions.push({ id: 'browse', label: BROWSE_LABEL[shop] });
     }
-    if (message) text = `${message}\n\n${text}`;
+    if (message && !browsing) text = `${message}\n\n${text}`;
     g.ui.showInteraction({
       title: point.name ?? point.label ?? NPCS[npc] ?? '',
-      text: `${text}${shop ? `\n\nYou have $${life.bounty}.` : ''}`, actions, mode: shop ? 'shop' : 'talk',
+      text,
+      actions,
+      mode: browsing ? 'shop' : 'talk',
+      eyebrow: browsing ? `Cash $${life.bounty}` : '',
     }, (id) => this.act(id));
   }
 
@@ -192,6 +228,7 @@ export class TownActions {
     const npc = npcOf(this.current), shop = SHOP_OF[npc];
     let result = null;
     if (id === 'back') { this.view = null; this.draw(); return; }
+    if (id === 'browse' && shop) { this.view = { shop: true }; this.draw(); return; }
     if (id === 'posters') { this.view = { posters: true }; this.draw(); return; }
     if (id.startsWith('offer:')) { this.view = { offer: id.slice(6) }; this.draw(); return; }
     if (id.startsWith('accept:')) {

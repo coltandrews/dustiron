@@ -635,7 +635,7 @@ export class Game {
         for (const c of this.corpses) { c.mesh.visible = true; c.render(alpha); }
         this.projectiles.render(alpha);
       }
-      const focus = this.frontier.cameraFocus() ?? (p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position);
+      const focus = this.frontier.viewFocus() ?? (p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position);
       this.rig.update(dt, focus, p.alive && !this.frontier.inside ? this.intent.aim : null);
       this.render.focusShadow(this.rig.target.x, this.rig.target.z);
       this.audio.setListener(this.rig.target.x, this.rig.target.z);

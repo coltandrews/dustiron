@@ -199,6 +199,13 @@ test('a bounty runs from the wanted board to proof, payment, shopping, death and
   game.player.gun.ammo = 2;
   const pistol = game.run.ammo.pistol;
   openAt(game, enterStore(game, 'guns'));
+  assert.equal(game.ui.menu.mode, 'talk');
+  assert.ok(game.ui.menu.actions.some((item) => item.id === 'browse'));
+  assert.equal(game.ui.menu.actions.some((item) => item.id.startsWith('buy:')), false);
+  choose(game, 'browse');
+  assert.equal(game.ui.menu.mode, 'shop');
+  assert.equal(game.ui.menu.actions.find((item) => item.id === 'buy:shotgun').label, CATALOGUE.shotgun.name);
+  assert.equal(game.ui.menu.actions.find((item) => item.id === 'buy:shotgun').price, `$${CATALOGUE.shotgun.price}`);
   choose(game, 'buy:shotgun');
   assert.equal(game.run.bounty, 200 - CATALOGUE.shotgun.price);
   assert.equal(game.player.guns.length, 2);
@@ -209,6 +216,7 @@ test('a bounty runs from the wanted board to proof, payment, shopping, death and
   close(game);
   game.frontier.exit();
   openAt(game, enterStore(game, 'doctor'));
+  choose(game, 'browse');
   choose(game, 'buy:heal');
   assert.equal(game.player.hp, 100);
   close(game);

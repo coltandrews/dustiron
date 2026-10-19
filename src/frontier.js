@@ -52,12 +52,12 @@ export function buildFrontier(game, world) {
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
   }));
-  let active = null, seated = null, doorCooldown = 0;
+  let active = null, seated = null, doorCooldown = 0, focusOverride = null;
 
   const enter = (site, saved = null) => {
     const room = rooms.get(site.id);
     if (!room || !game.player) return false;
-    active = room; seated = null; outdoor.visible = false; room.root.visible = true;
+    active = room; seated = null; focusOverride = null; outdoor.visible = false; room.root.visible = true;
     game.projectiles?.clear();
     for (const enemy of game.enemies) {
       if (enemy.token) enemy.releaseToken();
@@ -75,7 +75,7 @@ export function buildFrontier(game, world) {
   const leave = () => {
     if (!active) return;
     const outside = game.run.interior?.outside ?? { x: active.site.outsideX, z: active.site.outsideZ };
-    active.root.visible = false; active = null; seated = null; outdoor.visible = true;
+    active.root.visible = false; active = null; seated = null; focusOverride = null; outdoor.visible = true;
     game.run.interior = null; movePlayer(game, outside.x, outside.z, outside.x < 0 ? Math.PI / 2 : -Math.PI / 2);
     game.rig.targetDistance = 28; game.rig.snap(outside.x, outside.z); doorCooldown = 1; game.saveT = 0;
     game.render?.setInterior?.(null);
@@ -88,6 +88,8 @@ export function buildFrontier(game, world) {
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
     interactions() { return active ? active.points : [...doors, ...npcs]; },
     cameraFocus() { return active?.center ?? null; },
+    viewFocus() { return focusOverride ?? active?.center ?? null; },
+    setCameraFocus(point) { focusOverride = point; },
     restore(saved) {
       if (!saved) return false;
       const site = sites.find((item) => item.id === saved.id);
