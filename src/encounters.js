@@ -1,22 +1,25 @@
 // Camp state stays separate from the scene. Each camp has a small local path grid.
 import { NavGrid } from './nav.js';
-import { generateCamp } from './level.js';
+import { generateAmbush, generateCamp } from './level.js';
 import { Prop } from './props.js';
 import { Bandit } from './enemy.js';
 import { campDecor } from './camp-decor.js';
+import { showGun } from './character.js';
+import { teleport } from './enemy-captive.js';
 
 const ENEMY_FIELDS = ['hp', 'x', 'z', 'yaw', 'ammo', 'reloadT', 'cooldown', 'knows', 'canSee',
   'lastSeenX', 'lastSeenZ', 'lastSeenT', 'state', 'stateT', 'aimT', 'aimYaw', 'burstLeft', 'burstT',
   'homeX', 'homeZ', 'wanderX', 'wanderZ', 'wanderT', 'peekX', 'peekZ', 'fleeing', 'unseenT',
-  'stimX', 'stimZ', 'perceptT', 'spottedX', 'spottedZ', 'spottedT', 'vx', 'vz', 'kx', 'kz'];
+  'stimX', 'stimZ', 'perceptT', 'spottedX', 'spottedZ', 'spottedT', 'vx', 'vz', 'kx', 'kz', 'surrendered', 'captive'];
 
 export function buildEncounters(game) {
-  return game.run.world.camps.map((camp, index) => {
+  const world = game.run.world, camps = [...world.camps, ...(world.ambushes ?? [])];
+  return camps.map((camp, index) => {
     const saved = game.run.camps[camp.id];
     saved.cleared ??= false;
-    const layout = generateCamp(game.run.seed + index * 104729, camp.difficulty);
+    const layout = camp.ambush ? generateAmbush(game.run.seed + index * 7717) : generateCamp(game.run.seed + index * 104729, camp.difficulty);
     const encounter = { ...camp, enemies: [], props: [], nav: new NavGrid(32, 0.5, 0.45, camp) };
-    if (game.levelGroup) campDecor(game, camp, layout, game.run.seed + index * 104729);
+    if (game.levelGroup && !camp.ambush) campDecor(game, camp, layout, game.run.seed + index * 104729);
     const oldProps = new Map((saved.props ?? []).map((p) => [p.id, p]));
     layout.props.forEach((spec, i) => {
       const id = `${camp.id}:prop:${i}`, old = oldProps.get(id);
@@ -42,12 +45,13 @@ export function buildEncounters(game) {
     });
     const oldEnemies = new Map((saved.enemies ?? []).map((e) => [e.id, e]));
     layout.enemies.forEach((spec, i) => {
-      const id = i === 0 ? camp.targetId : `${camp.id}:outlaw:${i}`, old = oldEnemies.get(id);
+      const target = i === 0 && !camp.ambush;
+      const id = target ? camp.targetId : `${camp.id}:outlaw:${i}`, old = oldEnemies.get(id);
       if (old?.alive === false) return;
-      const e = new Bandit(game, spec.type, spec.x + camp.x, spec.z + camp.z, camp.difficulty, encounter, i === 0);
+      const e = new Bandit(game, spec.type, spec.x + camp.x, spec.z + camp.z, camp.difficulty, encounter, target);
       e.id = id;
       e.campId = camp.id;
-      if (i === 0) {
+      if (target) {
         // The marked outlaw wears a red hat. Its identity stays fixed for this life.
         e.model.root.userData.targetName = camp.targetName;
       }
@@ -58,6 +62,8 @@ export function buildEncounters(game) {
         // A cover point is tied to a live prop. Find a new point after loading.
         if (['hold', 'peek', 'toCover', 'flank'].includes(e.state)) e.state = 'toCover';
         if (e.state === 'aim' || e.state === 'burst') { e.token = true; game.tokens.holders.add(e); }
+        if (e.surrendered) { showGun(e.model, null); e.setState(e.captive ? 'captive' : 'surrender'); e.state = e.captive ? 'captive' : 'surrender'; }
+        if (e.captive && game.player) teleport(e, game.player.x - 1.5, game.player.z - 1.5);
       }
       encounter.enemies.push(e);
     });

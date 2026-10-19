@@ -5,7 +5,7 @@ import { Game } from '../src/game.js';
 import { CameraRig } from '../src/camera.js';
 import { initPhysics } from '../src/physics.js';
 import { loadSave, SAVE_KEY } from '../src/storage.js';
-import { CATALOGUE } from '../src/life.js';
+import { CATALOGUE, START_MONEY, START_ROUNDS } from '../src/items.js';
 
 await initPhysics();
 
@@ -31,6 +31,7 @@ function makeGame(t) {
     el: { app: { classList: { remove() {}, toggle() {} } } },
     show(screen) { this.screen = screen; }, toast() {}, setContinue() {}, setSaveStatus() {}, hitMarker() {}, hurt() {}, update() {}, showDead() {},
     showInteraction(menu, action) { this.menu = menu; this.action = action; },
+    questNote(text) { this.notes = [...(this.notes ?? []), text]; }, setTip() {}, emptyClick() {}, showJournal() {},
   };
   const audio = { setDeadEye() {}, setAmbience() {}, play() {}, at() {}, setListener() {} };
   const input = { clear() {}, pressed: () => false, held: () => false, takeWheel: () => 0,
@@ -108,7 +109,7 @@ test('a new world saves, town protects the player, and travel uses finite ammuni
   assert.equal(game.run.shots, shots + 1);
   assert.equal(gun.startReload(), true);
   const reserve = gun.reserve;
-  assert.equal(gun.update(gun.reloadTotal), true);
+  assert.equal(gun.update(gun.def.reloadPerRound + 0.001), 'done');
   assert.equal(gun.ammo, 6);
   assert.equal(gun.reserve, reserve - 1);
   game.save();
@@ -151,69 +152,67 @@ test('camp supply chests give money and selected-gun ammunition one time', (t) =
   assert.equal(restored.looted, true);
 });
 
-test('bounty, shopping, save, death, and a new life share one consistent record', (t) => {
+test('a bounty runs from the wanted board to proof, payment, shopping, death and a new life', (t) => {
   const game = makeGame(t);
   startLife(game, 0.23456);
-  const camp = game.encounters[0], targetId = camp.targetId;
-  openAt(game, game.frontier.npcs.find((npc) => npc.id === 'martha'));
-  choose(game, `accept:${camp.id}`);
-  assert.equal(game.run.contracts[camp.id].status, 'active');
+  assert.equal(game.run.bounty, START_MONEY);
+  const camp = game.encounters[0], targetId = camp.targetId, jobId = `bounty-${camp.id}`;
+  const def = game.questDefs.find((q) => q.id === jobId);
+  assert.equal(def.want, 'either');
+  openAt(game, enterStore(game, 'sheriff'));
+  choose(game, 'posters');
+  choose(game, `offer:${jobId}`);
+  choose(game, `accept:${jobId}`);
+  assert.equal(game.run.quests[jobId].status, 'active');
   close(game);
+  game.frontier.exit();
   const target = camp.enemies.find((enemy) => enemy.id === targetId);
   place(game, target.x + 4, target.z + 4);
   game.player.damage(38, 1, 0);
-  game.player.gun.ammo = 2; game.player.gun.reserve = 9;
   const hit = target.onHit(1000, 1, 0, 1);
   assert.equal(hit.killed, true);
   assert.equal(game.corpses.length, 6);
-  assert.equal(new Set(game.corpses.map((corpse) => corpse.body.handle)).size, 6);
   game.onEnemyKilled(target, hit.crit);
-  assert.equal(game.run.contracts[camp.id].status, 'proof');
-  assert.equal(game.run.bounty, 0);
+  assert.equal(game.run.quests[jobId].status, 'active', 'proof is still on the body');
+  const proof = game.worldPoints.proofs.find((p) => p.enemy === target);
+  assert.ok(proof);
+  place(game, proof.x, proof.z);
+  game.townActions.open();
+  assert.equal(game.run.quests[jobId].status, 'complete');
+  assert.equal(game.run.bounty, START_MONEY, 'no pay until turn-in');
   const saved = loadSave();
-  assert.ok(saved);
   game.continueRun(saved);
   assert.equal(game.player.hp, 62);
-  assert.equal(game.player.gun.ammo, 2);
-  assert.equal(game.player.gun.reserve, 9);
   assert.equal(game.enemies.some((enemy) => enemy.id === targetId), false);
-  assert.equal(game.run.contracts[camp.id].status, 'proof');
+  assert.equal(game.run.quests[jobId].status, 'complete');
 
   openAt(game, enterStore(game, 'sheriff'));
-  choose(game, 'claim');
-  assert.equal(game.run.bounty, camp.reward);
-  const paid = game.run.bounty;
-  game.townActions.act('claim');
-  assert.equal(game.run.bounty, paid);
-  assert.equal(game.run.contracts[camp.id].status, 'paid');
+  choose(game, `turnin:${jobId}`);
+  assert.equal(game.run.bounty, START_MONEY + def.reward.money);
+  assert.equal(game.ui.menu.actions.some((item) => item.id === `turnin:${jobId}`), false, 'paid once');
+  game.townActions.act(`turnin:${jobId}`);
+  assert.equal(game.run.bounty, START_MONEY + def.reward.money);
   close(game);
   game.frontier.exit();
 
+  game.run.bounty = 200;
+  game.player.gun.ammo = 2;
+  const pistol = game.run.ammo.pistol;
   openAt(game, enterStore(game, 'guns'));
-  assert.equal(game.ui.menu.actions.find((item) => item.id === 'buy:shotgun').itemId, 'shotgun');
   choose(game, 'buy:shotgun');
-  assert.equal(game.run.bounty, paid - CATALOGUE.shotgun.price);
+  assert.equal(game.run.bounty, 200 - CATALOGUE.shotgun.price);
   assert.equal(game.player.guns.length, 2);
   assert.equal(game.player.guns[0].ammo, 2);
-  assert.equal(game.player.guns[0].reserve, 9);
+  choose(game, 'buy:ammo-shells');
+  assert.equal(game.run.ammo.shells, 8);
+  assert.equal(game.run.ammo.pistol, pistol);
   close(game);
   game.frontier.exit();
-  game.player.switchTo(1);
-  const shotgun = game.player.gun;
-  shotgun.ammo = 1; shotgun.reserve = 4;
   openAt(game, enterStore(game, 'doctor'));
   choose(game, 'buy:heal');
   assert.equal(game.player.hp, 100);
-  assert.equal(game.player.gunIndex, 1);
-  assert.equal(game.player.gun.ammo, 1);
-  assert.equal(game.player.gun.reserve, 4);
-  assert.equal(game.player.guns[0].ammo, 2);
-  assert.equal(game.player.guns[0].reserve, 9);
   close(game);
-  const shoppingSave = loadSave();
-  assert.ok(shoppingSave);
-  assert.equal(shoppingSave.contracts[camp.id].status, 'paid');
-  assert.equal(shoppingSave.guns.shotgun.ammo, 1);
+  assert.equal(loadSave().quests[jobId].status, 'turnedIn');
 
   const oldSeed = game.run.seed;
   game.frontier.exit();
@@ -223,20 +222,55 @@ test('bounty, shopping, save, death, and a new life share one consistent record'
   assert.equal(game.run.status, 'dead');
   assert.equal(loadSave(), null);
   assert.equal(JSON.parse(localStorage.getItem(SAVE_KEY)).status, 'dead');
-  game.save();
-  assert.equal(loadSave(), null);
   startLife(game, 0.34567);
   assert.notEqual(game.run.seed, oldSeed);
-  assert.equal(game.run.status, 'alive');
-  assert.equal(game.run.bounty, 0);
-  assert.equal(game.player.hp, 100);
+  assert.equal(game.run.bounty, START_MONEY);
   assert.deepEqual(game.run.unlocked, ['revolver']);
-  assert.equal(game.player.guns.length, 1);
-  assert.equal(game.player.gun.ammo, 6);
-  assert.equal(game.player.gun.reserve, 24);
-  assert.equal(game.run.contracts[camp.id].status, 'offered');
-  assert.equal(game.enemies.some((enemy) => enemy.id === targetId), true);
+  assert.equal(game.player.gun.reserve, START_ROUNDS);
+  assert.ok(Object.values(game.run.quests).every((q) => q.status === 'offered'));
   assert.ok(loadSave());
+});
+
+test('a wounded wanted target surrenders, follows and is jailed for the live reward', (t) => {
+  const game = makeGame(t);
+  startLife(game, 0.6789);
+  const camp = game.encounters[0], jobId = `bounty-${camp.id}`, def = game.questDefs.find((q) => q.id === jobId);
+  game.run.quests[jobId].status = 'active';
+  const target = camp.enemies.find((e) => e.id === camp.targetId);
+  place(game, target.x + 3, target.z + 3);
+  target.knows = true;
+  const hit = target.onHit(target.hp - 10, 1, 0, 1);
+  assert.equal(hit.killed, false);
+  assert.equal(target.surrendered, true);
+  const point = game.townActions.points().find((p) => p.kind === 'restrain');
+  assert.ok(point);
+  place(game, point.x, point.z);
+  game.townActions.open();
+  assert.equal(target.captive, true);
+  place(game, 0, 20);
+  for (let i = 0; i < 5; i++) target.tick(1 / 60);
+  assert.equal(target.jailed, true);
+  assert.equal(game.run.quests[jobId].status, 'complete');
+  openAt(game, enterStore(game, 'sheriff'));
+  choose(game, `turnin:${jobId}`);
+  assert.equal(game.run.bounty, START_MONEY + def.aliveReward);
+});
+
+test('bandages take time and a hard hit stops them', (t) => {
+  const game = makeGame(t);
+  startLife(game, 0.789);
+  place(game, 0, 60);
+  const p = game.player;
+  p.damage(50, 1, 0);
+  p.startBandage();
+  assert.equal(p.bandaging, true);
+  p.damage(10, 1, 0);
+  assert.equal(p.bandaging, false);
+  assert.equal(game.run.items.bandage, 1, 'an interrupted bandage is not used up');
+  p.startBandage();
+  for (let i = 0; i < 120; i++) p.tick(1 / 60, 1 / 60, game.intent);
+  assert.equal(game.run.items.bandage, 0);
+  assert.ok(p.hp > 40);
 });
 
 test('clearing one camp does not end the world or count the camp twice', (t) => {

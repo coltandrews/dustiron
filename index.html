@@ -61,6 +61,9 @@
     <div class="interaction-hint" id="interaction-hint" hidden></div>
     <div class="hint" id="hint"><kbd>WASD</kbd> move · <kbd>E</kbd> talk · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</div>
     <div class="toast" id="toast"></div>
+    <div class="notes" id="notes" aria-live="polite"></div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="tracker" id="tracker"></div>
   </div>
 
   <div id="reticle" aria-hidden="true">
@@ -78,7 +81,7 @@
       <div class="title-brand">
         <p class="eyebrow">One life on the frontier</p>
         <h1>Dust <span>&amp;</span> Iron</h1>
-        <p class="lede">Start in town. Talk to residents, take bounties, and explore the land. Return for supplies and payment. Death removes your money, gear, and map. Your next life starts on new land.</p>
+        <p class="lede">Start in town with $15 and a revolver. Take jobs, buy what you can afford, and ride out. Turn finished work in to the person who asked. Death takes everything; the next life starts on new land.</p>
       </div>
       <div class="title-menu panel">
         <p class="eyebrow menu-label">Your trail</p>
@@ -97,10 +100,13 @@
         <div><dt><kbd>Space</kbd></dt><dd>Dodge roll</dd></div>
         <div><dt><kbd>R</kbd></dt><dd>Reload</dd></div>
         <div><dt><kbd>Shift</kbd></dt><dd>Dead Eye (hold)</dd></div>
-        <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
+        <div><dt><kbd>1</kbd>–<kbd>5</kbd> <kbd>Q</kbd></dt><dd>Switch weapon</dd></div>
         <div><dt><kbd>M</kbd></dt><dd>Map</dd></div>
         <div><dt><kbd>E</kbd></dt><dd>Talk / use</dd></div>
-        <div><dt><kbd>H</kbd></dt><dd>Use bandage</dd></div>
+        <div><dt><kbd>H</kbd></dt><dd>Wrap a bandage</dd></div>
+        <div><dt><kbd>J</kbd></dt><dd>Journal</dd></div>
+        <div><dt><kbd>C</kbd></dt><dd>Walk quietly</dd></div>
+        <div><dt><kbd>F</kbd> <kbd>V</kbd></dt><dd>Mount · whistle</dd></div>
         <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
@@ -140,11 +146,14 @@
         <li><i class="lg-camp"></i>Known camp</li>
         <li><i class="lg-seen"></i>Bounty search area</li>
         <li><i class="lg-unknown"></i>Unexplored land</li>
+        <li><i class="lg-place"></i>Known place</li>
+        <li><i class="lg-rumor"></i>Rumor</li>
+        <li><i class="lg-mark"></i>Your mark (click the map)</li>
       </ul>
       <div class="actions">
         <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
       </div>
-      <p class="fine">Travel to reveal land. Buy a map to see roads. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
+      <p class="fine">Travel to reveal land. An area map shows roads and landmarks. Click to set your own mark. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
     </div>
   </section>
 
@@ -160,6 +169,21 @@
         <div class="actions interaction-actions" id="interaction-actions"></div>
         <p class="fine"><kbd>Esc</kbd> closes this screen</p>
       </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-journal" hidden>
+    <div class="card journal-card">
+      <div class="journal-head">
+        <div><p class="eyebrow">Journal</p><h2>Jobs and supplies</h2></div>
+        <div class="actions" id="journal-tabs">
+          <button class="btn primary" type="button" data-tab="jobs">Jobs</button>
+          <button class="btn" type="button" data-tab="supplies">Supplies</button>
+        </div>
+      </div>
+      <div class="journal-body" id="journal-body"></div>
+      <div class="actions"><button class="btn" id="btn-journal-close" type="button">Back to the trail</button></div>
+      <p class="fine"><kbd>J</kbd> or <kbd>Esc</kbd> closes the journal. The game is paused.</p>
     </div>
   </section>
 

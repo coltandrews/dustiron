@@ -223,6 +223,10 @@ kbd {
 .map-legend .lg-seen { border: 1.5px dashed #d0864a; border-radius: 50%; }
 .map-legend .lg-camp { border: 0; background: #d0864a; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .map-legend .lg-unknown { background: #9f8057; border-color: #9f8057; }
+.map-legend .lg-place { border: 0; border-radius: 50%; background: #e3d1b1; }
+.map-legend .lg-rumor { border: 1.5px dashed #cdb894; border-radius: 50%; }
+.map-legend .lg-mark { border: 0; background: linear-gradient(45deg, transparent 42%, #6f9cc8 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, #6f9cc8 42% 58%, transparent 58%); }
+#map-canvas { cursor: crosshair; }
 .map-card .actions { justify-content: center; }
 .map-card .fine { text-align: center; }
 
@@ -235,6 +239,35 @@ kbd {
 .loading { display: flex; align-items: center; gap: 14px; font: 26px/1 var(--display); color: var(--paper); }
 .loading i { width: 18px; height: 18px; border: 3px solid var(--brass); border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
+/* Story notes, first-life tips and the job tracker sit at the edges of the view. */
+.notes { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); display: grid; gap: 6px; justify-items: center; width: min(560px, 80vw); pointer-events: none; }
+.note { padding: 7px 14px; border: 1px solid #8a6234; border-radius: 2px; background: rgba(34, 22, 15, 0.9); color: var(--paper); font-size: 15px; font-weight: 600; text-align: center; transition: opacity 0.5s; }
+.note.gone { opacity: 0; }
+.tip { position: absolute; left: 50%; bottom: max(80px, 12vh); transform: translateX(-50%); padding: 7px 14px; border-radius: 2px; background: rgba(34, 22, 15, 0.82); color: #e3d1b1; font-size: 15px; }
+.tracker { position: absolute; left: var(--edge-l); top: calc(var(--edge-t) + 96px); width: min(270px, 40vw); display: grid; gap: 6px; font-size: 13px; color: #e3d1b1; text-shadow: 0 1px 2px rgba(20, 12, 8, 0.8); }
+.tracker b { display: block; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #c9a15c; }
+.choice-detail { display: block; margin-top: 3px; font-size: 13px; font-weight: 500; color: #bfa983; }
+.btn:disabled .choice-detail { color: #e0806a; }
+#reticle.dry .ret-ring { animation: dry 0.25s ease-out; }
+.ret-hit.head i { background: #ffd56a; height: 12px; }
+.card.journal-card { width: min(820px, calc(100% - 28px)); max-height: calc(100vh - 40px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.journal-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
+.journal-body { overflow-y: auto; display: grid; gap: 10px; margin-bottom: 14px; padding-right: 4px; }
+.job { padding: 12px 14px; border: 1px solid #5a3d22; background: rgba(0, 0, 0, 0.18); }
+.job h3 { margin: 2px 0 6px; font: 20px/1.15 var(--display); color: #f2dfbd; }
+.job-step { margin: 0 0 6px; font-weight: 700; color: #f0c978; }
+.job-complete .job-step { color: #9fd08a; }
+.job-failed, .job-turnedIn { opacity: 0.6; }
+.job-text { margin: 0 0 8px; color: #e3d1b1; }
+.job-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 4px 14px; margin: 0; font-size: 14px; }
+.job-facts dt { color: #c9a15c; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+.job-facts dd { margin: 0; }
+.supplies { display: grid; gap: 4px; }
+.supply { display: grid; grid-template-columns: minmax(140px, 0.6fr) 1fr auto; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid #4a3220; }
+.supply-name { font-weight: 700; }
+.supply-value { color: #cdb894; font-size: 14px; }
+.supply .btn { padding: 6px 12px; }
+@keyframes dry { 0% { transform: translate(-50%, -50%) scale(1); } 40% { transform: translate(-50%, -50%) scale(0.75); } 100% { transform: translate(-50%, -50%) scale(1); } }
 @keyframes pulse { from { opacity: 1; } to { opacity: 0.55; } }
 @keyframes hit { 0% { opacity: 1; transform: scale(0.7); } 100% { opacity: 0; transform: scale(1.25); } }
 @keyframes fade { 0% { opacity: 1; } 100% { opacity: 0; } }

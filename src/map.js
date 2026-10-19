@@ -61,7 +61,7 @@ export class MapView {
       ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
       let drawing = false;
       for (let x = RIVER_MIN_X; x <= RIVER_MAX_X; x += 3) {
-        const z = riverCenter(x), visible = life.hasMap || isDiscovered(life, x, z);
+        const z = riverCenter(x), visible = life.gear.map || isDiscovered(life, x, z);
         if (!visible) { drawing = false; continue; }
         if (!drawing) { ctx.moveTo(X(x), Y(z)); drawing = true; } else ctx.lineTo(X(x), Y(z));
       }
@@ -77,35 +77,59 @@ export class MapView {
       const points = campTrailPoints(camp, index);
       for (let i = 0; i < points.length - 1; i++) {
         const { x, z } = points[i], { x: nx, z: nz } = points[i + 1];
-        if (!life.hasMap && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
+        if (!life.gear.map && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
         ctx.moveTo(X(x), Y(z)); ctx.lineTo(X(nx), Y(nz));
       }
     }
     ctx.stroke(); ctx.setLineDash([]);
 
+    // Active jobs show a broad search area, never the exact place. A bought lead narrows it.
     let active = 0, proof = 0;
-    for (const camp of world.camps) {
-      const status = life.contracts[camp.id].status;
-      if (status === 'proof') proof++;
-      if (status !== 'active') continue;
+    for (const def of game.questDefs) {
+      const st = life.quests[def.id];
+      if (st.status === 'complete') proof++;
+      if (st.status !== 'active') continue;
       active++;
-      // A lead gives a broad area, not the target's exact location.
-      const x = Math.round(camp.x / 50) * 50, z = Math.round(camp.z / 50) * 50;
-      ctx.beginPath(); ctx.arc(X(x), Y(z), 60 * k, 0, Math.PI * 2);
+      const area = st.lead && def.leadArea ? def.leadArea : def.area;
+      ctx.beginPath(); ctx.arc(X(area.x), Y(area.z), area.r * k, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(180,83,46,0.10)'; ctx.fill();
       ctx.strokeStyle = C.bounty; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
-      label(camp.targetName, x, z, C.bounty, -60 * k - 8);
+      label(def.title.replace('Wanted: ', ''), area.x, area.z, C.bounty, -area.r * k - 8);
+    }
+
+    // Known places: found by travel, bought maps (landmarks only) or heard as rumors.
+    for (const site of world.sites ?? []) {
+      const state = life.known[site.id], landmark = site.kind === 'landmark' || site.kind === 'tree';
+      if (!state && !(life.gear.map && landmark)) continue;
+      if (state === 'rumor') {
+        ctx.beginPath(); ctx.arc(X(site.x), Y(site.z), 22 * k, 0, Math.PI * 2);
+        ctx.strokeStyle = C.soft; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+        label(`${site.name}?`, site.x, site.z, C.soft, 0);
+        continue;
+      }
+      ctx.fillStyle = landmark ? C.soft : C.ink;
+      ctx.beginPath(); ctx.arc(X(site.x), Y(site.z), landmark ? 4 : 3, 0, Math.PI * 2); ctx.fill();
+      label(state === 'looted' ? `${site.name} · empty` : site.name, site.x, site.z, C.soft, 11);
+    }
+    if (life.marker) {
+      const mx = X(life.marker.x), my = Y(life.marker.z);
+      ctx.strokeStyle = C.you; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(mx - 6, my - 6); ctx.lineTo(mx + 6, my + 6); ctx.moveTo(mx + 6, my - 6); ctx.lineTo(mx - 6, my + 6); ctx.stroke();
     }
 
     // Camps appear after the player finds the land around them.
     for (const camp of world.camps) {
-      if (!life.hasMap && !isDiscovered(life, camp.x, camp.z)) continue;
+      if (!life.gear.map && !isDiscovered(life, camp.x, camp.z)) continue;
       const cleared = life.camps[camp.id]?.cleared;
       ctx.beginPath(); ctx.moveTo(X(camp.x), Y(camp.z) - 7);
       ctx.lineTo(X(camp.x) - 7, Y(camp.z) + 5); ctx.lineTo(X(camp.x) + 7, Y(camp.z) + 5); ctx.closePath();
       ctx.fillStyle = cleared ? C.cleared : C.bounty; ctx.fill();
       ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.stroke();
       label(`${camp.name}${cleared ? ' · cleared' : ''}`, camp.x, camp.z);
+    }
+    for (const camp of world.ambushes ?? []) {
+      if (!life.camps[camp.id]?.cleared) continue;
+      label(`${camp.name} · ambush cleared`, camp.x, camp.z, C.cleared);
     }
 
     const town = world.town;
@@ -150,6 +174,20 @@ export class MapView {
     const cells = Math.ceil(H * 2 / MAP_CELL) ** 2;
     const surveyed = Math.round(Object.keys(life.discovered).length / cells * 100);
     this.title.textContent = 'Frontier map';
+    // Clicking the map sets or clears your own marker.
+    if (!this.bound) {
+      this.bound = true;
+      cv.addEventListener('click', (event) => {
+        const r = cv.getBoundingClientRect(), g = this.game, l = g?.run;
+        if (!l) return;
+        const half = l.world.half, sz = r.width, sp = sz - 28, kk = sp / (half * 2);
+        const x = (event.clientX - r.left - 14) / kk - half, z = (event.clientY - r.top - 14) / kk - half;
+        if (Math.abs(x) > half || Math.abs(z) > half) return;
+        l.marker = l.marker && Math.hypot(l.marker.x - x, l.marker.z - z) < 12 ? null : { x: Math.round(x), z: Math.round(z) };
+        this.draw(g);
+      });
+    }
+    this.game = game;
     this.sub.textContent = `${surveyed}% explored · ${active} active ${active === 1 ? 'bounty' : 'bounties'}${proof ? ` · ${proof} ready to claim` : ''}`;
     cv.setAttribute('aria-label', `Frontier map. ${surveyed}% explored. ${active} active ${active === 1 ? 'bounty' : 'bounties'}. Blue arrow: your location. Blue line: river. Brown circles: bounty search areas.`);
   }

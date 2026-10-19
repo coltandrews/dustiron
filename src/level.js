@@ -6,16 +6,36 @@ import { PAL, Shape, MAT } from './models.js';
 export const ARENA_HALF = 22;
 export const PLAYER_SPAWN = { x: 0, z: 18.5 };
 
-/** Bandit roster for camp N (0-based). */
+/**
+ * Bandit roster by threat. The first entry is the camp's wanted target.
+ * Low: 3 basic outlaws. Medium: 5 with a leader and a scout. High: 8 with
+ * riflemen. Deadly: 10. Difficulty comes from roles, not only from health.
+ */
+export const ROSTERS = [
+  ['gunman', 'gunman', 'rusher'],
+  ['leader', 'gunman', 'gunman', 'rusher', 'scout'],
+  ['leader', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'scout'],
+  ['leader', 'gunman', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout'],
+];
+export const AMBUSH_ROSTER = ['gunman', 'gunman', 'rusher'];
+
 export function rosterFor(camp) {
-  const gunmen = Math.min(6, 3 + camp);
-  const rushers = Math.min(3, Math.floor((camp + 2) / 2));
-  const snipers = Math.min(2, Math.floor(camp / 2));
-  const list = [];
-  for (let i = 0; i < gunmen; i++) list.push('gunman');
-  for (let i = 0; i < rushers; i++) list.push('rusher');
-  for (let i = 0; i < snipers; i++) list.push('sharpshooter');
-  return list;
+  return [...ROSTERS[Math.max(0, Math.min(3, camp))]];
+}
+
+/** A roadside ambush: rocks for cover and three outlaws waiting behind them. */
+export function generateAmbush(seed) {
+  const rng = createRng(seed), props = [], enemies = [];
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2 + rng.range(-0.3, 0.3), d = rng.range(5, 9), r = rng.range(0.9, 1.5);
+    props.push({ kind: 'rock', x: Math.cos(a) * d, z: Math.sin(a) * d - 4, r, seed: rng.int(1, 999) });
+  }
+  for (let i = 0; i < 2; i++) props.push({ kind: 'crate', x: rng.range(-4, 4), z: rng.range(-10, -6), ry: rng.range(0, 3) });
+  AMBUSH_ROSTER.forEach((type, i) => {
+    const rock = props[i * 2], a = Math.atan2(rock.z + 4, rock.x);
+    enemies.push({ type, x: rock.x + Math.cos(a) * (rock.r + 0.9), z: rock.z + Math.sin(a) * (rock.r + 0.9) });
+  });
+  return { props, enemies, campfire: { x: 0, z: -4 }, name: 'Ambush' };
 }
 
 /**

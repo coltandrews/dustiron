@@ -67,7 +67,7 @@ export class CameraRig {
     this.targetDistance = Math.max(c.minDistance, Math.min(c.maxDistance, this.targetDistance));
     if (c.fov !== this.camera.fov) { this.camera.fov = c.fov; this.camera.updateProjectionMatrix(); }
     this.time += dt;
-    this.distance += (this.targetDistance - this.distance) * Math.min(1, dt * 10);
+    this.distance += (this.targetDistance + (this.ride ?? 0) - this.distance) * Math.min(1, dt * 4);
     this.desired.set(focus.x, 0, focus.z);
     if (aim) {
       let dx = (aim.x - focus.x) * c.lookAheadFactor, dz = (aim.z - focus.z) * c.lookAheadFactor;

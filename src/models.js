@@ -107,10 +107,13 @@ export const LOOKS = {
   gunman: { shirt: PAL.bShirtA, vest: PAL.woodDark, hat: PAL.bHat, band: PAL.brass, pants: PAL.bShirtC, bandana: PAL.bandanaA },
   rusher: { shirt: PAL.bShirtB, vest: PAL.poncho, hat: PAL.woodDark, band: PAL.red, pants: PAL.woodDark, bandana: PAL.bandanaB, poncho: true },
   sharpshooter: { shirt: PAL.bShirtC, vest: PAL.black, hat: PAL.black, band: PAL.bone, pants: PAL.black, bandana: PAL.bandanaB, tall: true },
+  leader: { shirt: 0x6a2a24, vest: 0x1e1814, hat: 0x2a1e18, band: PAL.brass, pants: 0x2a2624, scarf: 0xb9a06a, tall: true },
+  scout: { shirt: 0xb58e58, vest: 0x5a4a32, hat: 0x8a7a5a, band: PAL.woodDark, pants: 0x4a4740, bandana: 0x5d6b3a },
 };
 
 const ARM_PITCH = 0.45;
-export const GUN_REACH = { revolver: 0.76, shotgun: 0.98, rifle: 1.08 };
+export const GUN_REACH = { revolver: 0.76, heavy: 0.82, repeater: 1.02, shotgun: 0.98, rifle: 1.08 };
+export const GUN_KINDS = ['revolver', 'heavy', 'repeater', 'shotgun', 'rifle'];
 
 function gunShape(kind) {
   const s = new Shape();
@@ -118,6 +121,17 @@ function gunShape(kind) {
     s.box(0.06, 0.07, 0.3, PAL.iron, 0, 0.05, 0.6);
     s.box(0.1, 0.1, 0.11, PAL.iron, 0, 0.05, 0.47);
     s.box(0.07, 0.14, 0.08, PAL.woodDark, 0, -0.03, 0.43, 0.4);
+  } else if (kind === 'heavy') {
+    s.box(0.07, 0.08, 0.38, PAL.iron, 0, 0.05, 0.64);
+    s.box(0.12, 0.12, 0.13, PAL.iron, 0, 0.05, 0.47);
+    s.box(0.08, 0.16, 0.09, 0x3d2418, 0, -0.04, 0.42, 0.45);
+    s.box(0.03, 0.04, 0.08, PAL.brass, 0, 0.12, 0.8);
+  } else if (kind === 'repeater') {
+    s.box(0.05, 0.06, 0.66, PAL.iron, 0, 0.07, 0.7);
+    s.box(0.05, 0.03, 0.5, PAL.iron, 0, 0.02, 0.66);
+    s.box(0.08, 0.1, 0.16, PAL.brass, 0, 0.03, 0.4);
+    s.box(0.08, 0.1, 0.36, 0x9a5a34, 0, 0.0, 0.22);
+    s.box(0.03, 0.08, 0.12, PAL.iron, 0, -0.07, 0.42);
   } else if (kind === 'shotgun') {
     s.box(0.1, 0.07, 0.62, PAL.iron, 0, 0.06, 0.66);
     s.box(0.09, 0.1, 0.34, PAL.wood, 0, 0.0, 0.33);
@@ -201,7 +215,7 @@ export function makeCharacter(look) {
   armShape.box(0.11, 0.12, 0.12, PAL.skin, 0, 0, 0.44);
   arm.add(mk(armShape));
   const guns = {};
-  for (const kind of ['revolver', 'shotgun', 'rifle']) {
+  for (const kind of GUN_KINDS) {
     const g = mk(gunShape(kind));
     g.visible = kind === 'revolver';
     arm.add(g);

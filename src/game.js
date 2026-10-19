@@ -9,7 +9,14 @@ import { Debris, sharedGeometries } from './props.js';
 import { lineGeo } from './enemy.js';
 import { Player } from './player.js';
 import { Projectiles } from './projectiles.js';
-import { createLife, discover, recordTargetKill } from './life.js';
+import { createLife, discover, questDefs } from './life.js';
+import { buildWorldPoints } from './world-points.js';
+import { Horse } from './horse.js';
+import { Tips } from './tips.js';
+import { enemyKilled, questEvent, tickProgress, wantsAlive } from './progress.js';
+import { updateIntent } from './game-input.js';
+import { ammoMax } from './items.js';
+import { objective } from './quests.js';
 import { loadSave as readSave, writeLife, endLife } from './storage.js';
 import { buildFrontier } from './frontier.js';
 import { buildEncounters, captureEncounters, rebuildCampNav } from './encounters.js';
@@ -40,6 +47,12 @@ export class Game {
     this.encounters = [];
     this.frontier = null;
     this.townActions = new TownActions(this);
+    this.tips = new Tips(this);
+    this.horse = null;
+    this.worldPoints = null;
+    this.questDefs = [];
+    this.progressT = 0;
+    this.sprintHeld = false;
     this.interactionHint = '';
     this.locationName = 'Mercy Crossing';
     this.state = 'title';
@@ -107,7 +120,9 @@ export class Game {
     this.time = run.simTime ?? 0;
     this.arenaHalf = run.world.half;
     this.tokens.holders.clear();
+    this.questDefs = questDefs(run.world);
     this.frontier = buildFrontier(this, run.world);
+    this.worldPoints = buildWorldPoints(this, this.levelGroup);
     this.debris = new Debris(this);
     this.projectiles = new Projectiles(this);
     this.player = new Player(this, run.player.x, run.player.z, run);
@@ -115,6 +130,8 @@ export class Game {
       if (Number.isFinite(run.player[key])) this.player[key] = run.player[key];
     }
     this.player.prevYaw = this.player.yaw;
+    this.horse = run.horse ? new Horse(this, run.horse) : null;
+    this.rig.ride = 0;
     this.frontier.restore(run.interior);
     this.encounters = buildEncounters(this);
     this.props = this.encounters.flatMap((c) => c.props);
@@ -136,7 +153,7 @@ export class Game {
     this.rig.snap(this.player.x, this.player.z - 3);
     this.state = 'playing';
     this.ui.show(null);
-    this.ui.toast(run.migrated ? 'Your old life is now in Mercy Crossing. Your money and guns are kept.' : 'One life. Talk to the townspeople with E. Open your map with M.', 6);
+    this.ui.toast(run.migrated ? 'Your old life is now in Mercy Crossing. Your money and guns are kept.' : run.time < 1 ? `One life. $${run.bounty} in your pocket. Find work in town.` : 'Back on the trail.', 6);
     delete run.migrated;
     this.audio.setAmbience(0.13);
     this.save();
@@ -144,6 +161,9 @@ export class Game {
 
   unload() {
     if (!this.levelGroup) return;
+    this.horse?.dispose();
+    this.horse = null;
+    this.worldPoints = null;
     this.frontier?.dispose();
     this.frontier = null;
     this.encounters = [];
@@ -197,7 +217,7 @@ export class Game {
     }
     for (const gun of p.guns) {
       run.guns[gun.def.key] = {};
-      for (const key of ['ammo', 'reserve', 'cooldown', 'bloom', 'reloading', 'reloadT', 'reloadTotal']) run.guns[gun.def.key][key] = gun[key];
+      for (const key of ['ammo', 'cooldown', 'bloom', 'reloading', 'reloadT', 'reloadTotal', 'condition']) run.guns[gun.def.key][key] = gun[key];
     }
   }
 
@@ -226,7 +246,7 @@ export class Game {
     chest.setLooted(true);
     const gun = this.player.gun;
     this.run.bounty += chest.lootMoney;
-    gun.reserve += chest.lootAmmo;
+    gun.reserve = Math.min(ammoMax(this.run, gun.def.ammoType), gun.reserve + chest.lootAmmo);
     this.fx.emit('dust', chest.x, 0.7, chest.z, 5, 0, 1, Math.PI, 0.5);
     this.audio.play('coin', { bus: 'ui', vol: 0.65 });
     this.ui.toast(`Found $${chest.lootMoney} and ${chest.lootAmmo} ${gun.def.name.toLowerCase()} rounds.`, 3.5);
@@ -234,14 +254,60 @@ export class Game {
     return true;
   }
 
-  useBandage() {
-    if (!this.player.alive || this.player.hp >= T.player.hp) return;
-    if (!this.run.bandages) { this.ui.toast('No bandages. Visit the doctor in town.'); return; }
-    this.run.bandages--;
-    const healed = Math.min(T.player.hp - this.player.hp, T.player.bandageHeal);
-    this.player.hp += healed;
-    this.ui.toast(`Bandage used · +${Math.round(healed)} health`);
+  useBandage() { this.player.startBandage(); this.tips.done('heal'); }
+
+  questEvent(event) { return questEvent(this, event); }
+  wantsAlive(enemy) { return wantsAlive(this, enemy); }
+
+  /** Moves the player at once, for dismounting and tests. */
+  teleportPlayer(x, z) {
+    const p = this.player;
+    p.x = p.px = x; p.z = p.pz = z; p.vx = p.vz = 0;
+    p.body.setTranslation({ x, y: p.bodyY, z }, true);
+    p.body.setNextKinematicTranslation({ x, y: p.bodyY, z });
+    this.physics.world.propagateModifiedBodyPositionsToColliders();
+  }
+
+  /** Up to two current jobs for the HUD. */
+  trackerHtml() {
+    if (!this.run || this.state === 'title') return '';
+    const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+    const order = { complete: 0, active: 1 };
+    return this.questDefs.filter((d) => order[this.run.quests[d.id].status] !== undefined)
+      .sort((a, b) => order[this.run.quests[a.id].status] - order[this.run.quests[b.id].status]).slice(0, 2)
+      .map((d) => `<div><b>${esc(d.title)}</b>${esc(objective(this.run, d))}</div>`).join('');
+  }
+
+  spawnHorse() {
+    this.horse?.dispose();
+    this.run.horse.x = 0; this.run.horse.z = 0;
+    this.horse = new Horse(this, this.run.horse);
+    this.horse.x = this.horse.data.x = -5.4; this.horse.z = this.horse.data.z = 21;
+    this.ui.questNote(`${this.horse.name} waits outside the livery. F to mount, V to whistle.`);
+  }
+
+  endRental() {
+    this.horse?.dispose();
+    this.horse = null;
+    this.run.horse = null;
+    this.rig.ride = 0;
     this.save();
+  }
+
+  openJournal() {
+    if (this.state !== 'playing') return;
+    this.state = 'journal';
+    this.setDeadEye(false);
+    this.input.fireHeld = false;
+    this.ui.showJournal(this);
+    this.audio.play('uiClick', { bus: 'ui' });
+  }
+
+  closeJournal() {
+    if (this.state !== 'journal') return;
+    this.state = 'playing';
+    this.input.clear();
+    this.ui.show(null);
   }
 
   quitToTitle() {
@@ -304,17 +370,14 @@ export class Game {
   onEnemyKilled(e, crit) {
     const run = this.run;
     run.kills++;
-    const proof = recordTargetKill(run, e.id);
     this.deadEye.add(T.deadEye.fillKill);
     this.hitStop(T.hitStop.kill);
     this.addTrauma(0.15);
-    this.ui.toast(proof ? 'Target down. Proof collected. Return to the sheriff.' : (crit ? 'Sneak shot' : 'Outlaw down'), 3);
+    if (!e.isTarget) this.ui.toast(crit ? 'Clean shot' : 'Outlaw down', 2);
     const camp = e.encounter;
-    if (camp.enemies.every((x) => !x.alive) && !run.camps[camp.id].cleared) {
-      run.camps[camp.id].cleared = true;
-      run.camp++;
+    if (enemyKilled(this, e)) {
       this.slowmo = { scale: 0.3, t: T.run.killSlowmoTime, target: 0.3 };
-      this.ui.toast(`${camp.name} is clear. Return to town when you are ready.`, 5);
+      this.ui.toast(`${camp.name} is quiet now.`, 4);
     }
     this.save();
   }
@@ -420,10 +483,11 @@ export class Game {
   }
 
   /** A bandit that spots the player warns allies nearby. */
-  shout(from) {
+  /** Warns nearby allies. Scouts shout loud enough for the whole camp. */
+  shout(from, reach = 1) {
     for (const e of this.enemies) {
-      if (e === from || !e.alive || e.knows) continue;
-      if (Math.hypot(e.x - from.x, e.z - from.z) < 11) e.hear(from.lastSeenX, from.lastSeenZ);
+      if (e === from || !e.alive || e.knows || e.surrendered) continue;
+      if (Math.hypot(e.x - from.x, e.z - from.z) < 11 * reach) e.hear(from.lastSeenX, from.lastSeenZ);
     }
   }
 
@@ -460,48 +524,7 @@ export class Game {
   // ---------- per frame ----------
 
   /** Reads input into intents. Runs once per frame before simulation ticks. */
-  updateIntent() {
-    const inp = this.input, it = this.intent;
-    if (this.state === 'interaction') {
-      if (inp.pressed('pause')) this.townActions.close();
-      return;
-    }
-    if (this.state === 'map' && (inp.pressed('map') || inp.pressed('pause'))) { this.closeMap(); return; }
-    if (this.state === 'playing' && inp.pressed('map')) { this.openMap(); return; }
-    if (inp.pressed('pause') && (this.state === 'playing' || this.state === 'paused')) this.pause(this.state === 'playing');
-    if (this.state !== 'playing' && this.state !== 'dying') {
-      it.fireHeld = false;
-      return;
-    }
-    if (this.state === 'playing' && inp.pressed('interact')) {
-      if (this.townActions.nearest()) { this.townActions.open(); return; }
-      if (this.lootNearest()) return;
-    }
-    if (this.state === 'playing' && inp.pressed('bandage')) this.useBandage();
-    it.move = inp.moveAxis();
-    this.rig.place(0);
-    const aim = this.rig.projectCursor(inp.mouse.ndcX, inp.mouse.ndcY);
-    if (aim) { this.aimPoint.copy(aim); it.aim = this.aimPoint; }
-    it.fireHeld = inp.fireHeld;
-    if (inp.firePressed) it.firePressed = true;
-    if (inp.pressed('reload')) it.reload = true;
-    if (inp.pressed('dodge')) it.dodgeUntil = this.realTime + T.dodge.buffer;
-    const p = this.player;
-    if (p) {
-      if (inp.pressed('weapon1')) it.switchTo = 0;
-      if (inp.pressed('weapon2')) it.switchTo = 1;
-      if (inp.pressed('weapon3')) it.switchTo = 2;
-      if (inp.pressed('nextWeapon')) it.switchTo = (p.gunIndex + 1) % p.guns.length;
-      const w = inp.takeWheel();
-      if (w) this.rig.zoom(w);
-    }
-
-    // Dead Eye is held, and drains in real time.
-    const de = this.deadEye;
-    const want = inp.held('deadEye') && this.state === 'playing' && p && p.alive && !this.inTown();
-    if (want && !de.active && de.meter >= T.deadEye.minToStart) this.setDeadEye(true);
-    if (de.active && !want) this.setDeadEye(false);
-  }
+  updateIntent() { updateIntent(this); }
 
   /** The sim time scale for this frame. */
   timeScale() {
@@ -521,6 +544,10 @@ export class Game {
     this.frontier.beforePlayer(this.intent);
     p.tick(dt, gunDt, this.intent);
     this.frontier.tick(dt);
+    this.horse?.tick(dt, this.intent, this.sprintHeld);
+    this.worldPoints.tick(dt, p);
+    this.progressT -= dt;
+    if (this.progressT <= 0 && this.state === 'playing') { this.progressT = 1; tickProgress(this); }
     if (p.alive) {
       if (!this.frontier.inside) discover(this.run, p.x, p.z);
       if (!this.frontier.inside) {
@@ -585,6 +612,7 @@ export class Game {
       this.frontier.render(alpha);
       const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);
+      this.horse?.render(dt);
       if (this.frontier.inside) {
         for (const e of this.enemies) { e.model.root.visible = false; e.hideAimLine(); }
         for (const pr of this.props) {

@@ -4,10 +4,11 @@ import { T } from './tuning.js';
 import { GROUPS, RAPIER } from './physics.js';
 import { makeCharacter, LOOKS, muzzleLocal } from './models.js';
 import { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse, poseSeated } from './character.js';
-import { WEAPONS, Gun } from './weapons.js';
-import { randSpread } from './rng.js';
+import { WEAPONS, Gun, STEADY_TIME } from './weapons.js';
+import { effectActive } from './items.js';
+import { fireShot } from './player-fire.js';
 
-const DEG = Math.PI / 180;
+const COAT_LOOK = { ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a };
 
 export class Player {
   /**
@@ -26,10 +27,8 @@ export class Player {
     this.hp = run.hp;
     this.alive = true;
     this.sinceHit = 99;
-    this.guns = run.unlocked.map((k) => {
-      const saved = run.guns[k];
-      return Object.assign(new Gun(WEAPONS[k], saved.ammo, saved.reserve), saved);
-    });
+    this.pool = run.ammo;
+    this.guns = run.unlocked.map((k) => new Gun(WEAPONS[k], run.guns[k], this.pool));
     this.gunIndex = Math.min(run.weapon ?? 0, this.guns.length - 1);
     this.rollT = -1;
     this.rollCooldown = 0;
@@ -38,6 +37,10 @@ export class Player {
     this.flash = 0;
     this.speedNow = 0;
     this.emptyClickT = 0;
+    this.steadyT = 0;
+    this.recoil = 0;
+    this.bandageT = -1;
+    this.run = run;
 
     const cap = game.physics.kinematicCapsule(x, z, T.player.halfHeight, T.player.radius, GROUPS.player, this);
     this.body = cap.body;
@@ -45,8 +48,8 @@ export class Player {
     this.bodyY = cap.y;
     this.controller = game.physics.characterController();
 
-    this.model = addRollPivot(makeCharacter(run.coat ? { ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a } : LOOKS.player));
-    this.coat = run.coat;
+    this.model = addRollPivot(makeCharacter(run.gear.coat ? COAT_LOOK : LOOKS.player));
+    this.coat = run.gear.coat;
     showGun(this.model, this.gun.def.key);
     game.levelGroup.add(this.model.root);
   }
@@ -54,22 +57,64 @@ export class Player {
   get gun() { return this.guns[this.gunIndex]; }
   get rolling() { return this.rollT >= 0; }
   get invulnerable() { return this.rollT >= 0 && this.rollT < T.dodge.iframes; }
+  get moveFraction() { return Math.min(1, this.speedNow / T.player.speed); }
+  get steady() { return this.steadyT >= STEADY_TIME; }
+  get sway() { return effectActive(this.run, 'whiskey') ? 1.4 : 0; }
+  get bandaging() { return this.bandageT >= 0; }
+
+  /** Spread the reticle should show right now. */
+  aimSpread() { return this.gun.spread(this.moveFraction, this.steady, this.sway); }
 
   refreshInventory(run) {
+    this.run = run;
+    this.pool = run.ammo;
     for (const key of run.unlocked) {
       let gun = this.guns.find((g) => g.def.key === key);
-      if (!gun) { gun = new Gun(WEAPONS[key]); this.guns.push(gun); }
-      Object.assign(gun, run.guns[key]);
+      if (!gun) { gun = new Gun(WEAPONS[key], run.guns[key], this.pool); this.guns.push(gun); }
+      gun.pool = this.pool;
+      gun.ammo = run.guns[key].ammo;
+      gun.condition = run.guns[key].condition ?? 1;
     }
     this.hp = run.hp;
-    if (this.coat !== run.coat) {
+    if (this.coat !== run.gear.coat) {
       this.game.levelGroup.remove(this.model.root);
       this.model.root.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
       this.model.material.dispose();
-      this.model = addRollPivot(makeCharacter({ ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a }));
+      this.model = addRollPivot(makeCharacter(run.gear.coat ? COAT_LOOK : LOOKS.player));
       this.game.levelGroup.add(this.model.root);
-      this.coat = run.coat;
+      this.coat = run.gear.coat;
       showGun(this.model, this.gun.def.key);
+    }
+  }
+
+  /** Starts wrapping a bandage. It heals at the end; a hard hit stops it. */
+  startBandage() {
+    const g = this.game;
+    if (!this.alive || this.bandaging || this.rolling) return;
+    if (this.hp >= T.player.hp) { g.ui.toast('You are not hurt.'); return; }
+    if (!this.run.items.bandage) { g.ui.toast('No bandages. The doctor sells them.'); return; }
+    this.bandageT = 0;
+    this.gun.reloading = false;
+    g.audio.play('reloadTick', { vol: 0.5, pitch: 0.6 });
+  }
+
+  tickCare(dt) {
+    const g = this.game, P = T.player;
+    if (this.bandaging) {
+      this.bandageT += dt;
+      if (this.bandageT >= P.bandageTime) {
+        this.bandageT = -1;
+        this.run.items.bandage--;
+        const healed = Math.min(P.hp - this.hp, P.bandageHeal);
+        this.hp += healed;
+        g.ui.toast(`Bandaged · +${Math.round(healed)} health`);
+        g.save();
+      }
+    }
+    // A meal heals slowly once the shooting has stopped for a while.
+    if (this.run.mealHeal > 0 && effectActive(this.run, 'meal') && this.sinceHit > 5 && this.hp < P.hp) {
+      const step = Math.min(this.run.mealHeal, 2 * dt, P.hp - this.hp);
+      this.hp += step; this.run.mealHeal -= step;
     }
   }
 
@@ -94,8 +139,9 @@ export class Player {
     const g = this.game, P = T.player, D = T.dodge;
 
     // Dodge roll (buffered input).
-    this.rollCooldown -= dt;
-    if (!this.rolling && this.rollCooldown <= 0 && g.realTime <= intent.dodgeUntil) {
+    this.rollCooldown -= dt * (effectActive(this.run, 'coffee') ? 1.6 : 1);
+    if (!this.rolling && this.rollCooldown <= 0 && g.realTime <= intent.dodgeUntil && !g.horse?.mounted) {
+      if (this.bandaging) { this.bandageT = -1; g.ui.toast('Bandage dropped'); }
       intent.dodgeUntil = -1;
       const mv = intent.move;
       if (mv.x || mv.z) { this.rollX = mv.x; this.rollZ = mv.z; }
@@ -112,11 +158,13 @@ export class Player {
       const v0 = D.distance / (D.duration * 0.7);
       const v = v0 * (1 - 0.6 * Math.min(1, f));
       this.vx = this.rollX * v; this.vz = this.rollZ * v;
-      if (this.rollT >= D.duration) { this.rollT = -1; this.rollCooldown = D.cooldown; this.vx *= 0.4; this.vz *= 0.4; }
+      if (this.rollT >= D.duration) { this.rollT = -1; this.rollCooldown = D.cooldown; this.recoverT = D.recovery; this.vx *= 0.4; this.vz *= 0.4; }
     } else {
-      const tx = intent.move.x * P.speed, tz = intent.move.z * P.speed;
+      this.recoverT = Math.max(0, (this.recoverT ?? 0) - dt);
+      const speed = P.speed * this.gun.def.moveMult * (this.recoverT > 0 ? 0.5 : 1) * (this.bandaging ? 0.45 : 1) * (g.horse?.mounted ? g.horse.speedFactor : 1);
+      const tx = intent.move.x * speed, tz = intent.move.z * speed;
       const accelerating = tx * this.vx + tz * this.vz > 0 || Math.hypot(tx, tz) > Math.hypot(this.vx, this.vz);
-      const rate = (P.speed / (tx || tz ? (accelerating ? P.accelTime : P.stopTime) : P.stopTime)) * dt;
+      const rate = (speed / (tx || tz ? (accelerating ? P.accelTime : P.stopTime) : P.stopTime)) * dt;
       const dx = tx - this.vx, dz = tz - this.vz;
       const dl = Math.hypot(dx, dz);
       if (dl <= rate) { this.vx = tx; this.vz = tz; } else { this.vx += (dx / dl) * rate; this.vz += (dz / dl) * rate; }
@@ -126,6 +174,7 @@ export class Player {
     const mv = this.controller.computedMovement();
     this.x += mv.x; this.z += mv.z;
     if (!g.frontier?.inside) {
+      // Shop rooms sit beyond the land edge, so the edge clamp only applies outdoors.
       const lim = g.arenaHalf - 0.6;
       this.x = Math.max(-lim, Math.min(lim, this.x));
       this.z = Math.max(-lim, Math.min(lim, this.z));
@@ -151,24 +200,27 @@ export class Player {
     // Weapons.
     if (intent.switchTo !== null) { this.switchTo(intent.switchTo); intent.switchTo = null; }
     const gun = this.gun;
-    if (gun.update(gunDt)) g.audio.play('reloadDone', { vol: 0.8 });
-    if (gun.reloading) {
-      const per = gun.reloadTotal / Math.max(1, gun.def.mag - gun.ammo);
-      gun.tickAcc = (gun.tickAcc ?? 0) + gunDt;
-      if (gun.tickAcc >= per) { gun.tickAcc = 0; g.audio.play('reloadTick', { vol: 0.5 }); }
-    }
-    if (intent.reload) { intent.reload = false; if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6 }); }
+    const reload = gun.update(gunDt);
+    if (reload === 'round') g.audio.play('reloadTick', { vol: 0.5 });
+    else if (reload === 'done') g.audio.play('reloadDone', { vol: 0.8 });
+    this.recoil = Math.max(0, this.recoil - gunDt * 3);
+    if (this.speedNow < 0.8 && !this.rolling) this.steadyT += gunDt; else this.steadyT = 0;
+    if (intent.reload) { intent.reload = false; if (!this.bandaging && gun.startReload()) g.audio.play('reloadTick', { vol: 0.6 }); }
     this.emptyClickT -= gunDt;
-    if (!g.inTown() && !this.rolling && (intent.fireHeld || intent.firePressed)) {
-      if (gun.canFire()) this.fire();
+    if (!g.inTown() && !this.rolling && !this.bandaging && (intent.fireHeld || intent.firePressed)) {
+      if (gun.canFire()) fireShot(this);
       else if (gun.ammo <= 0 && intent.firePressed && this.emptyClickT <= 0) {
         this.emptyClickT = 0.3;
-        g.audio.play('dryClick', { vol: 0.8 });
+        this.recoil = Math.min(1, this.recoil + 0.25);
+        g.audio.play('dryClick', { vol: 0.9 });
+        g.ui.emptyClick();
         if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6, delay: 0.1 });
+        else if (gun.reserve <= 0) g.ui.toast('Out of ammunition');
       }
     }
     intent.firePressed = false;
-    if (gun.ammo <= 0 && !gun.reloading && gun.cooldown < -0.15) gun.startReload();
+    if (gun.ammo <= 0 && !gun.reloading && gun.cooldown < -0.15 && !this.bandaging) gun.startReload();
+    this.tickCare(dt);
 
     // Threshold regeneration.
     this.sinceHit += dt;
@@ -184,85 +236,12 @@ export class Player {
     return { x: this.x + m.x * c + m.z * s, y: m.y, z: this.z - m.x * s + m.z * c };
   }
 
-  fire() {
-    const g = this.game, gun = this.gun, def = gun.def;
-    if (g.inTown()) return;
-    const spreadDeg = gun.fire();
-    const aim = g.intent.aim;
-    let dx = Math.sin(this.yaw), dz = Math.cos(this.yaw);
-    if (aim) {
-      const ax = aim.x - this.x, az = aim.z - this.z;
-      const l = Math.hypot(ax, az);
-      if (l > 1.2) { dx = ax / l; dz = az / l; }
-    }
-    // Aim assist: bend up to a few degrees toward a bandit near the line.
-    let baseA = Math.atan2(dx, dz);
-    let best = T.aimAssist.angleDeg * DEG;
-    for (const e of g.enemies) {
-      if (!e.alive) continue;
-      const ex = e.x - this.x, ez = e.z - this.z;
-      const d = Math.hypot(ex, ez);
-      if (d > T.aimAssist.range || d < 0.5) continue;
-      const off = Math.abs(angleDelta(baseA, Math.atan2(ex, ez)));
-      if (off < best && g.physics.los(this.x, this.z, e.x, e.z)) { best = off; baseA = Math.atan2(ex, ez); }
-    }
-
-    const mz = this.muzzle();
-    const y = T.player.gunHeight;
-    const mult = g.deadEye.active ? T.deadEye.damageMult : 1;
-    let anyHit = false, anyKill = false, anyCrit = false;
-    for (let i = 0; i < def.pellets; i++) {
-      const a = baseA + randSpread((spreadDeg * DEG) / 2);
-      const rx = Math.sin(a), rz = Math.cos(a);
-      const max = def.range * (def.pellets > 1 ? 1.35 : 1.8);
-      let ox = this.x, oz = this.z, traveled = 0, pierce = def.pierce, exclude = this.collider;
-      let endX = ox + rx * max, endZ = oz + rz * max;
-      for (let guard = 0; guard < 4; guard++) {
-        const hit = g.physics.castRay(ox, y, oz, rx, 0, rz, max - traveled, GROUPS.playerShot, exclude);
-        if (!hit) { endX = ox + rx * (max - traveled); endZ = oz + rz * (max - traveled); break; }
-        const d = traveled + hit.dist;
-        const fall = d <= def.range ? 1 : Math.max(0.5, 1 - (d - def.range) / def.range);
-        const dmg = def.damage * fall * mult;
-        const owner = hit.owner;
-        endX = hit.x; endZ = hit.z;
-        if (owner && owner.onHit) {
-          const res = owner.onHit(dmg, rx, rz, def.knockback);
-          anyHit = true;
-          anyKill = anyKill || res.killed;
-          anyCrit = anyCrit || res.crit;
-          g.fx.impact('flesh', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
-          g.audio.at('hitFlesh', hit.x, hit.z, { vol: 0.8 });
-          if (res.killed) g.onEnemyKilled(owner, res.crit);
-          else g.deadEye.add(T.deadEye.fillHit);
-          if (pierce > 0) { pierce--; traveled = d + 0.05; ox = hit.x + rx * 0.05; oz = hit.z + rz * 0.05; exclude = hit.collider; continue; }
-        } else if (owner && owner.damage) {
-          const surface = owner.damage(dmg, hit.x, hit.y, hit.z, rx, rz, def.impulse, 'player');
-          g.fx.impact(surface === 'cloth' || surface === 'plant' ? 'dirt' : surface, hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
-          const snd = surface === 'wood' || surface === 'water' ? 'hitWood' : surface === 'stone' ? 'hitDirt' : 'hitDirt';
-          g.audio.at(snd, hit.x, hit.z, { vol: 0.6 });
-        } else {
-          g.fx.impact('dirt', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
-          g.audio.at('hitDirt', hit.x, hit.z, { vol: 0.5 });
-        }
-        break;
-      }
-      g.fx.tracer(mz.x, mz.y, mz.z, endX, y, endZ, g.deadEye.active ? 0xffb070 : 0xffe7b0);
-    }
-
-    g.fx.muzzle(mz.x, mz.y, mz.z, dx, dz, def.pellets > 1);
-    if (def.key !== 'shotgun') g.fx.casing(this.x, 1.0, this.z, dx, dz);
-    g.audio.play(def.sound, { vol: 1, vary: 0.06 });
-    g.addTrauma(def.trauma);
-    g.noise(this.x, this.z, T.enemy.hearRange);
-    g.stats.shots++;
-    if (anyHit) { g.stats.hits++; g.ui.hitMarker(anyKill); }
-    if (anyCrit && !anyKill) g.hitStop(T.hitStop.crit);
-    this.vx -= dx * 0.6; this.vz -= dz * 0.6; // tiny recoil push
-  }
-
   damage(amount, dirX, dirZ) {
     if (!this.alive || this.invulnerable || this.game.inTown()) return false;
     const g = this.game;
+    if (this.run.gear.coat) amount *= 0.9;
+    if (this.bandaging && amount >= T.player.bandageBreak) { this.bandageT = -1; g.ui.toast('Bandage dropped'); }
+    g.horse?.spook(amount);
     this.hp -= amount;
     this.sinceHit = 0;
     this.flash = 0.08;
@@ -297,6 +276,7 @@ export class Player {
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
     if (this.game.frontier?.seated && !this.rolling) poseSeated(m);
+    if (this.bandaging) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
     showGun(m, this.game.inTown() ? null : this.gun.def.key);
     if (this.game.inTown()) m.arm.rotation.x = 1.1;
   }

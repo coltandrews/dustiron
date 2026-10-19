@@ -37,8 +37,11 @@ function savedLife(game) {
 
 test('camps place actors and navigation at their separate world positions', (t) => {
   const game = gameFor(t);
-  assert.equal(game.encounters.length, 3);
-  for (const camp of game.encounters) {
+  const camps = game.encounters.filter((camp) => !camp.ambush);
+  assert.equal(camps.length, game.run.world.camps.length);
+  assert.ok(camps.length >= 3);
+  assert.ok(game.encounters.some((camp) => camp.ambush), 'trail ambushes join the camps');
+  for (const camp of camps) {
     assert.ok(Math.hypot(camp.x, camp.z) > 80);
     assert.ok(camp.enemies.length > 0);
     assert.ok(camp.props.length > 0);
@@ -123,7 +126,7 @@ test('damaged props keep health, fuse, body transform, and motion on reload', (t
 });
 
 test('bounty targets keep identity and combat state after reload', (t) => {
-  const first = gameFor(t), targets = first.encounters.map((camp) => {
+  const first = gameFor(t), targets = first.encounters.filter((camp) => !camp.ambush).map((camp) => {
     const target = camp.enemies.find((enemy) => enemy.id === camp.targetId);
     assert.ok(target, `missing target for ${camp.id}`);
     target.hp -= 17; target.x += 1.2; target.z -= 0.8;

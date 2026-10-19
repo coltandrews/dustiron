@@ -1,5 +1,6 @@
 // One atomic record holds a life. A dead record prevents an old save from returning.
-import { createLife, normalizeLife } from './life.js';
+import { createLife, gunState, normalizeLife } from './life.js';
+import { AMMO } from './items.js';
 import { WEAPONS } from './weapons.js';
 
 export const SAVE_KEY = 'dustiron.run.v2';
@@ -25,7 +26,9 @@ export function loadSave(storage) {
     for (const key of old.unlocked) {
       if (!Object.prototype.hasOwnProperty.call(WEAPONS, key)) continue;
       if (!life.unlocked.includes(key)) life.unlocked.push(key);
-      life.guns[key] = { ammo: WEAPONS[key].mag, reserve: WEAPONS[key].mag * 3 };
+      life.guns[key] = gunState(key);
+      const type = WEAPONS[key].ammoType;
+      life.ammo[type] = Math.min(AMMO[type].max, life.ammo[type] + WEAPONS[key].mag * 3);
     }
     life.weapon = Math.max(0, life.unlocked.indexOf(old.unlocked[old.weapon]));
     const checked = normalizeLife(life);

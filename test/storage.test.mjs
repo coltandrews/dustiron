@@ -19,7 +19,7 @@ function oldLife() {
 
 test('a saved life returns with the same inventory, bullets, and simulation time', () => {
   const storage = memoryStorage(), life = createLife(23);
-  life.guns.revolver.ammo = 2; life.guns.revolver.reserve = 9;
+  life.guns.revolver.ammo = 2; life.ammo.pistol = 9;
   life.simTime = 10.5;
   life.projectiles = [{ x: 80, z: 20, dx: 0, dz: 1, speed: 30, dmg: 12, left: 8 }];
   assert.equal(writeLife(life, storage), true);
@@ -59,7 +59,7 @@ test('migration keeps earned money, owned guns, selected weapon, health, and sta
   const storage = memoryStorage(), old = oldLife();
   storage.setItem(LEGACY_KEY, JSON.stringify(old));
   const life = loadSave(storage);
-  assert.equal(life.version, 2);
+  assert.equal(life.version, 3);
   assert.equal(life.migrated, true);
   assert.equal(life.seed, old.seed);
   assert.equal(life.bounty, old.bounty);

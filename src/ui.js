@@ -1,5 +1,6 @@
 // HUD, reticle and full-screen cards. Plain DOM over the canvas.
 import * as THREE from 'three';
+import { renderJournal } from './ui-journal.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -27,7 +28,13 @@ const shopItemArt = {
   drink: `<svg viewBox="0 0 88 58" role="img" aria-label="Whiskey"><g stroke="#2c1a12" stroke-width="2" stroke-linejoin="round"><path d="M24 8h18v8l-4 7v28H16V23l4-7V8z" fill="#81512f"/><path d="M20 29h14v14H20z" fill="#d2b574"/><path d="M22 8h18v7H22z" fill="#c39a4a"/><path d="M52 27h24l-3 22H55z" fill="#d9b45c" fill-opacity=".65"/><path d="M55 35h18l-2 14H57z" fill="#bd6b2f"/><path d="M51 27h26" stroke="#e8d2a4" stroke-width="3"/></g></svg>`,
 };
 
+shopItemArt.heavy = `<svg viewBox="0 0 88 58" role="img" aria-label="Heavy revolver"><g stroke="#251710" stroke-width="2" stroke-linejoin="round"><path d="M28 22h42v8H28z" fill="#343231"/><circle cx="33" cy="30" r="8" fill="#4a4644"/><path d="M24 30l10 2-6 18h-9z" fill="#5c3422"/><path d="M66 18h4v4h-4z" fill="#c19b4c"/></g></svg>`;
+shopItemArt.horse = `<svg viewBox="0 0 88 58" role="img" aria-label="Horse"><g stroke="#251710" stroke-width="2" stroke-linejoin="round"><path d="M18 26c4-6 30-7 38-2l10-12 8 4-4 12-6 2-4 22h-6l-2-14H30l-3 14h-6l-1-16c-3-2-4-6-2-10z" fill="#7a4a2e"/><path d="M60 13l6 0 4 6" fill="none" stroke="#2a1a12" stroke-width="3"/><path d="M34 24h14v6H34z" fill="#9a6337"/></g></svg>`;
+shopItemArt.meal = `<svg viewBox="0 0 88 58" role="img" aria-label="Hot meal"><g stroke="#2c1a12" stroke-width="2"><ellipse cx="44" cy="38" rx="26" ry="9" fill="#cbb48a"/><ellipse cx="44" cy="35" rx="18" ry="6" fill="#8a4a2a"/><path d="M36 22c2-4-2-6 0-10M46 22c2-4-2-6 0-10" fill="none" stroke="#e8d8b8"/></g></svg>`;
+const artAlias = { repeater: 'rifle', rifle: 'rifle', whiskey: 'drink', coffee: 'drink', oil: 'drink', rent: 'horse', feed: 'meal', belt: 'ammo' };
+
 function makeShopItemArt(itemId) {
+  itemId = shopItemArt[itemId] ? itemId : artAlias[itemId];
   if (!shopItemArt[itemId]) return null;
   const art = document.createElement('span');
   art.className = 'choice-art';
@@ -44,13 +51,15 @@ export class UI {
       campName: $('camp-name'), outlaws: $('outlaws'), bounty: $('bounty'), campNo: $('camp-no'),
       weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
       vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'),
-      screens: { title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
+      screens: { journal: $('screen-journal'), title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
       interactionEyebrow: $('interaction-eyebrow'),
       deadBody: $('dead-body'), deadTitle: $('dead-title'),
       errorBody: $('error-body'),
       saveStatus: $('save-status'),
+      notes: $('notes'), tip: $('tip'), tracker: $('tracker'),
+      journal: $('journal-body'), journalTabs: $('journal-tabs'),
     };
     this.ammoKey = '';
     this.cylAngle = 0;
@@ -92,7 +101,7 @@ export class UI {
 
   show(name) {
     for (const [k, el] of Object.entries(this.el.screens)) el.hidden = k !== name;
-    const playing = name === null || name === 'interaction' || name === 'dead';
+    const playing = name === null || name === 'interaction' || name === 'dead' || name === 'journal';
     this.el.hud.hidden = !playing;
     this.el.app.classList.toggle('in-menu', name !== null);
   }
@@ -100,6 +109,16 @@ export class UI {
   error(message) {
     this.el.errorBody.textContent = message;
     this.show('error');
+  }
+
+  showJournal(game) {
+    renderJournal(this, game);
+    if (!this.journalBound) {
+      this.journalBound = true;
+      for (const button of this.el.journalTabs.querySelectorAll('button')) button.addEventListener('click', (e) => { e.stopPropagation(); renderJournal(this, game, button.dataset.tab); });
+      document.getElementById('btn-journal-close').addEventListener('click', (e) => { e.stopPropagation(); game.closeJournal(); });
+    }
+    this.show('journal');
   }
 
   setContinue(save) {
@@ -119,7 +138,34 @@ export class UI {
     this.toastT = seconds;
   }
 
-  hitMarker(kill) {
+  /** Short story beats: quest steps, discoveries, rewards. */
+  questNote(text) {
+    if (!text) return;
+    const box = this.el.notes;
+    if (!box) { this.toast(text, 3.5); return; }
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = text;
+    box.prepend(note);
+    while (box.children.length > 3) box.lastChild.remove();
+    setTimeout(() => note.classList.add('gone'), 5200);
+    setTimeout(() => note.remove(), 5800);
+  }
+
+  setTip(html) {
+    if (!this.el.tip || this.tipHtml === html) return;
+    this.tipHtml = html;
+    this.el.tip.innerHTML = html;
+    this.el.tip.hidden = !html;
+  }
+
+  emptyClick() {
+    const r = this.el.reticle;
+    r.classList.remove('dry'); void r.offsetWidth; r.classList.add('dry');
+  }
+
+  hitMarker(kill, head = false) {
+    this.el.hit.classList.toggle('head', head);
     const h = this.el.hit;
     h.classList.remove('show', 'kill');
     void h.offsetWidth;
@@ -137,14 +183,14 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'resident' }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '' }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
-    const shopModes = ['guns', 'doctor', 'maps', 'clothes', 'saloon'];
+    const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
-    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Choose your play' : shopModes.includes(mode) ? 'Available' : 'Your reply';
+    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Your play' : 'Your reply';
     this.el.interactionTitle.textContent = title;
-    this.el.interactionEyebrow.textContent = interactionLabels[mode] ?? interactionLabels.resident;
+    this.el.interactionEyebrow.textContent = eyebrow || interactionLabels[mode] || 'Town resident';
     this.renderInteractionText(text, mode);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
@@ -164,6 +210,12 @@ export class UI {
       const label = document.createElement('span');
       label.className = 'choice-text';
       label.textContent = action.label;
+      if (action.detail) {
+        const detail = document.createElement('small');
+        detail.className = 'choice-detail';
+        detail.textContent = action.detail;
+        label.append(detail);
+      }
       const art = makeShopItemArt(action.itemId);
       button.append(key, ...(art ? [art] : []), label);
       button.dataset.action = action.id;
@@ -285,7 +337,10 @@ export class UI {
     e.campName.textContent = game.locationName;
     e.outlaws.textContent = inTown ? 'Weapons holstered' : 'Return to town for payment';
     e.bounty.textContent = `$${game.run.bounty}`;
-    e.bandages.textContent = `${game.run.bandages} bandage${game.run.bandages === 1 ? '' : 's'} · H`;
+    const b = game.run.items.bandage;
+    e.bandages.textContent = p.bandaging ? `Wrapping a bandage… ${Math.round(p.bandageT / 1.6 * 100)}%` : `${b} bandage${b === 1 ? '' : 's'} · H`;
+    const tracker = game.trackerHtml?.() ?? '';
+    if (e.tracker && tracker !== this.trackerHtml) { this.trackerHtml = tracker; e.tracker.innerHTML = tracker; }
     e.interactionHint.textContent = game.interactionHint || '';
     const doorEntry = game.interactionHint === 'Press [E] to Enter';
     e.interactionHint.classList.toggle('door-entry', doorEntry);
@@ -306,7 +361,7 @@ export class UI {
     const gun = p.gun;
     this.buildAmmo(gun);
     e.weaponName.textContent = gun.def.name;
-    e.reserve.textContent = `${gun.ammo} loaded · ${gun.reserve} spare`;
+    e.reserve.textContent = `${gun.ammo} loaded · ${gun.reserve} spare${gun.condition < 0.85 ? ' · needs oil' : ''}`;
     const pips = e.ammo.children;
     if (gun.ammo !== this.lastAmmo) {
       if (gun.def.layout === 'cylinder' && this.lastAmmo > gun.ammo) this.cylAngle += 60 * (this.lastAmmo - gun.ammo);
@@ -325,7 +380,7 @@ export class UI {
     // Reticle follows the cursor; ring shows spread, arc shows reload.
     const m = game.input.mouse;
     e.reticle.style.transform = `translate(${m.x}px, ${m.y}px)`;
-    const spread = 10 + gun.spreadDeg * 4.5;
+    const spread = 10 + p.aimSpread() * 4.5 + p.recoil * 8;
     e.ring.style.width = e.ring.style.height = spread * 2 + 'px';
     const circ = 2 * Math.PI * 22;
     e.reload.style.strokeDasharray = `${circ}`;

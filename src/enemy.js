@@ -7,6 +7,7 @@ import { makeCharacter, LOOKS, muzzleLocal } from './models.js';
 import { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse } from './character.js';
 import { chooseCover } from './cover.js';
 import { rand, randSpread } from './rng.js';
+import { surrender, tickCaptive } from './enemy-captive.js';
 
 const DEG = Math.PI / 180;
 
@@ -25,6 +26,18 @@ export const BANDIT_TYPES = {
     look: 'sharpshooter', hp: 60, speed: 3.2, gun: 'rifle', aim: 0.9, burst: 1, burstGap: 0, pellets: 1,
     dmg: 35, bulletSpeed: 60, spreadDeg: 0.8, cooldown: [2.2, 3.2], range: [17, 26], fireRange: 32,
     mag: 5, reload: 2.2, bounty: 30, usesCover: true, sight: 30,
+  },
+  // Leads a camp: tougher, quicker to shoot and quick to flank.
+  leader: {
+    look: 'leader', hp: 150, speed: 3.9, gun: 'heavy', aim: 0.42, burst: 2, burstGap: 0.34, pellets: 1,
+    dmg: 19, bulletSpeed: 44, spreadDeg: 3.4, cooldown: [1.0, 1.8], range: [5, 12], fireRange: 21,
+    mag: 5, reload: 1.8, bounty: 40, usesCover: true, sight: 20, flanks: true,
+  },
+  // Watches the approaches, shouts the camp awake and keeps his distance.
+  scout: {
+    look: 'scout', hp: 55, speed: 5.0, gun: 'repeater', aim: 0.55, burst: 1, burstGap: 0, pellets: 1,
+    dmg: 12, bulletSpeed: 48, spreadDeg: 3, cooldown: [1.4, 2.4], range: [12, 19], fireRange: 26,
+    mag: 8, reload: 2, bounty: 15, usesCover: true, sight: 26, warns: true,
   },
 };
 
@@ -79,6 +92,8 @@ export class Bandit {
     this.zig = rand(0, 6);
     this.accuracy = 1 + campIndex * T.enemy.accuracyPerCamp;
     this.spottedX = x; this.spottedZ = z; this.spottedT = -99; // last time the player saw this bandit
+    this.isTarget = !!target;
+    this.surrendered = false;
 
     const ph = game.physics;
     const cap = ph.kinematicCapsule(x, z, T.player.halfHeight, T.player.radius, GROUPS.enemy, this);
@@ -108,7 +123,9 @@ export class Bandit {
     const dx = P.x - this.x, dz = P.z - this.z;
     const d = Math.hypot(dx, dz);
     let see = false;
-    if (d < this.def.sight) {
+    // Walking slowly keeps the player harder to spot; running draws the eye.
+    const sight = this.def.sight * (P.sneaking ? 0.6 : P.moveFraction > 0.75 ? 1.1 : 1);
+    if (d < sight) {
       const off = Math.abs(angleDelta(this.yaw, Math.atan2(dx, dz)));
       if (d < T.enemy.closeSense || this.knows || off < (T.enemy.sightFovDeg * DEG) / 2) {
         see = this.game.physics.los(this.x, this.z, P.x, P.z);
@@ -120,7 +137,8 @@ export class Bandit {
       this.lastSeenT = this.game.time;
       if (!this.knows && this.state !== 'alert') {
         this.alertTo(P.x, P.z);
-        this.game.shout(this);
+        this.game.shout(this, this.def.warns ? 3 : 1);
+        if (this.def.warns) this.game.audio.at('alert', this.x, this.z, { vol: 0.9, pitch: 1.3 });
       }
     }
   }
@@ -272,7 +290,7 @@ export class Bandit {
     this.ammo--;
     this.markSpotted(); // muzzle flashes give away a shooter's position
     g.fx.muzzle(mz.x, mz.y, mz.z, Math.sin(this.aimYaw), Math.cos(this.aimYaw), def.pellets > 1);
-    g.audio.at('enemyShot', this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: def.gun === 'rifle' ? 1.12 : def.gun === 'shotgun' ? 0.8 : 0.92 });
+    g.audio.at('enemyShot', this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: { rifle: 1.12, shotgun: 0.8, heavy: 0.78, repeater: 1.2 }[def.gun] ?? 0.92 });
     g.addTrauma(0.04);
     if (P.alive) { this.lastSeenX = P.x; this.lastSeenZ = P.z; }
   }
@@ -305,8 +323,9 @@ export class Bandit {
   /** @returns {{killed:boolean, crit:boolean}} */
   onHit(dmg, dirX, dirZ, knock) {
     if (!this.alive) return { killed: false, crit: false };
-    const crit = !this.knows;
+    const crit = !this.knows && !this.surrendered;
     this.hp -= crit ? dmg * 2 : dmg;
+    if (this.hp > 0 && !this.surrendered && this.shouldSurrender()) { surrender(this); return { killed: false, crit }; }
     this.flash = 0.06;
     this.kx += dirX * knock * 2.2;
     this.kz += dirZ * knock * 2.2;
@@ -324,8 +343,14 @@ export class Bandit {
     return { killed: false, crit };
   }
 
+  /** A wounded bounty target gives up so they can be taken alive. */
+  shouldSurrender() {
+    return this.isTarget && this.hp < this.maxHp * 0.35 && this.game.wantsAlive?.(this);
+  }
+
   die(dirX, dirZ, force) {
     this.alive = false;
+    this.surrendered = false;
     this.releaseToken();
     this.hideAimLine();
     if (this.game.flanker === this) this.game.flanker = null;
@@ -352,6 +377,7 @@ export class Bandit {
     this.stateT += dt;
     this.wantX = 0; this.wantZ = 0;
 
+    if (this.surrendered) { tickCaptive(this, dt); return; }
     this.perceptT -= dt;
     if (this.perceptT <= 0) { this.perceptT = T.enemy.perceptionInterval; this.perceive(); }
     if (this.canSee) this.unseenT = 0; else this.unseenT += dt;
@@ -406,7 +432,7 @@ export class Bandit {
         }
         if (this.ammo <= 0 && this.reloadT <= 0) this.reloadT = def.reload;
         if (sinceSeen > T.enemy.memory) { this.setState('search'); break; }
-        if (!this.fleeing && !this.canSee && g.playerCamping() > T.enemy.flankAfter && !g.flanker && this.type === 'gunman') {
+        if (!this.fleeing && !this.canSee && g.playerCamping() > T.enemy.flankAfter * (def.flanks ? 0.5 : 1) && !g.flanker && (this.type === 'gunman' || def.flanks)) {
           g.flanker = this; this.setState('flank'); break;
         }
         if (this.cooldown <= 0 && this.ammo > 0 && this.reloadT <= 0 && g.tokens.take(this)) {
@@ -570,6 +596,7 @@ export class Bandit {
   render(alpha, realDt) {
     if (!this.alive) return;
     const m = this.model;
+    m.root.visible = !this.jailed;
     m.root.position.set(this.px + (this.x - this.px) * alpha, 0, this.pz + (this.z - this.pz) * alpha);
     m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
     if (this.flash > 0) this.flash -= realDt;
@@ -578,6 +605,7 @@ export class Bandit {
       aiming: this.state === 'aim' || this.state === 'burst' || this.state === 'peek' || (this.knows && this.state === 'hold'),
       flash: this.flash,
     });
+    if (this.surrendered) { m.arm.rotation.x = -2.5; m.body.rotation.x = this.captive ? 0.1 : 0; }
     if (this.aimLine.visible) {
       const pulse = 0.85 + Math.sin(this.game.time * 40) * 0.15;
       this.aimLine.material.opacity *= pulse;
