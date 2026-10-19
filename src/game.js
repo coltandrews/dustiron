@@ -153,7 +153,7 @@ export class Game {
     this.rig.snap(this.player.x, this.player.z - 3);
     this.state = 'playing';
     this.ui.show(null);
-    this.ui.toast(run.migrated ? 'Your old life is now in Mercy Crossing. Your money and guns are kept.' : run.time < 1 ? `One life. $${run.bounty} in your pocket. Find work in town.` : 'Back on the trail.', 6);
+    if (run.migrated) this.ui.toast('Your old life is now in Mercy Crossing. Your money and guns are kept.', 6);
     delete run.migrated;
     this.audio.setAmbience(0.13);
     this.save();

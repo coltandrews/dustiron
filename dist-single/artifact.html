@@ -166,7 +166,7 @@ kbd {
 .title-menu { align-self: center; }
 .menu-label { margin: 0 0 12px; }
 .title-guide { grid-column: 1 / -1; width: 100%; padding: 16px 20px; }
-.title-guide .eyebrow { margin-bottom: 10px; }
+.guide-title { margin: 0 0 10px; font: 20px/1 var(--display); color: #f2dfbd; }
 .controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 22px; margin: 0; }
 .controls div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
 .controls dt { white-space: nowrap; }
@@ -195,22 +195,104 @@ kbd {
 .interaction-screen.shop-dialogue .dialog-menu { grid-column: 2; grid-row: 1; padding: 20px; border-top: 0; border-left: 1px solid #5a3d22; }
 .interaction-screen.shop-dialogue .interaction-actions { grid-template-columns: minmax(0, 1fr); }
 
-/* Blackjack keeps the same panel with a felt area for the cards. */
-#screen-interaction[data-mode="blackjack"] { place-items: center; background: rgba(8, 6, 4, 0.7); }
-#screen-interaction[data-mode="blackjack"] .interaction-card { width: min(680px, calc(100vw - 40px)); overflow-y: auto; }
-#screen-interaction[data-mode="blackjack"] .interaction-actions { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-.blackjack-board { overflow: hidden; border: 1px solid #5a3d22; background: #17382c; text-align: left; }
-.hand-row { display: grid; grid-template-columns: 82px minmax(0, 1fr) 44px; align-items: center; gap: 14px; min-height: 60px; margin: 0; padding: 12px 16px; }
-.hand-row + .hand-row { border-top: 1px solid rgba(201, 161, 92, 0.3); }
-.hand-owner { color: #d9c08c; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.playing-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-.playing-card { display: grid; place-items: center; width: 36px; height: 50px; color: #21170f; background: #f3e6c8; border-radius: 3px; font: 19px/1 var(--display); font-style: normal; box-shadow: 0 2px 0 #0b1a14; }
-.playing-card.red-card { color: #9e3426; }
-.playing-card.hidden-card { color: transparent; background: repeating-linear-gradient(45deg, #5a2a1e 0 4px, #8a5a2c 4px 6px); }
-.hand-score { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: #f1dca9; background: #0d251c; border: 1px solid #8a6234; font-size: 16px; font-variant-numeric: tabular-nums; }
-.table-message { color: #f1dcad; font-size: 16px; text-align: center; }
-.table-callout { margin: 12px 0 0; }
-.table-intro { max-width: 40ch; margin: 4px 0 8px; color: #e7d09f; text-align: left; }
+/* Blackjack sits over the 3D saloon table. It uses cards, chips and small table controls. */
+#screen-interaction[data-mode="blackjack"] {
+  place-items: stretch; padding: 0;
+  background: radial-gradient(ellipse at 50% 62%, transparent 20%, rgba(7, 4, 3, 0.24) 78%, rgba(7, 4, 3, 0.66));
+  overflow: hidden;
+}
+#screen-interaction[data-mode="blackjack"] .interaction-card {
+  width: min(980px, 100%); height: 100%; max-height: none; margin: auto; overflow: visible;
+  background: none; border: 0; box-shadow: none;
+}
+#screen-interaction[data-mode="blackjack"] .dialog-copy {
+  display: grid; align-content: center; height: 100%; padding: 42px 28px 126px; box-sizing: border-box; overflow: visible;
+}
+#screen-interaction[data-mode="blackjack"] .dialog-copy > h2,
+#screen-interaction[data-mode="blackjack"] .dialog-copy > .eyebrow { display: none; }
+#screen-interaction[data-mode="blackjack"] #interaction-text { display: grid; place-items: center; max-width: none; height: 100%; }
+#screen-interaction[data-mode="blackjack"] .dialog-menu {
+  position: absolute; z-index: 3; inset: auto 24px 20px; padding: 0; overflow: visible;
+  border: 0; background: none;
+}
+#screen-interaction[data-mode="blackjack"] .interaction-actions {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+#screen-interaction[data-mode="blackjack"] .table-action {
+  justify-content: center; width: auto; min-width: 112px; padding: 10px 18px;
+  border-color: #b18145; border-radius: 4px;
+  background: linear-gradient(#54301e, #2d1a12); box-shadow: 0 5px 12px rgba(0, 0, 0, 0.42);
+  color: #f6e4bf; font: 700 16px/1 var(--body); text-align: center; text-transform: uppercase;
+}
+#screen-interaction[data-mode="blackjack"] .table-action:hover { background: linear-gradient(#6b3d26, #382016); }
+#screen-interaction[data-mode="blackjack"] .table-action:disabled { opacity: 0.28; }
+#screen-interaction[data-mode="blackjack"] .interaction-close {
+  position: fixed; top: 18px; right: 18px; width: auto; min-width: 0; padding: 6px 10px;
+  border: 0; background: rgba(24, 14, 10, 0.7); box-shadow: none; color: #d9c6a6;
+  font-size: 13px; text-transform: none;
+}
+#screen-interaction[data-mode="blackjack"][data-phase="idle"] .bet-chip,
+#screen-interaction[data-mode="blackjack"][data-phase="done"] .bet-chip {
+  width: 74px; min-width: 74px; height: 74px; padding: 0; border: 7px dashed #ead8ae; border-radius: 50%;
+  background: radial-gradient(circle, #b94632 0 48%, #7c231d 49% 63%, #d8bc7c 64% 70%, #8f2e24 71%);
+  box-shadow: inset 0 0 0 3px #281712, 0 5px 12px rgba(0, 0, 0, 0.48);
+  color: #fff1d4; font: 22px/1 var(--display); text-shadow: 0 2px #411a13;
+}
+
+.blackjack-board {
+  position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  width: min(820px, calc(100vw - 48px)); height: min(56vh, 500px); min-height: 360px; overflow: hidden;
+  padding: 24px 42px 34px; box-sizing: border-box;
+  border: 12px solid #4b2819; border-radius: 48% 48% 18% 18% / 36% 36% 14% 14%;
+  background:
+    radial-gradient(ellipse at 50% 42%, transparent 0 42%, rgba(236, 205, 132, 0.22) 42.5% 43%, transparent 43.5%),
+    radial-gradient(ellipse at 50% 115%, #246149, #133d2e 68%, #0d2d22);
+  box-shadow: inset 0 0 0 5px #9a6a38, inset 0 0 45px rgba(0, 0, 0, 0.5), 0 18px 38px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.blackjack-table-top { position: relative; display: flex; justify-content: center; align-items: center; color: #e8d4a7; font-size: 14px; }
+.blackjack-table-top span { position: absolute; top: 40px; z-index: 1; padding: 4px 9px; border-radius: 12px; background: rgba(8, 28, 21, 0.58); }
+.blackjack-table-top span:first-child { left: 26px; }
+.blackjack-table-top span:last-child { right: 26px; }
+.blackjack-table-top strong { color: rgba(238, 211, 154, 0.7); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.blackjack-table-top b { color: #fff0c7; font-size: 18px; }
+.bet-prompt { align-self: center; grid-row: 2 / 4; margin: 0; color: #e8d4a7; font: clamp(24px, 4vw, 36px)/1 var(--display); text-shadow: 0 2px #091d16; }
+.hand-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) 42px; align-items: center; gap: 14px; min-height: 94px; margin: 0; padding: 8px 10px; box-sizing: border-box; }
+.dealer-hand { align-self: end; }
+.player-hands { align-self: start; display: grid; grid-template-columns: 1fr; }
+.player-hands.split-hands { grid-template-columns: 1fr 1fr; gap: 12px; }
+.split-hands .hand-row { grid-template-columns: 60px minmax(0, 1fr) 36px; gap: 6px; opacity: 0.62; }
+.split-hands .active-hand { opacity: 1; border-bottom: 2px solid #e1bc6d; }
+.hand-owner { color: #e2c892; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; text-align: left; }
+.playing-cards { display: flex; justify-content: center; gap: 7px; min-width: 0; }
+.playing-card {
+  position: relative; display: grid; place-items: center; width: 46px; height: 64px; flex: none;
+  color: #21170f; background: linear-gradient(135deg, #fff8e8, #e5d5b5); border: 1px solid #b49b73; border-radius: 4px;
+  font-style: normal; box-shadow: 0 4px 5px rgba(4, 12, 9, 0.48); transform-origin: 100% 0;
+}
+.playing-card b { position: absolute; top: 5px; left: 6px; font: 18px/1 var(--display); }
+.playing-card span { font: 24px/1 Georgia, serif; }
+.playing-card.red-card { color: #a52d25; }
+.playing-card.hidden-card {
+  background: repeating-linear-gradient(45deg, #65281e 0 5px, #c58c4c 5px 7px);
+  box-shadow: inset 0 0 0 4px #e3ca94, 0 4px 5px rgba(4, 12, 9, 0.48);
+}
+.playing-card.deal-card { animation: deal-card 0.28s cubic-bezier(.2, .8, .3, 1) both; }
+.hand-score { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #f1dca9; background: #0d251c; border: 1px solid #a77a42; font-size: 17px; font-variant-numeric: tabular-nums; }
+.blackjack-result {
+  position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-2deg);
+  min-width: 260px; padding: 14px 24px; border: 3px double #f1d596; background: rgba(28, 18, 11, 0.93);
+  color: #f6dfa9; font: clamp(28px, 5vw, 48px)/1 var(--display); text-shadow: 0 3px #3a1a12; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+}
+.blackjack-result.result-win, .blackjack-result.result-blackjack { color: #ffe58e; }
+.blackjack-result.result-lose { color: #e4846e; border-color: #b6533f; }
+.blackjack-result.result-push, .blackjack-result.result-mixed { color: #d7d2bd; }
+.table-notice { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); margin: 0; color: #f1c987; font-weight: 700; }
+@keyframes deal-card {
+  from { opacity: 0; transform: translate(90px, -70px) rotate(16deg) scale(0.7); }
+  to { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+}
+#app.blackjack-open #hud { opacity: 0; }
 
 /* Map: the same frame around a parchment sheet. */
 .card.map-card { width: min(760px, calc(100% - 28px)); margin-block: 24px; }
@@ -378,12 +460,10 @@ kbd {
     <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
     <div class="card title-card">
       <div class="title-brand">
-        <p class="eyebrow">One life on the frontier</p>
         <h1>Dust <span>&amp;</span> Iron</h1>
-        <p class="lede">Start in town with $15 and a revolver. Take jobs, buy what you can afford, and ride out. Turn finished work in to the person who asked. Death takes everything; the next life starts on new land.</p>
+        <p class="lede">Take work. Ride out. Make it home.</p>
       </div>
       <div class="title-menu panel">
-        <p class="eyebrow menu-label">Your trail</p>
         <div class="actions stack">
           <button id="btn-start" class="btn primary" type="button">Start a new life</button>
           <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
@@ -391,7 +471,7 @@ kbd {
         <p class="continue-info" id="continue-info" hidden></p>
       </div>
       <div class="title-guide panel">
-        <p class="eyebrow">Controls</p>
+        <h2 class="guide-title">Controls</h2>
         <dl class="controls">
         <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
         <div><dt><kbd>Mouse</kbd></dt><dd>Aim</dd></div>
@@ -410,7 +490,6 @@ kbd {
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
         </dl>
-        <p class="fine">Town is safe. Ammunition is limited. The map reveals land as you travel. Watch enemy aim lines: when one turns red, roll.</p>
         <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
       </div>
     </div>
@@ -418,14 +497,12 @@ kbd {
 
   <section class="screen" id="screen-pause" hidden>
     <div class="card small pause-card">
-      <p class="eyebrow">Paused</p>
-      <h2>Take a breath</h2>
-      <p class="lede" id="save-status">Your life is saved. You can return to this position with your current supplies and progress.</p>
+      <h2>Paused</h2>
+      <p class="lede" id="save-status">Game saved.</p>
       <div class="actions stack">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
       </div>
-      <p class="fine"><kbd>N</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
     </div>
   </section>
 
@@ -433,8 +510,7 @@ kbd {
     <div class="card map-card">
       <div class="map-head">
         <div>
-          <p class="eyebrow">Survey map</p>
-          <h2 id="map-title">Frontier map</h2>
+          <h2 id="map-title">Map</h2>
         </div>
         <p class="map-sub" id="map-sub"></p>
       </div>
@@ -450,23 +526,20 @@ kbd {
         <li><i class="lg-mark"></i>Your mark (click the map)</li>
       </ul>
       <div class="actions">
-        <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
+        <button id="btn-map-close" class="btn primary" type="button">Close</button>
       </div>
-      <p class="fine">Travel to reveal land. An area map shows roads and landmarks. Click to set your own mark. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
     </div>
   </section>
 
   <section class="screen interaction-screen" id="screen-interaction" hidden>
     <div class="interaction-card panel" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
       <div class="dialog-copy">
-        <p class="eyebrow" id="interaction-eyebrow">Town resident</p>
+        <p class="eyebrow" id="interaction-eyebrow" hidden></p>
         <h2 id="interaction-title"></h2>
         <div class="lede" id="interaction-text"></div>
       </div>
       <div class="dialog-menu">
-        <p class="choice-label">Your move</p>
         <div class="actions interaction-actions" id="interaction-actions"></div>
-        <p class="fine"><kbd>Esc</kbd> closes this screen</p>
       </div>
     </div>
   </section>
@@ -474,27 +547,24 @@ kbd {
   <section class="screen" id="screen-journal" hidden>
     <div class="card journal-card">
       <div class="journal-head">
-        <div><p class="eyebrow">Journal</p><h2>Jobs and supplies</h2></div>
+        <h2>Journal</h2>
         <div class="actions" id="journal-tabs">
           <button class="btn primary" type="button" data-tab="jobs">Jobs</button>
           <button class="btn" type="button" data-tab="supplies">Supplies</button>
         </div>
       </div>
       <div class="journal-body" id="journal-body"></div>
-      <div class="actions"><button class="btn" id="btn-journal-close" type="button">Back to the trail</button></div>
-      <p class="fine"><kbd>J</kbd> or <kbd>Esc</kbd> closes the journal. The game is paused.</p>
+      <div class="actions"><button class="btn" id="btn-journal-close" type="button">Close</button></div>
     </div>
   </section>
 
   <section class="screen" id="screen-dead" hidden>
     <div class="card small dead">
-      <p class="eyebrow">Last ride</p>
       <h2 id="dead-title">Shot down</h2>
       <div class="ledger" id="dead-body"></div>
       <div class="actions">
         <button id="btn-restart" class="btn primary" type="button">Start a new life</button>
       </div>
-      <p class="fine">Money, gear, jobs, and discoveries are gone. Start on new land. Press <kbd>R</kbd> to begin.</p>
     </div>
   </section>
 
@@ -1302,6 +1372,183 @@ const randSpread = (spread) => (Math.random() + Math.random() - 1) * spread;
 return { createRng, randomSeed, rand, randSpread };
 })();
 
+// ---- src/blackjack.js ----
+__m.blackjack = (() => {
+// Saved, deterministic blackjack. Money changes as soon as a hand starts or ends.
+const { createRng } = __m.rng;
+const BLACKJACK_BET = 5;
+/** Table limits keep cards a small gamble, never the safest way to earn. */
+const BETS = [5, 10, 20];
+
+function emptyBlackjack() {
+  return {
+    hand: 0, phase: 'idle', deck: [], player: [], dealer: [], result: '', bet: BLACKJACK_BET,
+    split: null, splitBet: 0, activeHand: 0, outcome: '', net: 0,
+  };
+}
+
+function handValue(cards) {
+  let value = 0, aces = 0;
+  for (const rank of cards) {
+    if (rank === 1) { value += 11; aces++; }
+    else value += Math.min(rank, 10);
+  }
+  while (value > 21 && aces) { value -= 10; aces--; }
+  return value;
+}
+
+function deckFor(seed, hand) {
+  const deck = [];
+  for (let suit = 0; suit < 4; suit++) for (let rank = 1; rank <= 13; rank++) deck.push(rank);
+  const rng = createRng((seed ^ Math.imul(hand + 1, 0x9e3779b9)) >>> 0);
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function settle(life, message, payout, outcome, stake) {
+  const state = life.blackjack;
+  state.phase = 'done';
+  state.result = message;
+  state.outcome = outcome;
+  state.net = payout - stake;
+  life.bounty += payout;
+  return { ok: true, message };
+}
+
+function naturals(life) {
+  const state = life.blackjack;
+  const player = handValue(state.player), dealer = handValue(state.dealer), bet = state.bet ?? BLACKJACK_BET;
+  if (player !== 21 && dealer !== 21) return null;
+  if (player === 21 && dealer === 21) return settle(life, 'Push.', bet, 'push', bet);
+  if (player === 21) return settle(life, 'Blackjack!', bet + Math.floor(bet * 1.5), 'blackjack', bet);
+  return settle(life, 'Dealer blackjack.', 0, 'lose', bet);
+}
+
+function activeCards(state) { return state.activeHand === 1 && state.split ? state.split : state.player; }
+function activeBet(state) { return state.activeHand === 1 && state.split ? state.splitBet : state.bet; }
+
+function canDoubleBlackjack(life) {
+  const state = life.blackjack;
+  return state.phase === 'playing' && activeCards(state).length === 2 && life.bounty >= activeBet(state);
+}
+
+function canSplitBlackjack(life) {
+  const state = life.blackjack;
+  return state.phase === 'playing' && !state.split && state.player.length === 2
+    && Math.min(state.player[0], 10) === Math.min(state.player[1], 10) && life.bounty >= state.bet;
+}
+
+function startBlackjack(life, bet = BLACKJACK_BET) {
+  if (life.status !== 'alive') return { ok: false, message: 'This life has ended.' };
+  if (life.blackjack.phase === 'playing') return { ok: false, message: 'Finish the current hand.' };
+  if (!BETS.includes(bet)) return { ok: false, message: 'The table takes $5, $10 or $20.' };
+  if (life.bounty < bet) return { ok: false, message: `You need $${bet}.` };
+  const hand = life.blackjack.hand + 1, deck = deckFor(life.seed, hand);
+  life.bounty -= bet;
+  life.blackjack = {
+    hand, phase: 'playing', deck, player: [deck.pop(), deck.pop()], dealer: [deck.pop(), deck.pop()], result: '', bet,
+    split: null, splitBet: 0, activeHand: 0, outcome: '', net: 0,
+  };
+  return naturals(life) ?? { ok: true, message: 'Cards dealt.' };
+}
+
+function settleHands(life) {
+  const state = life.blackjack, hands = state.split ? [state.player, state.split] : [state.player];
+  const bets = state.split ? [state.bet, state.splitBet] : [state.bet];
+  const liveHand = hands.some((cards) => handValue(cards) <= 21);
+  if (liveHand) while (handValue(state.dealer) < 17) state.dealer.push(state.deck.pop());
+  const dealer = handValue(state.dealer);
+  let payout = 0;
+  const results = hands.map((cards, index) => {
+    const value = handValue(cards), bet = bets[index];
+    if (value > 21) return 'lose';
+    if (dealer > 21 || value > dealer) { payout += bet * 2; return 'win'; }
+    if (value === dealer) { payout += bet; return 'push'; }
+    return 'lose';
+  });
+  const stake = bets.reduce((sum, bet) => sum + bet, 0);
+  const outcome = results.every((result) => result === 'win') ? 'win'
+    : results.every((result) => result === 'lose') ? 'lose'
+      : results.every((result) => result === 'push') ? 'push' : 'mixed';
+  const net = payout - stake;
+  const message = outcome === 'win' ? `You win $${net}.`
+    : outcome === 'lose' ? 'Dealer wins.'
+      : outcome === 'push' ? 'Push.' : `Split result: ${net > 0 ? '+' : ''}$${net}.`;
+  return settle(life, message, payout, outcome, stake);
+}
+
+function finishActiveHand(life) {
+  const state = life.blackjack;
+  if (state.split && state.activeHand === 0) {
+    state.activeHand = 1;
+    return { ok: true, message: 'Second hand.' };
+  }
+  return settleHands(life);
+}
+
+function hitBlackjack(life) {
+  const state = life.blackjack;
+  if (state.phase !== 'playing') return { ok: false, message: 'Deal a new hand first.' };
+  const cards = activeCards(state);
+  cards.push(state.deck.pop());
+  const value = handValue(cards);
+  if (value >= 21) return finishActiveHand(life);
+  return { ok: true, message: 'Card dealt.' };
+}
+
+function standBlackjack(life) {
+  if (life.blackjack.phase !== 'playing') return { ok: false, message: 'Deal a new hand first.' };
+  return finishActiveHand(life);
+}
+
+function doubleBlackjack(life) {
+  if (!canDoubleBlackjack(life)) return { ok: false, message: 'You cannot double this hand.' };
+  const state = life.blackjack, bet = activeBet(state), cards = activeCards(state);
+  life.bounty -= bet;
+  if (state.activeHand === 1 && state.split) state.splitBet *= 2;
+  else state.bet *= 2;
+  cards.push(state.deck.pop());
+  return finishActiveHand(life);
+}
+
+function splitBlackjack(life) {
+  if (!canSplitBlackjack(life)) return { ok: false, message: 'You cannot split this hand.' };
+  const state = life.blackjack, second = state.player.pop();
+  life.bounty -= state.bet;
+  state.player.push(state.deck.pop());
+  state.split = [second, state.deck.pop()];
+  state.splitBet = state.bet;
+  state.activeHand = 0;
+  return { ok: true, message: 'Hand split.' };
+}
+
+function cardName(rank) {
+  return rank === 1 ? 'A' : rank === 11 ? 'J' : rank === 12 ? 'Q' : rank === 13 ? 'K' : String(rank);
+}
+
+function validCards(cards) {
+  return Array.isArray(cards) && cards.every((rank) => Number.isSafeInteger(rank) && rank >= 1 && rank <= 13);
+}
+
+function validBlackjack(value) {
+  if (!value || typeof value !== 'object' || !Number.isSafeInteger(value.hand) || value.hand < 0) return false;
+  if (!['idle', 'playing', 'done'].includes(value.phase) || !validCards(value.deck) || !validCards(value.player) || !validCards(value.dealer)) return false;
+  if (value.split !== undefined && value.split !== null && !validCards(value.split)) return false;
+  const cards = [...value.deck, ...value.player, ...value.dealer, ...(value.split ?? [])];
+  return cards.length <= 52 && typeof value.result === 'string' && value.result.length < 180
+    && (value.bet === undefined || BETS.includes(value.bet) || BETS.includes(value.bet / 2))
+    && (value.splitBet === undefined || value.splitBet === 0 || BETS.includes(value.splitBet) || BETS.includes(value.splitBet / 2))
+    && (value.activeHand === undefined || value.activeHand === 0 || value.activeHand === 1)
+    && (value.outcome === undefined || ['', 'win', 'lose', 'push', 'blackjack', 'mixed'].includes(value.outcome))
+    && (value.net === undefined || Number.isFinite(value.net));
+}
+
+return { BLACKJACK_BET, BETS, emptyBlackjack, handValue, canDoubleBlackjack, canSplitBlackjack, startBlackjack, hitBlackjack, standBlackjack, doubleBlackjack, splitBlackjack, cardName, validBlackjack };
+})();
+
 // ---- src/terrain.js ----
 __m.terrain = (() => {
 // Shared river shape for the world and the paper map.
@@ -2043,21 +2290,9 @@ return { renderJournal };
 __m.ui = (() => {
 // HUD, reticle and full-screen cards. Plain DOM over the canvas.
 
+const { cardName, handValue } = __m.blackjack;
 const { renderJournal } = __m.ui_journal;
 const $ = (id) => document.getElementById(id);
-
-const interactionLabels = {
-  blackjack: 'The Last Drop · $5 table',
-  bounty: 'Bounty lead',
-  clothes: 'Mercantile counter',
-  doctor: 'Doctor and remedies',
-  guns: 'Gunsmith counter',
-  maps: 'Survey office',
-  resident: 'Town resident',
-  saloon: 'Saloon bar',
-  sheriff: 'Sheriff office',
-  stable: 'Stable yard',
-};
 
 const shopItemArt = {
   ammo: `<svg viewBox="0 0 88 58" role="img" aria-label="Ammunition"><g transform="rotate(-10 44 29)"><path d="M22 43V17h9v26zM39 43V13h9v30zM56 43V18h9v25z" fill="#b7742f" stroke="#2c1b12" stroke-width="2"/><path d="M22 17l4.5-8 4.5 8M39 13l4.5-8 4.5 8M56 18l4.5-8 4.5 8" fill="#d8b35e" stroke="#2c1b12" stroke-width="2"/><path d="M19 43h15v6H19zM36 43h15v6H36zM53 43h15v6H53z" fill="#d5a24d" stroke="#2c1b12" stroke-width="2"/></g></svg>`,
@@ -2146,6 +2381,7 @@ class UI {
     const playing = name === null || name === 'interaction' || name === 'dead' || name === 'journal';
     this.el.hud.hidden = !playing;
     this.el.app.classList.toggle('in-menu', name !== null);
+    this.el.app.classList.toggle('blackjack-open', name === 'interaction' && this.el.screens.interaction.dataset.mode === 'blackjack');
   }
 
   error(message) {
@@ -2170,8 +2406,7 @@ class UI {
   }
 
   setSaveStatus(ok) {
-    this.el.saveStatus.textContent = ok ? 'Your life is saved. You can return to this position with your current supplies and progress.'
-      : 'Save failed. Keep this tab open. Browser storage is blocked, full, or changed in another tab.';
+    this.el.saveStatus.textContent = ok ? 'Game saved.' : 'Save failed. Keep this tab open.';
   }
 
   toast(text, seconds = 2.2) {
@@ -2225,15 +2460,18 @@ class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '' }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '', blackjack = null }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
+    screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
-    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Your play' : 'Your reply';
     this.el.interactionTitle.textContent = title;
-    this.el.interactionEyebrow.textContent = eyebrow || interactionLabels[mode] || 'Town resident';
-    this.renderInteractionText(text, mode);
+    if (this.el.interactionEyebrow) {
+      this.el.interactionEyebrow.textContent = eyebrow;
+      this.el.interactionEyebrow.hidden = !this.el.interactionEyebrow.textContent;
+    }
+    this.renderInteractionText(text, mode, blackjack);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
@@ -2244,11 +2482,9 @@ class UI {
     for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
+      const betChip = action.id.startsWith('blackjack:deal:');
+      button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${betChip ? ' bet-chip' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
       if (action.itemId) button.classList.add('shop-choice');
-      const key = document.createElement('span');
-      key.className = 'choice-key';
-      key.textContent = action.id === 'close' ? 'Esc' : String(index + 1);
       const label = document.createElement('span');
       label.className = 'choice-text';
       label.textContent = action.label;
@@ -2259,7 +2495,13 @@ class UI {
         label.append(detail);
       }
       const art = makeShopItemArt(action.itemId);
-      button.append(key, ...(art ? [art] : []), label);
+      if (mode !== 'blackjack' || action.id === 'close') {
+        const key = document.createElement('span');
+        key.className = 'choice-key';
+        key.textContent = action.id === 'close' ? 'Esc' : String(index + 1);
+        button.append(key);
+      }
+      button.append(...(art ? [art] : []), label);
       button.dataset.action = action.id;
       button.disabled = Boolean(action.disabled);
       if (!button.disabled && action.id === focusedId) preferredFocus = button;
@@ -2270,54 +2512,104 @@ class UI {
     (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
   }
 
-  renderInteractionText(text, mode) {
+  renderInteractionText(text, mode, blackjack = null) {
     const box = this.el.interactionText;
     box.replaceChildren();
     if (mode !== 'blackjack') {
       box.textContent = text;
       return;
     }
+    this.renderBlackjackTable(box, blackjack?.state, blackjack?.balance, text);
+  }
 
+  renderBlackjackTable(box, state, balance, message = '') {
+    if (!state) return;
     const board = document.createElement('div');
     board.className = 'blackjack-board';
-    const messages = [];
-    let hands = 0;
-    const lines = text.split('\n');
-    for (const line of lines) {
-      const hand = line.match(/^(Dealer|You):\s*(.*?)\s+\(([^)]+)\)$/);
-      if (!hand) {
-        if (!line.trim()) continue;
-        if (!messages.includes(line.trim())) messages.push(line.trim());
-        continue;
+    const outcome = state.outcome || (/blackjack/i.test(state.result) && /win/i.test(state.result) ? 'blackjack'
+      : /push|both have/i.test(state.result) ? 'push'
+        : /you win|dealer bust/i.test(state.result) ? 'win'
+          : state.phase === 'done' ? 'lose' : '');
+    board.dataset.outcome = outcome;
+    const previous = this.blackjackRender?.hand === state.hand ? this.blackjackRender : null;
+    const suits = ['♠', '♥', '♣', '♦'];
+    const suitUses = new Map();
+
+    const makeCard = (rank, index, hidden, previousCount) => {
+      const card = document.createElement('i');
+      const suitIndex = suitUses.get(rank) ?? 0;
+      suitUses.set(rank, suitIndex + 1);
+      const suit = suits[suitIndex];
+      card.className = `playing-card${hidden ? ' hidden-card' : ['♥', '♦'].includes(suit) ? ' red-card' : ''}${index >= previousCount ? ' deal-card' : ''}`;
+      if (!hidden) {
+        const value = document.createElement('b');
+        value.textContent = cardName(rank);
+        const mark = document.createElement('span');
+        mark.textContent = suit;
+        card.append(value, mark);
       }
+      return card;
+    };
+
+    const makeHand = (ownerText, cardsInHand, key, hidden = false, active = false) => {
       const row = document.createElement('div');
-      row.className = `hand-row ${hand[1] === 'Dealer' ? 'dealer-hand' : 'player-hand'}`;
+      row.className = `hand-row ${key === 'dealer' ? 'dealer-hand' : 'player-hand'}${active ? ' active-hand' : ''}`;
       const owner = document.createElement('span');
       owner.className = 'hand-owner';
-      owner.textContent = hand[1] === 'You' ? 'Your hand' : 'Dealer';
+      owner.textContent = ownerText;
       const cards = document.createElement('span');
       cards.className = 'playing-cards';
-      for (const [index, rank] of hand[2].trim().split(/\s+/).entries()) {
-        const card = document.createElement('i');
-        card.className = `playing-card${rank === '?' ? ' hidden-card' : index % 3 === 1 ? ' red-card' : ''}`;
-        card.textContent = rank;
-        cards.appendChild(card);
+      const previousCount = previous?.counts?.[key] ?? 0;
+      for (const [index, rank] of cardsInHand.entries()) {
+        cards.appendChild(makeCard(rank, index, hidden && index > 0, previousCount));
       }
       const score = document.createElement('b');
       score.className = 'hand-score';
-      score.textContent = hand[3];
-      score.title = `${owner.textContent} value`;
+      score.textContent = hidden ? '?' : handValue(cardsInHand);
       row.append(owner, cards, score);
-      board.appendChild(row);
-      hands++;
+      return row;
+    };
+
+    const tableTop = document.createElement('div');
+    tableTop.className = 'blackjack-table-top';
+    tableTop.innerHTML = `<span>Cash <b>$${balance}</b></span><strong>Blackjack pays 3 to 2</strong><span>Bet <b>$${state.phase === 'idle' ? 0 : state.bet + (state.splitBet || 0)}</b></span>`;
+    board.appendChild(tableTop);
+
+    if (state.phase === 'idle') {
+      const prompt = document.createElement('p');
+      prompt.className = 'bet-prompt';
+      prompt.textContent = 'Place your bet';
+      board.appendChild(prompt);
+    } else {
+      board.appendChild(makeHand('Dealer', state.dealer, 'dealer', state.phase === 'playing'));
+      const hands = document.createElement('div');
+      hands.className = `player-hands${state.split ? ' split-hands' : ''}`;
+      hands.appendChild(makeHand(state.split ? 'Hand 1' : 'Your hand', state.player, 'player', false, state.phase === 'playing' && state.activeHand === 0));
+      if (state.split) hands.appendChild(makeHand('Hand 2', state.split, 'split', false, state.phase === 'playing' && state.activeHand === 1));
+      board.appendChild(hands);
     }
-    if (hands) box.appendChild(board);
-    for (const text of messages) {
-      const message = document.createElement('p');
-      message.className = `table-message${hands ? ' table-callout' : ' table-intro'}`;
-      message.textContent = text;
-      box.appendChild(message);
+
+    if (state.phase === 'done') {
+      const result = document.createElement('div');
+      const net = Number.isFinite(state.net) ? state.net : null;
+      result.className = `blackjack-result result-${outcome || 'mixed'}`;
+      const resultText = outcome === 'blackjack' ? 'BLACKJACK'
+        : outcome === 'win' ? `YOU WIN${net === null ? '' : ` +$${net}`}`
+          : outcome === 'lose' ? `YOU LOSE${net === null ? '' : ` $${Math.abs(net)}`}`
+            : outcome === 'push' ? 'PUSH' : net === null ? 'HAND OVER' : `SPLIT ${net >= 0 ? '+' : '-'}$${Math.abs(net)}`;
+      result.textContent = resultText;
+      board.appendChild(result);
+    } else if (message && !['Cards dealt.', 'Card dealt.', 'Hand split.', 'Second hand.'].includes(message)) {
+      const notice = document.createElement('p');
+      notice.className = 'table-notice';
+      notice.textContent = message;
+      board.appendChild(notice);
     }
+    box.appendChild(board);
+    this.blackjackRender = {
+      hand: state.hand,
+      counts: { dealer: state.dealer.length, player: state.player.length, split: state.split?.length ?? 0 },
+    };
   }
 
   showDead(stats) {
@@ -4725,113 +5017,6 @@ class Projectiles {
 return { Projectiles };
 })();
 
-// ---- src/blackjack.js ----
-__m.blackjack = (() => {
-// Saved, deterministic blackjack. Money changes as soon as a hand starts or ends.
-const { createRng } = __m.rng;
-const BLACKJACK_BET = 5;
-/** Table limits keep cards a small gamble, never the safest way to earn. */
-const BETS = [5, 10, 20];
-
-function emptyBlackjack() {
-  return { hand: 0, phase: 'idle', deck: [], player: [], dealer: [], result: '', bet: BLACKJACK_BET };
-}
-
-function handValue(cards) {
-  let value = 0, aces = 0;
-  for (const rank of cards) {
-    if (rank === 1) { value += 11; aces++; }
-    else value += Math.min(rank, 10);
-  }
-  while (value > 21 && aces) { value -= 10; aces--; }
-  return value;
-}
-
-function deckFor(seed, hand) {
-  const deck = [];
-  for (let suit = 0; suit < 4; suit++) for (let rank = 1; rank <= 13; rank++) deck.push(rank);
-  const rng = createRng((seed ^ Math.imul(hand + 1, 0x9e3779b9)) >>> 0);
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = rng.int(0, i);
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  return deck;
-}
-
-function settle(life, message, payout) {
-  life.blackjack.phase = 'done';
-  life.blackjack.result = message;
-  life.bounty += payout;
-  return { ok: true, message };
-}
-
-function naturals(life) {
-  const state = life.blackjack;
-  const player = handValue(state.player), dealer = handValue(state.dealer);
-  if (player !== 21 && dealer !== 21) return null;
-  const bet = state.bet ?? BLACKJACK_BET;
-  if (player === 21 && dealer === 21) return settle(life, `Both have blackjack. Your $${bet} bet is returned.`, bet);
-  if (player === 21) return settle(life, `Blackjack. You win $${Math.floor(bet * 1.5)} plus your bet.`, bet + Math.floor(bet * 1.5));
-  return settle(life, 'The dealer has blackjack.', 0);
-}
-
-function startBlackjack(life, bet = BLACKJACK_BET) {
-  if (life.status !== 'alive') return { ok: false, message: 'This life has ended.' };
-  if (life.blackjack.phase === 'playing') return { ok: false, message: 'Finish the current hand.' };
-  if (!BETS.includes(bet)) return { ok: false, message: 'The table takes $5, $10 or $20.' };
-  if (life.bounty < bet) return { ok: false, message: `You need $${bet} to bet that.` };
-  const hand = life.blackjack.hand + 1, deck = deckFor(life.seed, hand);
-  life.bounty -= bet;
-  life.blackjack = { hand, phase: 'playing', deck, player: [deck.pop(), deck.pop()], dealer: [deck.pop(), deck.pop()], result: '', bet };
-  return naturals(life) ?? { ok: true, message: 'The cards are dealt.' };
-}
-
-function hitBlackjack(life) {
-  const state = life.blackjack;
-  if (state.phase !== 'playing') return { ok: false, message: 'Deal a new hand first.' };
-  state.player.push(state.deck.pop());
-  const value = handValue(state.player);
-  if (value > 21) return settle(life, `You have ${value}. Bust.`, 0);
-  if (value === 21) return standBlackjack(life);
-  return { ok: true, message: `You draw. Your hand is ${value}.` };
-}
-
-function standBlackjack(life) {
-  const state = life.blackjack;
-  if (state.phase !== 'playing') return { ok: false, message: 'Deal a new hand first.' };
-  while (handValue(state.dealer) < 17) state.dealer.push(state.deck.pop());
-  const player = handValue(state.player), dealer = handValue(state.dealer), bet = state.bet ?? BLACKJACK_BET;
-  if (dealer > 21) return settle(life, `Dealer busts with ${dealer}. You win $${bet} plus your bet.`, bet * 2);
-  if (player > dealer) return settle(life, `You win ${player} to ${dealer}. You get $${bet} plus your bet.`, bet * 2);
-  if (player === dealer) return settle(life, `Push at ${player}. Your bet is returned.`, bet);
-  return settle(life, `Dealer wins ${dealer} to ${player}.`, 0);
-}
-
-function cardName(rank) {
-  return rank === 1 ? 'A' : rank === 11 ? 'J' : rank === 12 ? 'Q' : rank === 13 ? 'K' : String(rank);
-}
-
-function blackjackText(life) {
-  const state = life.blackjack;
-  if (state.phase === 'idle') return 'Bets are $5, $10 or $20. Blackjack pays 3 to 2. The dealer stands on 17.';
-  const player = state.player.map(cardName).join('  ');
-  const dealerCards = state.phase === 'playing' ? `${cardName(state.dealer[0])}  ?` : state.dealer.map(cardName).join('  ');
-  const dealerValue = state.phase === 'playing' ? '?' : handValue(state.dealer);
-  return `Dealer: ${dealerCards} (${dealerValue})\nYou: ${player} (${handValue(state.player)})\nBet on the table: $${state.bet ?? BLACKJACK_BET}${state.result ? `\n\n${state.result}` : ''}`;
-}
-
-function validBlackjack(value) {
-  if (!value || typeof value !== 'object' || !Number.isSafeInteger(value.hand) || value.hand < 0) return false;
-  if (!['idle', 'playing', 'done'].includes(value.phase) || !Array.isArray(value.deck) || !Array.isArray(value.player) || !Array.isArray(value.dealer)) return false;
-  const cards = [...value.deck, ...value.player, ...value.dealer];
-  return cards.length <= 52 && cards.every((rank) => Number.isSafeInteger(rank) && rank >= 1 && rank <= 13)
-    && typeof value.result === 'string' && value.result.length < 180
-    && (value.bet === undefined || BETS.includes(value.bet));
-}
-
-return { BLACKJACK_BET, BETS, emptyBlackjack, handValue, startBlackjack, hitBlackjack, standBlackjack, cardName, blackjackText, validBlackjack };
-})();
-
 // ---- src/life.js ----
 __m.life = (() => {
 // Saved data for one life. This module has no browser state.
@@ -6072,7 +6257,10 @@ function saloon(kit) {
   const seats = [-1.75, -0.6, 0.6, 1.75].map((angle) => seatAround(kit, tx, tz, 2.0, angle, PAL.wood));
   patron(room, 'Ada Crow', PATRONS.ada, seats[0].x, seats[0].z, seats[0].yaw, 0.4);
   patron(room, 'Wes Mercer', PATRONS.wes, seats[3].x, seats[3].z, seats[3].yaw, 3.6);
-  for (const [i, seat] of [[1, seats[1]], [2, seats[2]]]) room.points.push({ id: `saloon-seat-${i}`, label: 'Sit down', kind: 'seat', x: c.x + seat.x, z: c.z + seat.z, yaw: seat.yaw });
+  for (const [i, seat] of [[1, seats[1]], [2, seats[2]]]) room.points.push({
+    id: `blackjack-seat-${i}`, label: 'Blackjack', kind: 'blackjack',
+    x: c.x + seat.x, z: c.z + seat.z, yaw: seat.yaw,
+  });
   // Two drinking tables, each with a patron, a bottle and glasses.
   for (const [x, z, name, look, angles, phase] of [[5.4, 3.3, 'Hank Dillard', PATRONS.hank, [R + 0.3, -R + 0.3], 1.8], [-5.4, 3.3, 'June Hale', PATRONS.june, [-R - 0.3, R - 0.3], 5.0]]) {
     put((s) => { roundTable(s, 0.62, 0.76); bottle(s, 0.1, FLOOR + 0.76, -0.1, 0xc4904b); mug(s, -0.25, FLOOR + 0.76, 0.18, 0xd8e4dc); }, x, z);
@@ -6084,7 +6272,6 @@ function saloon(kit) {
   put((s) => { s.cyl(0.18, 0.22, 0.28, 8, PAL.brass, 0, FLOOR + 0.14, 0); }, 1.4, -3.2);
   for (const x of [-7.2, 7.2]) put((s) => { frame(s, 1.5, 1.05, 0x3d1f18, x < 0 ? 0x9a6a3a : 0x5f6e57, 2.6); s.box(1.0, 0.25, 0.03, x < 0 ? 0xc49a5c : 0xd9c08c, 0, 2.45, 0.06, 0, 0, 0.1); }, x, BACK + 0.02);
   for (const x of [-4.4, 4.4]) put((s) => wallLantern(s, 2.9), x, BACK + 0.02);
-  room.points.push({ id: 'blackjack', label: 'Blackjack', kind: 'blackjack', x: c.x + tx, z: c.z + tz + 2.55 });
 }
 
 /** A low-poly horse facing +z with feet on the floor. */
@@ -8207,7 +8394,7 @@ function buildFrontier(game, world) {
     },
     exit: leave,
     sit(point) {
-      if (!active || point.kind !== 'seat') return false;
+      if (!active || !['seat', 'blackjack'].includes(point.kind)) return false;
       seated = point; movePlayer(game, point.x, point.z, point.yaw ?? 0); return true;
     },
     stand() { seated = null; },
@@ -8747,9 +8934,9 @@ __m.town_actions = (() => {
 // pure rules in items.js, quests.js and life.js, then the life is saved.
 const { work, rumorOrder } = __m.life;
 const { CATALOGUE, SHOPS, buy, cannotBuy, priceOf } = __m.items;
-const { BETS, blackjackText, hitBlackjack, standBlackjack, startBlackjack } = __m.blackjack;
+const { BETS, canDoubleBlackjack, canSplitBlackjack, doubleBlackjack, hitBlackjack, splitBlackjack, standBlackjack, startBlackjack } = __m.blackjack;
 const { accept, NPCS, quest, sellMedicine, turnIn } = __m.quests;
-const { KEEPER_NPC, ROLES, greeting, offerText, rumorLine } = __m.dialogue;
+const { KEEPER_NPC, greeting, offerText, rumorLine } = __m.dialogue;
 const { lootSite, readGrave, takeMedicine } = __m.progress;
 const { captivePoint, restrain } = __m.enemy_captive;
 const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant' };
@@ -8765,7 +8952,7 @@ function npcOf(point) {
 }
 
 class TownActions {
-  constructor(game) { this.game = game; this.current = null; this.view = null; }
+  constructor(game) { this.game = game; this.current = null; this.view = null; this.cameraDistance = null; }
 
   points() {
     const g = this.game, list = [];
@@ -8786,7 +8973,7 @@ class TownActions {
     for (const point of this.points()) {
       if (point.kind === 'door' && g.horse?.mounted) continue;
       const d = Math.hypot(point.x - g.player.x, point.z - g.player.z);
-      const range = point.kind === 'seat' ? 1.15 : point.kind === 'door' ? 2.2 : point.kind === 'mount' ? 2.6 : 2.6;
+      const range = ['seat', 'blackjack'].includes(point.kind) ? 1.15 : point.kind === 'door' ? 2.2 : point.kind === 'mount' ? 2.6 : 2.6;
       if (d < range && d < distance) { best = point; distance = d; }
     }
     return best;
@@ -8824,6 +9011,11 @@ class TownActions {
     if (point.kind === 'restrain') { if (restrain(point.enemy)) g.save(); return; }
     this.current = point;
     this.view = null;
+    if (point.kind === 'blackjack') {
+      g.frontier.sit(point);
+      this.cameraDistance = g.rig.targetDistance;
+      g.rig.targetDistance = 14;
+    }
     g.state = 'interaction';
     g.setDeadEye(false);
     g.input.clear();
@@ -8833,6 +9025,10 @@ class TownActions {
   }
 
   close() {
+    if (this.cameraDistance !== null) {
+      this.game.rig.targetDistance = this.cameraDistance;
+      this.cameraDistance = null;
+    }
     this.current = null;
     this.view = null;
     this.game.state = 'playing';
@@ -8896,19 +9092,25 @@ class TownActions {
     }
     if (message) text = `${message}\n\n${text}`;
     g.ui.showInteraction({
-      title: point.name ?? point.label ?? NPCS[npc] ?? '', eyebrow: ROLES[npc] ?? 'Town resident',
+      title: point.name ?? point.label ?? NPCS[npc] ?? '',
       text: `${text}${shop ? `\n\nYou have $${life.bounty}.` : ''}`, actions, mode: shop ? 'shop' : 'talk',
     }, (id) => this.act(id));
   }
 
   drawBlackjack(message) {
     const life = this.game.run;
-    let text = blackjackText(life);
-    if (message && !text.includes(message)) text = `${message}\n${text}`;
     const actions = life.blackjack.phase === 'playing'
-      ? [{ id: 'blackjack:hit', label: 'Hit' }, { id: 'blackjack:stand', label: 'Stand' }]
-      : BETS.map((bet) => ({ id: `blackjack:deal:${bet}`, label: `Deal · bet $${bet}`, disabled: life.bounty < bet }));
-    this.game.ui.showInteraction({ title: 'Blackjack', eyebrow: 'The Last Drop · table limit $20', text: `${text}\nYou have $${life.bounty}.`, actions, mode: 'blackjack' }, (id) => this.act(id));
+      ? [
+        { id: 'blackjack:hit', label: 'Hit' },
+        { id: 'blackjack:stand', label: 'Stand' },
+        { id: 'blackjack:double', label: 'Double', disabled: !canDoubleBlackjack(life) },
+        { id: 'blackjack:split', label: 'Split', disabled: !canSplitBlackjack(life) },
+      ]
+      : BETS.map((bet) => ({ id: `blackjack:deal:${bet}`, label: `$${bet}`, disabled: life.bounty < bet }));
+    this.game.ui.showInteraction({
+      title: 'Blackjack', text: message, actions, mode: 'blackjack',
+      blackjack: { state: life.blackjack, balance: life.bounty },
+    }, (id) => this.act(id));
   }
 
   act(id) {
@@ -8952,7 +9154,8 @@ class TownActions {
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');
-      result = move === 'deal' ? startBlackjack(life, Number(bet)) : move === 'hit' ? hitBlackjack(life) : standBlackjack(life);
+      const moves = { hit: hitBlackjack, stand: standBlackjack, double: doubleBlackjack, split: splitBlackjack };
+      result = move === 'deal' ? startBlackjack(life, Number(bet)) : moves[move]?.(life);
     }
     if (!result) return;
     if (result.ok) {
@@ -9328,7 +9531,7 @@ class Game {
     this.rig.snap(this.player.x, this.player.z - 3);
     this.state = 'playing';
     this.ui.show(null);
-    this.ui.toast(run.migrated ? 'Your old life is now in Mercy Crossing. Your money and guns are kept.' : run.time < 1 ? `One life. $${run.bounty} in your pocket. Find work in town.` : 'Back on the trail.', 6);
+    if (run.migrated) this.ui.toast('Your old life is now in Mercy Crossing. Your money and guns are kept.', 6);
     delete run.migrated;
     this.audio.setAmbience(0.13);
     this.save();

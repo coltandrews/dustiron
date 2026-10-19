@@ -1,21 +1,9 @@
 // HUD, reticle and full-screen cards. Plain DOM over the canvas.
 import * as THREE from 'three';
+import { cardName, handValue } from './blackjack.js';
 import { renderJournal } from './ui-journal.js';
 
 const $ = (id) => document.getElementById(id);
-
-const interactionLabels = {
-  blackjack: 'The Last Drop · $5 table',
-  bounty: 'Bounty lead',
-  clothes: 'Mercantile counter',
-  doctor: 'Doctor and remedies',
-  guns: 'Gunsmith counter',
-  maps: 'Survey office',
-  resident: 'Town resident',
-  saloon: 'Saloon bar',
-  sheriff: 'Sheriff office',
-  stable: 'Stable yard',
-};
 
 const shopItemArt = {
   ammo: `<svg viewBox="0 0 88 58" role="img" aria-label="Ammunition"><g transform="rotate(-10 44 29)"><path d="M22 43V17h9v26zM39 43V13h9v30zM56 43V18h9v25z" fill="#b7742f" stroke="#2c1b12" stroke-width="2"/><path d="M22 17l4.5-8 4.5 8M39 13l4.5-8 4.5 8M56 18l4.5-8 4.5 8" fill="#d8b35e" stroke="#2c1b12" stroke-width="2"/><path d="M19 43h15v6H19zM36 43h15v6H36zM53 43h15v6H53z" fill="#d5a24d" stroke="#2c1b12" stroke-width="2"/></g></svg>`,
@@ -104,6 +92,7 @@ export class UI {
     const playing = name === null || name === 'interaction' || name === 'dead' || name === 'journal';
     this.el.hud.hidden = !playing;
     this.el.app.classList.toggle('in-menu', name !== null);
+    this.el.app.classList.toggle('blackjack-open', name === 'interaction' && this.el.screens.interaction.dataset.mode === 'blackjack');
   }
 
   error(message) {
@@ -128,8 +117,7 @@ export class UI {
   }
 
   setSaveStatus(ok) {
-    this.el.saveStatus.textContent = ok ? 'Your life is saved. You can return to this position with your current supplies and progress.'
-      : 'Save failed. Keep this tab open. Browser storage is blocked, full, or changed in another tab.';
+    this.el.saveStatus.textContent = ok ? 'Game saved.' : 'Save failed. Keep this tab open.';
   }
 
   toast(text, seconds = 2.2) {
@@ -183,15 +171,18 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '' }, onAction) {
+  showInteraction({ title, text, actions = [], mode = 'talk', eyebrow = '', blackjack = null }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
+    screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
-    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Your play' : 'Your reply';
     this.el.interactionTitle.textContent = title;
-    this.el.interactionEyebrow.textContent = eyebrow || interactionLabels[mode] || 'Town resident';
-    this.renderInteractionText(text, mode);
+    if (this.el.interactionEyebrow) {
+      this.el.interactionEyebrow.textContent = eyebrow;
+      this.el.interactionEyebrow.hidden = !this.el.interactionEyebrow.textContent;
+    }
+    this.renderInteractionText(text, mode, blackjack);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
@@ -202,11 +193,9 @@ export class UI {
     for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
+      const betChip = action.id.startsWith('blackjack:deal:');
+      button.className = `btn${action.id.startsWith('blackjack:') ? ' table-action' : ''}${betChip ? ' bet-chip' : ''}${action.id === 'close' ? ' interaction-close' : ''}`;
       if (action.itemId) button.classList.add('shop-choice');
-      const key = document.createElement('span');
-      key.className = 'choice-key';
-      key.textContent = action.id === 'close' ? 'Esc' : String(index + 1);
       const label = document.createElement('span');
       label.className = 'choice-text';
       label.textContent = action.label;
@@ -217,7 +206,13 @@ export class UI {
         label.append(detail);
       }
       const art = makeShopItemArt(action.itemId);
-      button.append(key, ...(art ? [art] : []), label);
+      if (mode !== 'blackjack' || action.id === 'close') {
+        const key = document.createElement('span');
+        key.className = 'choice-key';
+        key.textContent = action.id === 'close' ? 'Esc' : String(index + 1);
+        button.append(key);
+      }
+      button.append(...(art ? [art] : []), label);
       button.dataset.action = action.id;
       button.disabled = Boolean(action.disabled);
       if (!button.disabled && action.id === focusedId) preferredFocus = button;
@@ -228,54 +223,104 @@ export class UI {
     (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
   }
 
-  renderInteractionText(text, mode) {
+  renderInteractionText(text, mode, blackjack = null) {
     const box = this.el.interactionText;
     box.replaceChildren();
     if (mode !== 'blackjack') {
       box.textContent = text;
       return;
     }
+    this.renderBlackjackTable(box, blackjack?.state, blackjack?.balance, text);
+  }
 
+  renderBlackjackTable(box, state, balance, message = '') {
+    if (!state) return;
     const board = document.createElement('div');
     board.className = 'blackjack-board';
-    const messages = [];
-    let hands = 0;
-    const lines = text.split('\n');
-    for (const line of lines) {
-      const hand = line.match(/^(Dealer|You):\s*(.*?)\s+\(([^)]+)\)$/);
-      if (!hand) {
-        if (!line.trim()) continue;
-        if (!messages.includes(line.trim())) messages.push(line.trim());
-        continue;
+    const outcome = state.outcome || (/blackjack/i.test(state.result) && /win/i.test(state.result) ? 'blackjack'
+      : /push|both have/i.test(state.result) ? 'push'
+        : /you win|dealer bust/i.test(state.result) ? 'win'
+          : state.phase === 'done' ? 'lose' : '');
+    board.dataset.outcome = outcome;
+    const previous = this.blackjackRender?.hand === state.hand ? this.blackjackRender : null;
+    const suits = ['♠', '♥', '♣', '♦'];
+    const suitUses = new Map();
+
+    const makeCard = (rank, index, hidden, previousCount) => {
+      const card = document.createElement('i');
+      const suitIndex = suitUses.get(rank) ?? 0;
+      suitUses.set(rank, suitIndex + 1);
+      const suit = suits[suitIndex];
+      card.className = `playing-card${hidden ? ' hidden-card' : ['♥', '♦'].includes(suit) ? ' red-card' : ''}${index >= previousCount ? ' deal-card' : ''}`;
+      if (!hidden) {
+        const value = document.createElement('b');
+        value.textContent = cardName(rank);
+        const mark = document.createElement('span');
+        mark.textContent = suit;
+        card.append(value, mark);
       }
+      return card;
+    };
+
+    const makeHand = (ownerText, cardsInHand, key, hidden = false, active = false) => {
       const row = document.createElement('div');
-      row.className = `hand-row ${hand[1] === 'Dealer' ? 'dealer-hand' : 'player-hand'}`;
+      row.className = `hand-row ${key === 'dealer' ? 'dealer-hand' : 'player-hand'}${active ? ' active-hand' : ''}`;
       const owner = document.createElement('span');
       owner.className = 'hand-owner';
-      owner.textContent = hand[1] === 'You' ? 'Your hand' : 'Dealer';
+      owner.textContent = ownerText;
       const cards = document.createElement('span');
       cards.className = 'playing-cards';
-      for (const [index, rank] of hand[2].trim().split(/\s+/).entries()) {
-        const card = document.createElement('i');
-        card.className = `playing-card${rank === '?' ? ' hidden-card' : index % 3 === 1 ? ' red-card' : ''}`;
-        card.textContent = rank;
-        cards.appendChild(card);
+      const previousCount = previous?.counts?.[key] ?? 0;
+      for (const [index, rank] of cardsInHand.entries()) {
+        cards.appendChild(makeCard(rank, index, hidden && index > 0, previousCount));
       }
       const score = document.createElement('b');
       score.className = 'hand-score';
-      score.textContent = hand[3];
-      score.title = `${owner.textContent} value`;
+      score.textContent = hidden ? '?' : handValue(cardsInHand);
       row.append(owner, cards, score);
-      board.appendChild(row);
-      hands++;
+      return row;
+    };
+
+    const tableTop = document.createElement('div');
+    tableTop.className = 'blackjack-table-top';
+    tableTop.innerHTML = `<span>Cash <b>$${balance}</b></span><strong>Blackjack pays 3 to 2</strong><span>Bet <b>$${state.phase === 'idle' ? 0 : state.bet + (state.splitBet || 0)}</b></span>`;
+    board.appendChild(tableTop);
+
+    if (state.phase === 'idle') {
+      const prompt = document.createElement('p');
+      prompt.className = 'bet-prompt';
+      prompt.textContent = 'Place your bet';
+      board.appendChild(prompt);
+    } else {
+      board.appendChild(makeHand('Dealer', state.dealer, 'dealer', state.phase === 'playing'));
+      const hands = document.createElement('div');
+      hands.className = `player-hands${state.split ? ' split-hands' : ''}`;
+      hands.appendChild(makeHand(state.split ? 'Hand 1' : 'Your hand', state.player, 'player', false, state.phase === 'playing' && state.activeHand === 0));
+      if (state.split) hands.appendChild(makeHand('Hand 2', state.split, 'split', false, state.phase === 'playing' && state.activeHand === 1));
+      board.appendChild(hands);
     }
-    if (hands) box.appendChild(board);
-    for (const text of messages) {
-      const message = document.createElement('p');
-      message.className = `table-message${hands ? ' table-callout' : ' table-intro'}`;
-      message.textContent = text;
-      box.appendChild(message);
+
+    if (state.phase === 'done') {
+      const result = document.createElement('div');
+      const net = Number.isFinite(state.net) ? state.net : null;
+      result.className = `blackjack-result result-${outcome || 'mixed'}`;
+      const resultText = outcome === 'blackjack' ? 'BLACKJACK'
+        : outcome === 'win' ? `YOU WIN${net === null ? '' : ` +$${net}`}`
+          : outcome === 'lose' ? `YOU LOSE${net === null ? '' : ` $${Math.abs(net)}`}`
+            : outcome === 'push' ? 'PUSH' : net === null ? 'HAND OVER' : `SPLIT ${net >= 0 ? '+' : '-'}$${Math.abs(net)}`;
+      result.textContent = resultText;
+      board.appendChild(result);
+    } else if (message && !['Cards dealt.', 'Card dealt.', 'Hand split.', 'Second hand.'].includes(message)) {
+      const notice = document.createElement('p');
+      notice.className = 'table-notice';
+      notice.textContent = message;
+      board.appendChild(notice);
     }
+    box.appendChild(board);
+    this.blackjackRender = {
+      hand: state.hand,
+      counts: { dealer: state.dealer.length, player: state.player.length, split: state.split?.length ?? 0 },
+    };
   }
 
   showDead(stats) {

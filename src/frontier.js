@@ -99,7 +99,7 @@ export function buildFrontier(game, world) {
     },
     exit: leave,
     sit(point) {
-      if (!active || point.kind !== 'seat') return false;
+      if (!active || !['seat', 'blackjack'].includes(point.kind)) return false;
       seated = point; movePlayer(game, point.x, point.z, point.yaw ?? 0); return true;
     },
     stand() { seated = null; },

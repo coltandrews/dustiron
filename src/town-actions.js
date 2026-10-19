@@ -2,9 +2,11 @@
 // pure rules in items.js, quests.js and life.js, then the life is saved.
 import { work, rumorOrder } from './life.js';
 import { CATALOGUE, SHOPS, buy, cannotBuy, priceOf } from './items.js';
-import { BETS, blackjackText, hitBlackjack, standBlackjack, startBlackjack } from './blackjack.js';
+import {
+  BETS, canDoubleBlackjack, canSplitBlackjack, doubleBlackjack, hitBlackjack, splitBlackjack, standBlackjack, startBlackjack,
+} from './blackjack.js';
 import { accept, NPCS, quest, sellMedicine, turnIn } from './quests.js';
-import { KEEPER_NPC, ROLES, greeting, offerText, rumorLine } from './dialogue.js';
+import { KEEPER_NPC, greeting, offerText, rumorLine } from './dialogue.js';
 import { lootSite, readGrave, takeMedicine } from './progress.js';
 import { captivePoint, restrain } from './enemy-captive.js';
 
@@ -21,7 +23,7 @@ export function npcOf(point) {
 }
 
 export class TownActions {
-  constructor(game) { this.game = game; this.current = null; this.view = null; }
+  constructor(game) { this.game = game; this.current = null; this.view = null; this.cameraDistance = null; }
 
   points() {
     const g = this.game, list = [];
@@ -42,7 +44,7 @@ export class TownActions {
     for (const point of this.points()) {
       if (point.kind === 'door' && g.horse?.mounted) continue;
       const d = Math.hypot(point.x - g.player.x, point.z - g.player.z);
-      const range = point.kind === 'seat' ? 1.15 : point.kind === 'door' ? 2.2 : point.kind === 'mount' ? 2.6 : 2.6;
+      const range = ['seat', 'blackjack'].includes(point.kind) ? 1.15 : point.kind === 'door' ? 2.2 : point.kind === 'mount' ? 2.6 : 2.6;
       if (d < range && d < distance) { best = point; distance = d; }
     }
     return best;
@@ -80,6 +82,11 @@ export class TownActions {
     if (point.kind === 'restrain') { if (restrain(point.enemy)) g.save(); return; }
     this.current = point;
     this.view = null;
+    if (point.kind === 'blackjack') {
+      g.frontier.sit(point);
+      this.cameraDistance = g.rig.targetDistance;
+      g.rig.targetDistance = 14;
+    }
     g.state = 'interaction';
     g.setDeadEye(false);
     g.input.clear();
@@ -89,6 +96,10 @@ export class TownActions {
   }
 
   close() {
+    if (this.cameraDistance !== null) {
+      this.game.rig.targetDistance = this.cameraDistance;
+      this.cameraDistance = null;
+    }
     this.current = null;
     this.view = null;
     this.game.state = 'playing';
@@ -152,19 +163,25 @@ export class TownActions {
     }
     if (message) text = `${message}\n\n${text}`;
     g.ui.showInteraction({
-      title: point.name ?? point.label ?? NPCS[npc] ?? '', eyebrow: ROLES[npc] ?? 'Town resident',
+      title: point.name ?? point.label ?? NPCS[npc] ?? '',
       text: `${text}${shop ? `\n\nYou have $${life.bounty}.` : ''}`, actions, mode: shop ? 'shop' : 'talk',
     }, (id) => this.act(id));
   }
 
   drawBlackjack(message) {
     const life = this.game.run;
-    let text = blackjackText(life);
-    if (message && !text.includes(message)) text = `${message}\n${text}`;
     const actions = life.blackjack.phase === 'playing'
-      ? [{ id: 'blackjack:hit', label: 'Hit' }, { id: 'blackjack:stand', label: 'Stand' }]
-      : BETS.map((bet) => ({ id: `blackjack:deal:${bet}`, label: `Deal · bet $${bet}`, disabled: life.bounty < bet }));
-    this.game.ui.showInteraction({ title: 'Blackjack', eyebrow: 'The Last Drop · table limit $20', text: `${text}\nYou have $${life.bounty}.`, actions, mode: 'blackjack' }, (id) => this.act(id));
+      ? [
+        { id: 'blackjack:hit', label: 'Hit' },
+        { id: 'blackjack:stand', label: 'Stand' },
+        { id: 'blackjack:double', label: 'Double', disabled: !canDoubleBlackjack(life) },
+        { id: 'blackjack:split', label: 'Split', disabled: !canSplitBlackjack(life) },
+      ]
+      : BETS.map((bet) => ({ id: `blackjack:deal:${bet}`, label: `$${bet}`, disabled: life.bounty < bet }));
+    this.game.ui.showInteraction({
+      title: 'Blackjack', text: message, actions, mode: 'blackjack',
+      blackjack: { state: life.blackjack, balance: life.bounty },
+    }, (id) => this.act(id));
   }
 
   act(id) {
@@ -208,7 +225,8 @@ export class TownActions {
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');
-      result = move === 'deal' ? startBlackjack(life, Number(bet)) : move === 'hit' ? hitBlackjack(life) : standBlackjack(life);
+      const moves = { hit: hitBlackjack, stand: standBlackjack, double: doubleBlackjack, split: splitBlackjack };
+      result = move === 'deal' ? startBlackjack(life, Number(bet)) : moves[move]?.(life);
     }
     if (!result) return;
     if (result.ok) {

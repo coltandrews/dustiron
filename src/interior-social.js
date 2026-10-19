@@ -110,7 +110,10 @@ function saloon(kit) {
   const seats = [-1.75, -0.6, 0.6, 1.75].map((angle) => seatAround(kit, tx, tz, 2.0, angle, PAL.wood));
   patron(room, 'Ada Crow', PATRONS.ada, seats[0].x, seats[0].z, seats[0].yaw, 0.4);
   patron(room, 'Wes Mercer', PATRONS.wes, seats[3].x, seats[3].z, seats[3].yaw, 3.6);
-  for (const [i, seat] of [[1, seats[1]], [2, seats[2]]]) room.points.push({ id: `saloon-seat-${i}`, label: 'Sit down', kind: 'seat', x: c.x + seat.x, z: c.z + seat.z, yaw: seat.yaw });
+  for (const [i, seat] of [[1, seats[1]], [2, seats[2]]]) room.points.push({
+    id: `blackjack-seat-${i}`, label: 'Blackjack', kind: 'blackjack',
+    x: c.x + seat.x, z: c.z + seat.z, yaw: seat.yaw,
+  });
   // Two drinking tables, each with a patron, a bottle and glasses.
   for (const [x, z, name, look, angles, phase] of [[5.4, 3.3, 'Hank Dillard', PATRONS.hank, [R + 0.3, -R + 0.3], 1.8], [-5.4, 3.3, 'June Hale', PATRONS.june, [-R - 0.3, R - 0.3], 5.0]]) {
     put((s) => { roundTable(s, 0.62, 0.76); bottle(s, 0.1, FLOOR + 0.76, -0.1, 0xc4904b); mug(s, -0.25, FLOOR + 0.76, 0.18, 0xd8e4dc); }, x, z);
@@ -122,7 +125,6 @@ function saloon(kit) {
   put((s) => { s.cyl(0.18, 0.22, 0.28, 8, PAL.brass, 0, FLOOR + 0.14, 0); }, 1.4, -3.2);
   for (const x of [-7.2, 7.2]) put((s) => { frame(s, 1.5, 1.05, 0x3d1f18, x < 0 ? 0x9a6a3a : 0x5f6e57, 2.6); s.box(1.0, 0.25, 0.03, x < 0 ? 0xc49a5c : 0xd9c08c, 0, 2.45, 0.06, 0, 0, 0.1); }, x, BACK + 0.02);
   for (const x of [-4.4, 4.4]) put((s) => wallLantern(s, 2.9), x, BACK + 0.02);
-  room.points.push({ id: 'blackjack', label: 'Blackjack', kind: 'blackjack', x: c.x + tx, z: c.z + tz + 2.55 });
 }
 
 /** A low-poly horse facing +z with feet on the floor. */

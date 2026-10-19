@@ -79,12 +79,10 @@
     <div class="dusk" aria-hidden="true"><div class="sun"></div><div class="mesa m1"></div><div class="mesa m2"></div><div class="mesa m3"></div></div>
     <div class="card title-card">
       <div class="title-brand">
-        <p class="eyebrow">One life on the frontier</p>
         <h1>Dust <span>&amp;</span> Iron</h1>
-        <p class="lede">Start in town with $15 and a revolver. Take jobs, buy what you can afford, and ride out. Turn finished work in to the person who asked. Death takes everything; the next life starts on new land.</p>
+        <p class="lede">Take work. Ride out. Make it home.</p>
       </div>
       <div class="title-menu panel">
-        <p class="eyebrow menu-label">Your trail</p>
         <div class="actions stack">
           <button id="btn-start" class="btn primary" type="button">Start a new life</button>
           <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
@@ -92,7 +90,7 @@
         <p class="continue-info" id="continue-info" hidden></p>
       </div>
       <div class="title-guide panel">
-        <p class="eyebrow">Controls</p>
+        <h2 class="guide-title">Controls</h2>
         <dl class="controls">
         <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd></div>
         <div><dt><kbd>Mouse</kbd></dt><dd>Aim</dd></div>
@@ -111,7 +109,6 @@
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
         </dl>
-        <p class="fine">Town is safe. Ammunition is limited. The map reveals land as you travel. Watch enemy aim lines: when one turns red, roll.</p>
         <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
       </div>
     </div>
@@ -119,14 +116,12 @@
 
   <section class="screen" id="screen-pause" hidden>
     <div class="card small pause-card">
-      <p class="eyebrow">Paused</p>
-      <h2>Take a breath</h2>
-      <p class="lede" id="save-status">Your life is saved. You can return to this position with your current supplies and progress.</p>
+      <h2>Paused</h2>
+      <p class="lede" id="save-status">Game saved.</p>
       <div class="actions stack">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>
       </div>
-      <p class="fine"><kbd>N</kbd> mutes sound · <kbd>`</kbd> opens the tuning panel</p>
     </div>
   </section>
 
@@ -134,8 +129,7 @@
     <div class="card map-card">
       <div class="map-head">
         <div>
-          <p class="eyebrow">Survey map</p>
-          <h2 id="map-title">Frontier map</h2>
+          <h2 id="map-title">Map</h2>
         </div>
         <p class="map-sub" id="map-sub"></p>
       </div>
@@ -151,23 +145,20 @@
         <li><i class="lg-mark"></i>Your mark (click the map)</li>
       </ul>
       <div class="actions">
-        <button id="btn-map-close" class="btn primary" type="button">Back to the trail</button>
+        <button id="btn-map-close" class="btn primary" type="button">Close</button>
       </div>
-      <p class="fine">Travel to reveal land. An area map shows roads and landmarks. Click to set your own mark. <kbd>M</kbd> or <kbd>Esc</kbd> closes this map. The game is paused.</p>
     </div>
   </section>
 
   <section class="screen interaction-screen" id="screen-interaction" hidden>
     <div class="interaction-card panel" role="dialog" aria-modal="true" aria-labelledby="interaction-title" aria-describedby="interaction-text">
       <div class="dialog-copy">
-        <p class="eyebrow" id="interaction-eyebrow">Town resident</p>
+        <p class="eyebrow" id="interaction-eyebrow" hidden></p>
         <h2 id="interaction-title"></h2>
         <div class="lede" id="interaction-text"></div>
       </div>
       <div class="dialog-menu">
-        <p class="choice-label">Your move</p>
         <div class="actions interaction-actions" id="interaction-actions"></div>
-        <p class="fine"><kbd>Esc</kbd> closes this screen</p>
       </div>
     </div>
   </section>
@@ -175,27 +166,24 @@
   <section class="screen" id="screen-journal" hidden>
     <div class="card journal-card">
       <div class="journal-head">
-        <div><p class="eyebrow">Journal</p><h2>Jobs and supplies</h2></div>
+        <h2>Journal</h2>
         <div class="actions" id="journal-tabs">
           <button class="btn primary" type="button" data-tab="jobs">Jobs</button>
           <button class="btn" type="button" data-tab="supplies">Supplies</button>
         </div>
       </div>
       <div class="journal-body" id="journal-body"></div>
-      <div class="actions"><button class="btn" id="btn-journal-close" type="button">Back to the trail</button></div>
-      <p class="fine"><kbd>J</kbd> or <kbd>Esc</kbd> closes the journal. The game is paused.</p>
+      <div class="actions"><button class="btn" id="btn-journal-close" type="button">Close</button></div>
     </div>
   </section>
 
   <section class="screen" id="screen-dead" hidden>
     <div class="card small dead">
-      <p class="eyebrow">Last ride</p>
       <h2 id="dead-title">Shot down</h2>
       <div class="ledger" id="dead-body"></div>
       <div class="actions">
         <button id="btn-restart" class="btn primary" type="button">Start a new life</button>
       </div>
-      <p class="fine">Money, gear, jobs, and discoveries are gone. Start on new land. Press <kbd>R</kbd> to begin.</p>
     </div>
   </section>
 
