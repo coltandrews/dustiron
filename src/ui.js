@@ -55,7 +55,7 @@ export class UI {
     this.hurtT = 0;
     this.toastT = 0;
     this.hintT = 12;
-    this.doorPoint = new THREE.Vector3();
+    this.promptPoint = new THREE.Vector3();
     this.el.screens.interaction.addEventListener('keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
       if (/^Digit[1-9]$/.test(event.code)) {
@@ -451,14 +451,19 @@ export class UI {
     if (e.tracker && tracker !== this.trackerHtml) { this.trackerHtml = tracker; e.tracker.innerHTML = tracker; }
     e.interactionHint.textContent = game.interactionHint || '';
     const doorEntry = game.interactionHint === 'Press [E] to Enter';
+    const npcTalk = game.interactionHint.startsWith('E · Talk to ');
     const dismount = game.horse?.mounted && game.interactionHint === 'Hold [E] to get off';
     e.interactionHint.classList.toggle('door-entry', doorEntry);
+    e.interactionHint.classList.toggle('npc-talk', npcTalk);
     e.interactionHint.classList.toggle('dismount-hint', dismount);
     e.interactionHint.style.setProperty('--hold-progress', `${(game.horse?.dismountProgress(game.realTime) ?? 0) * 100}%`);
     e.interactionHint.style.opacity = dismount ? game.horse.dismountHintOpacity(game.realTime) : '';
-    if (doorEntry) {
-      const door = game.townActions.nearest();
-      const projected = door ? this.doorPoint.set(door.x, 1.35, door.z).project(game.rig.camera) : null;
+    if (doorEntry || npcTalk) {
+      const point = game.townActions.nearest();
+      const position = npcTalk && point?.model?.root ? point.model.root.position : point;
+      const projected = position
+        ? this.promptPoint.set(position.x, npcTalk ? position.y + 2.55 : 1.35, position.z).project(game.rig.camera)
+        : null;
       if (projected) {
         e.interactionHint.style.left = `${(projected.x + 1) * 50}%`;
         e.interactionHint.style.top = `${(1 - projected.y) * 50}%`;
