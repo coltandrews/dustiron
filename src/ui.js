@@ -458,12 +458,9 @@ export class UI {
     e.interactionHint.classList.toggle('dismount-hint', dismount);
     e.interactionHint.style.setProperty('--hold-progress', `${(game.horse?.dismountProgress(game.realTime) ?? 0) * 100}%`);
     e.interactionHint.style.opacity = dismount ? game.horse.dismountHintOpacity(game.realTime) : '';
-    if (doorEntry || npcTalk) {
+    if (doorEntry) {
       const point = game.townActions.nearest();
-      const position = npcTalk && point?.model?.root ? point.model.root.position : point;
-      const projected = position
-        ? this.promptPoint.set(position.x, npcTalk ? position.y + 2.55 : 1.35, position.z).project(game.rig.camera)
-        : null;
+      const projected = point ? this.promptPoint.set(point.x, 1.35, point.z).project(game.rig.camera) : null;
       if (projected) {
         e.interactionHint.style.left = `${(projected.x + 1) * 50}%`;
         e.interactionHint.style.top = `${(1 - projected.y) * 50}%`;
