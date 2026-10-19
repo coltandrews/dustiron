@@ -1,9 +1,11 @@
 // The life map shows travelled land. Bought maps add roads; jobs add search areas.
 import { MAP_CELL, isDiscovered } from './life.js';
+import { RIVER_MAX_X, RIVER_MIN_X, riverCenter } from './terrain.js';
 
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
-  grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', bounty: '#b4532e', cleared: '#5f713e', you: '#2f5d8a',
+  grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', river: '#587784', riverBank: '#99734d',
+  bounty: '#b4532e', cleared: '#5f713e', you: '#2f5d8a',
 };
 const TOWN_PLACES = ['Guns & Ammo', 'Doctor Finch', 'Sheriff', 'Maps & Trails', 'Clothier', 'The Last Drop', 'Livery Stable'];
 
@@ -53,6 +55,21 @@ export class MapView {
       ctx.moveTo(X(-H), Y(v)); ctx.lineTo(X(H), Y(v));
     }
     ctx.stroke();
+
+    // The surveyed river uses the same curve as the world.
+    const drawRiver = (color, width) => {
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+      let drawing = false;
+      for (let x = RIVER_MIN_X; x <= RIVER_MAX_X; x += 3) {
+        const z = riverCenter(x), visible = life.hasMap || isDiscovered(life, x, z);
+        if (!visible) { drawing = false; continue; }
+        if (!drawing) { ctx.moveTo(X(x), Y(z)); drawing = true; } else ctx.lineTo(X(x), Y(z));
+      }
+      ctx.stroke();
+    };
+    drawRiver(C.riverBank, 5);
+    drawRiver(C.river, 3);
+    ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
 
     // Roads are drawn only where travelled until the player buys a map.
     ctx.strokeStyle = C.road; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
@@ -136,6 +153,6 @@ export class MapView {
     const surveyed = Math.round(Object.keys(life.discovered).length / cells * 100);
     this.title.textContent = 'Frontier map';
     this.sub.textContent = `${surveyed}% explored · ${active} active ${active === 1 ? 'bounty' : 'bounties'}${proof ? ` · ${proof} ready to claim` : ''}`;
-    cv.setAttribute('aria-label', `Frontier map. ${surveyed}% explored. ${active} active ${active === 1 ? 'bounty' : 'bounties'}. Blue arrow: your location. Brown circles: bounty search areas.`);
+    cv.setAttribute('aria-label', `Frontier map. ${surveyed}% explored. ${active} active ${active === 1 ? 'bounty' : 'bounties'}. Blue arrow: your location. Blue line: river. Brown circles: bounty search areas.`);
   }
 }

@@ -6,6 +6,7 @@ import { createRng } from './rng.js';
 import { GROUPS } from './physics.js';
 import { buildTown } from './town-buildings.js';
 import { buildInteriors, updateInteriorNpcs } from './interiors.js';
+import { RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverWidth } from './terrain.js';
 
 function ground(group, half, seed) {
   const geo = new THREE.PlaneGeometry(half * 2 + 30, half * 2 + 30, 80, 80).rotateX(-Math.PI / 2).toNonIndexed();
@@ -40,6 +41,49 @@ function paths(group, world) {
   group.add(meshOf(s, MAT.solid, false));
 }
 
+function cactusPatch(shape, rng, x, z) {
+  const style = rng.int(0, 2);
+  if (style === 0) {
+    const h = rng.range(1.5, 4.2), r = rng.range(0.16, 0.28), side = rng.chance(0.5) ? 1 : -1;
+    shape.cyl(r, r * 1.12, h, 7, PAL.cactus, x, h / 2, z);
+    shape.cone(r, r * 1.1, 7, 0x789750, x, h + r * 0.5, z);
+    shape.cyl(r * 0.62, r * 0.62, h * 0.3, 6, PAL.cactusDark, x + side * 0.43, h * 0.53, z, 0, 0, Math.PI / 2);
+    shape.cyl(r * 0.68, r * 0.68, h * 0.38, 6, PAL.cactus, x + side * 0.62, h * 0.68, z);
+    if (h > 2.5 && rng.chance(0.55)) {
+      shape.cyl(r * 0.52, r * 0.52, h * 0.24, 6, PAL.cactusDark, x - side * 0.36, h * 0.7, z, 0, 0, Math.PI / 2);
+      shape.cyl(r * 0.56, r * 0.56, h * 0.28, 6, PAL.cactus, x - side * 0.5, h * 0.81, z);
+    }
+    if (rng.chance(0.3)) shape.cone(r * 0.55, 0.24, 6, 0xb85c56, x, h + 0.28, z);
+  } else if (style === 1) {
+    const count = rng.int(3, 6), yaw = rng.range(0, Math.PI * 2);
+    for (let i = 0; i < count; i++) {
+      const a = yaw + i * 1.55, d = i ? rng.range(0.18, 0.6) : 0, h = rng.range(0.45, 0.95);
+      shape.add(new THREE.IcosahedronGeometry(1, 0), i % 2 ? PAL.cactusDark : PAL.cactus,
+        x + Math.cos(a) * d, h * 0.58, z + Math.sin(a) * d, 0, a, rng.range(-0.18, 0.18), 0.34, h * 0.58, 0.16);
+      if (i > 1 && rng.chance(0.28)) shape.cone(0.1, 0.22, 6, i % 2 ? 0xd4a54e : 0xb85c56,
+        x + Math.cos(a) * d, h + 0.12, z + Math.sin(a) * d);
+    }
+  } else {
+    const count = rng.int(2, 4);
+    for (let i = 0; i < count; i++) {
+      const r = rng.range(0.22, 0.38), dx = (i - (count - 1) / 2) * 0.42;
+      shape.cyl(r, r * 1.08, rng.range(0.45, 0.8), 9, i % 2 ? PAL.cactusDark : PAL.cactus, x + dx, 0.3, z + rng.range(-0.2, 0.2));
+      shape.cone(r * 0.82, 0.22, 9, 0x789750, x + dx, 0.69, z);
+      if (rng.chance(0.35)) shape.cone(0.1, 0.2, 6, 0xc46555, x + dx, 0.86, z);
+    }
+  }
+}
+
+function scrubPatch(shape, rng, x, z) {
+  const color = rng.chance(0.5) ? 0x8d8952 : 0x707747;
+  const count = rng.int(4, 7);
+  for (let j = 0; j < count; j++) {
+    const a = j * Math.PI * 2 / count + rng.range(-0.25, 0.25), d = rng.range(0.05, 0.42);
+    shape.cone(rng.range(0.08, 0.16), rng.range(0.35, 0.8), 3, j % 2 ? color : PAL.cactusDark,
+      x + Math.cos(a) * d, 0.22, z + Math.sin(a) * d, rng.range(-0.35, 0.35), a, rng.range(-0.25, 0.25));
+  }
+}
+
 function desert(game, group, world, rng) {
   const half = world.half ?? 210, camps = world.camps ?? [], s = new Shape();
   const clear = (x, z, margin = 0) => Math.hypot(x, z) > 40 + margin
@@ -49,27 +93,64 @@ function desert(game, group, world, rng) {
     const t = Math.max(0, Math.min(1, (x * c.x + z * c.z) / length));
     return Math.hypot(x - c.x * t, z - c.z * t) > clearance;
   });
-  for (let i = 0; i < 850; i++) {
+  const dry = (x, z, margin = 0) => x < RIVER_MIN_X || x > RIVER_MAX_X
+    || Math.abs(z - riverCenter(x)) > riverWidth(x) / 2 + margin;
+
+  // Broad color patches break up the flat sand without adding collision or draw calls.
+  for (let i = 0; i < 95; i++) {
+    const x = rng.range(-half + 10, half - 10), z = rng.range(-half + 10, half - 10), r = rng.range(3, 8);
+    if (!clear(x, z, 2) || !dry(x, z, r * 0.55)) continue;
+    s.add(new THREE.CircleGeometry(1, 9), rng.chance(0.5) ? 0xc5945f : 0xb98655,
+      x, 0.012, z, -Math.PI / 2, 0, rng.range(0, Math.PI), r, r * rng.range(0.38, 0.72), 1);
+  }
+
+  for (let i = 0; i < 1900; i++) {
     const x = rng.range(-half + 8, half - 8), z = rng.range(-half + 8, half - 8);
-    if (!clear(x, z) || !besideRoad(x, z)) continue;
+    if (!clear(x, z) || !besideRoad(x, z) || !dry(x, z, 1)) continue;
     const kind = rng.next();
-    if (kind < 0.22) {
-      const h = rng.range(1.3, 3.2), r = rng.range(0.16, 0.3), side = rng.chance(0.5) ? 1 : -1;
-      s.cyl(r, r * 1.1, h, 7, PAL.cactus, x, h / 2, z);
-      s.cyl(r * 0.65, r * 0.65, h * 0.42, 6, PAL.cactusDark, x + side * 0.45, h * 0.58, z);
-      s.box(0.5, r * 1.5, r * 1.5, PAL.cactus, x + side * 0.23, h * 0.4, z);
-      if (rng.chance(0.35)) s.cone(r * 0.55, 0.25, 6, 0xb85c56, x, h + 0.12, z);
-    } else if (kind < 0.5) {
+    if (kind < 0.46) cactusPatch(s, rng, x, z);
+    else if (kind < 0.67) {
       const r = rng.range(0.25, 1.1);
-      s.rock(r, PAL.rock, x, r * 0.3, z, 0.65, 0.25, rng.int(1, 999), rng.range(0, 6));
+      s.rock(r, rng.chance(0.35) ? PAL.rockLight : PAL.rock, x, r * 0.3, z, 0.65, 0.25, rng.int(1, 999), rng.range(0, 6));
+      if (r > 0.7) s.rock(r * 0.42, PAL.rockDark, x + r * 0.65, r * 0.18, z - r * 0.2, 0.55, 0.2, rng.int(1, 999));
+    } else if (kind < 0.95) scrubPatch(s, rng, x, z);
+    else if (kind < 0.985) {
+      s.box(0.28, 0.18, 0.32, PAL.bone, x, 0.1, z, 0, rng.range(0, 6), 0);
+      for (const side of [-1, 1]) s.box(0.07, 0.07, rng.range(0.35, 0.55), PAL.bone, x + side * 0.28, 0.05, z + side * 0.08, 0, rng.range(0, 6), 0);
     } else {
-      for (let j = 0; j < 4; j++) s.cone(0.12, rng.range(0.3, 0.7), 3, j % 2 ? 0x9a9059 : 0x817b4b, x + j * 0.13, 0.2, z, 0, j * 2);
+      const yaw = rng.range(0, Math.PI * 2);
+      s.cyl(0.1, 0.16, 1.8, 6, PAL.woodDark, x, 0.82, z, 0.35, 0, yaw);
+      s.cyl(0.06, 0.09, 1.0, 5, PAL.wood, x + Math.cos(yaw) * 0.35, 1.15, z + Math.sin(yaw) * 0.35, -0.8, yaw);
     }
   }
-  for (let i = 0; i < 28; i++) {
-    const x = rng.range(-half + 12, half - 12), z = rng.range(-half + 12, half - 12), r = rng.range(2, 4.5);
-    if (!clear(x, z, 8) || !besideRoad(x, z, r + 3.5)) continue;
+
+  // Reeds and cottonwood trees follow the river banks outside town.
+  for (let i = 0; i < 150; i++) {
+    const x = rng.range(RIVER_MIN_X + 5, RIVER_MAX_X - 5), side = rng.chance(0.5) ? 1 : -1;
+    const z = riverCenter(x) + side * (riverWidth(x) / 2 + rng.range(1.5, 6));
+    if (!clear(x, z) || !besideRoad(x, z, 3)) continue;
+    if (rng.chance(0.13)) {
+      const h = rng.range(2.8, 4.8);
+      s.cyl(0.16, 0.28, h, 7, PAL.woodDark, x, h / 2, z);
+      for (const [dx, dy, dz, scale, color] of [[0, h, 0, 1.5, 0x697849], [-0.8, h * 0.9, 0.2, 1.05, 0x7f874f], [0.65, h * 0.86, -0.35, 1.15, 0x596b3f]]) {
+        s.add(new THREE.IcosahedronGeometry(1, 1), color, x + dx, dy, z + dz, 0, rng.range(0, 6), 0, scale, scale * 0.75, scale);
+      }
+    } else {
+      for (let j = 0; j < rng.int(3, 7); j++) {
+        const dx = rng.range(-0.5, 0.5), dz = rng.range(-0.5, 0.5), h = rng.range(0.5, 1.25);
+        s.cone(0.07, h, 5, j % 2 ? 0x768151 : 0x9a9059, x + dx, h / 2, z + dz, rng.range(-0.12, 0.12), 0, rng.range(-0.12, 0.12));
+      }
+    }
+  }
+
+  // Large formations work as distant landmarks and physical cover.
+  for (let i = 0; i < 72; i++) {
+    const x = rng.range(-half + 12, half - 12), z = rng.range(-half + 12, half - 12), r = rng.range(2.6, 6.4);
+    if (!clear(x, z, 8) || !besideRoad(x, z, r + 3.5) || !dry(x, z, r + 2)) continue;
     s.rock(r, PAL.cliff, x, r * 0.65, z, 1.3, 0.22, rng.int(1, 999));
+    const side = rng.chance(0.5) ? 1 : -1;
+    s.rock(r * rng.range(0.38, 0.62), PAL.rockLight, x + side * r * 0.72, r * 0.36, z + r * 0.28, 0.8, 0.2, rng.int(1, 999));
+    if (r > 4.3 && rng.chance(0.65)) s.rock(r * 0.58, PAL.rock, x - side * r * 0.18, r * 1.45, z - r * 0.08, 0.82, 0.18, rng.int(1, 999));
     game.physics.fixedCylinder(x, r * 0.65, z, r * 0.65, r * 0.8, GROUPS.world);
   }
   for (let i = 0; i < 96; i++) {

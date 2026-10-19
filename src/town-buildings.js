@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { MAT, PAL, Shape, barrelShape, cactusShape, crateShape, meshOf, wagonShape } from './models.js';
 import { GROUPS } from './physics.js';
+import { RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent, riverWidth } from './terrain.js';
 
 export const STORES = [
   { id: 'guns', label: 'Guns & Ammo', kind: 'guns', side: -1, z: -18, color: 0x6f392c },
@@ -174,27 +175,81 @@ function makeBuilding(game, group, spec) {
 }
 
 function river(game, group) {
+  const strip = (extraWidth, y, colors) => {
+    const positions = [], normals = [], vertexColors = [], steps = 42;
+    const shades = colors.map((color) => new THREE.Color(color));
+    for (let i = 0; i < steps; i++) {
+      const x0 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * i / steps;
+      const x1 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * (i + 1) / steps;
+      const z0 = riverCenter(x0), z1 = riverCenter(x1);
+      const w0 = riverWidth(x0) / 2 + extraWidth, w1 = riverWidth(x1) / 2 + extraWidth;
+      positions.push(x0, y, z0 - w0, x1, y, z1 + w1, x1, y, z1 - w1,
+        x0, y, z0 - w0, x0, y, z0 + w0, x1, y, z1 + w1);
+      const color = shades[i % shades.length];
+      for (let j = 0; j < 6; j++) {
+        normals.push(0, 1, 0);
+        vertexColors.push(color.r, color.g, color.b);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+    geometry.computeBoundingSphere();
+    return meshOf(geometry, MAT.solid, false);
+  };
+  group.add(strip(1.8, 0.018, [PAL.dirt, PAL.rockLight]), strip(0, 0.04, [PAL.water, 0x66818a, 0x587783]));
+
   const s = new Shape();
-  s.box(150, 0.08, 10, PAL.water, 0, 0.01, 30);
-  for (let x = -72; x <= 72; x += 4) {
-    if (Math.abs(x) < 6) continue;
-    s.rock(1.5, x % 8 ? PAL.rock : PAL.rockLight, x, 0.3, 24.5, 0.45, 0.2, x + 80);
-    s.rock(1.4, x % 8 ? PAL.rockLight : PAL.rock, x + 1, 0.28, 35.5, 0.42, 0.2, x + 120);
+  for (let x = RIVER_MIN_X + 2; x <= RIVER_MAX_X - 2; x += 4) {
+    if (Math.abs(x) < 7) continue;
+    const z = riverCenter(x), width = riverWidth(x), wave = Math.sin(x * 1.73);
+    for (const side of [-1, 1]) {
+      const r = 0.85 + (wave * side + 1) * 0.28;
+      s.rock(r, side > 0 ? PAL.rock : PAL.rockLight, x + side * 0.45, 0.22, z + side * (width / 2 + 0.7), 0.42, 0.22, Math.round(x + side * 190));
+      if (Math.abs(x) > 18 && Math.round(x / 4) % 3 === 0) {
+        s.cyl(0.08, 0.12, 0.75, 6, PAL.cactusDark, x - side * 0.4, 0.38, z + side * (width / 2 + 1.6));
+        s.cone(0.11, 0.24, 6, 0x829d56, x - side * 0.4, 0.87, z + side * (width / 2 + 1.6));
+      }
+    }
   }
-  // The bridge has separate planks, posts, and rails.
-  for (let z = 23.5; z <= 36.5; z += 0.7) s.box(7.2, 0.18, 0.58, z % 1.4 < 0.3 ? PAL.woodLight : PAL.plank, 0, 0.42, z);
-  for (const x of [-3.35, 3.35]) {
-    s.box(0.22, 0.3, 14, PAL.woodDark, x, 0.28, 30);
-    s.box(0.14, 1.1, 14, PAL.woodLight, x, 1.05, 30);
-    for (let z = 24; z <= 36; z += 2) s.box(0.2, 1.4, 0.2, PAL.woodDark, x, 0.7, z);
-  }
-  for (const x of [-5.5, 5.5, -9, 9]) {
-    s.cyl(0.1, 0.13, 1.7, 6, PAL.cactusDark, x, 0.85, 23.3);
-    s.cone(0.14, 0.35, 6, 0x829d56, x, 1.85, 23.3);
+
+  // Rock walls hide the creek ends and give each bend a clear silhouette.
+  for (const side of [-1, 1]) {
+    const x = side < 0 ? RIVER_MIN_X : RIVER_MAX_X, z = riverCenter(x);
+    s.rock(5.8, PAL.cliff, x, 3.1, z, 1.05, 0.22, 310 + side);
+    s.rock(3.5, PAL.rockLight, x - side * 2.2, 4.8, z - side * 1.4, 0.85, 0.2, 410 + side);
+    game.physics.fixedCylinder(x, 2.6, z, 2.6, 4.4, GROUPS.world);
   }
   group.add(meshOf(s, MAT.solid, false));
-  game.physics.fixedBox(-39.3, 1, 30, 35.7, 1, 5, 0, GROUPS.world);
-  game.physics.fixedBox(39.3, 1, 30, 35.7, 1, 5, 0, GROUPS.world);
+
+  // The bridge follows the calm center of the river.
+  const bridgeShape = new Shape();
+  for (let z = -6.5; z <= 6.5; z += 0.7) bridgeShape.box(7.2, 0.18, 0.58, Math.round(z * 10) % 14 ? PAL.woodLight : PAL.plank, 0, 0.42, z);
+  for (const x of [-3.35, 3.35]) {
+    bridgeShape.box(0.22, 0.3, 14, PAL.woodDark, x, 0.28, 0);
+    bridgeShape.box(0.14, 1.1, 14, PAL.woodLight, x, 1.05, 0);
+    for (let z = -6; z <= 6; z += 2) bridgeShape.box(0.2, 1.4, 0.2, PAL.woodDark, x, 0.7, z);
+  }
+  for (const x of [-5.5, 5.5, -9, 9]) {
+    bridgeShape.cyl(0.1, 0.13, 1.7, 6, PAL.cactusDark, x, 0.85, -7.2);
+    bridgeShape.cone(0.14, 0.35, 6, 0x829d56, x, 1.85, -7.2);
+  }
+  const bridge = meshOf(bridgeShape);
+  bridge.position.set(0, 0, riverCenter(0));
+  bridge.rotation.y = -riverTangent(0);
+  group.add(bridge);
+
+  const steps = 32;
+  for (let i = 0; i < steps; i++) {
+    const x0 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * i / steps;
+    const x1 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * (i + 1) / steps;
+    const x = (x0 + x1) / 2;
+    if (Math.abs(x) < 4) continue;
+    const z0 = riverCenter(x0), z1 = riverCenter(x1), z = (z0 + z1) / 2;
+    const length = Math.hypot(x1 - x0, z1 - z0) + 0.3;
+    game.physics.fixedBox(x, 1, z, riverWidth(x) / 2, 1, length / 2, Math.atan2(x1 - x0, z1 - z0), GROUPS.world);
+  }
 }
 
 function streetDetails(game, group) {
