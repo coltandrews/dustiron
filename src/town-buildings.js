@@ -11,7 +11,7 @@ export const STORES = [
   { id: 'maps', label: 'Maps & Trails', kind: 'maps', side: 1, z: -6, color: 0x426c68 },
   { id: 'clothes', label: 'Clothier', kind: 'clothes', side: -1, z: 6, color: 0x815b72 },
   { id: 'saloon', label: 'The Last Drop', kind: 'saloon', side: 1, z: 6, color: 0x9b4d36 },
-  { id: 'stable', label: 'Livery Stable', kind: 'stable', side: -1, z: 18, color: 0x8d7547 },
+  { id: 'stable', label: 'Livery Stable', kind: 'stable', side: -1, z: 16, color: 0x8d7547 },
 ];
 
 function window(s, x, y, z, color = 0x49666a) {
@@ -237,10 +237,10 @@ function backstreetBuildings(game, group) {
   const buildings = [
     { type: 'forge', x: -25, z: -19, ry: Math.PI / 2, width: 8.2, depth: 7, height: 3.8, color: 0x73513a, trim: 0x9d7148, roof: 0x443832 },
     { type: 'cabin', x: -26, z: 1, ry: Math.PI / 2 + 0.04, width: 6.6, depth: 6.2, height: 3.7, color: 0x806342, trim: 0xae8250, roof: 0x51402f },
-    { type: 'freight', x: -25, z: 20, ry: Math.PI / 2 - 0.03, width: 9.4, depth: 7.6, height: 4.2, color: 0x6b533d, trim: 0x9d7951, roof: 0x453b35 },
+    { type: 'freight', x: -25, z: 11.5, ry: Math.PI / 2 - 0.03, width: 9.4, depth: 7.6, height: 4.2, color: 0x6b533d, trim: 0x9d7951, roof: 0x453b35 },
     { type: 'hotel', x: 25, z: -18, ry: -Math.PI / 2 - 0.03, width: 10, depth: 7.4, height: 6.4, color: 0x926243, trim: 0xc08b58, roof: 0x594034 },
     { type: 'chapel', x: 27, z: 2, ry: -Math.PI / 2 + 0.04, width: 6.8, depth: 8.2, height: 4.7, color: 0xb8a477, trim: 0xd5c294, roof: 0x5b4a3b },
-    { type: 'cabin', x: 25, z: 20, ry: -Math.PI / 2, width: 6.5, depth: 6, height: 3.6, color: 0x725841, trim: 0xa57a4c, roof: 0x48372c },
+    { type: 'cabin', x: 25, z: 15, ry: -Math.PI / 2, width: 6.5, depth: 6, height: 3.6, color: 0x725841, trim: 0xa57a4c, roof: 0x48372c },
   ];
   for (const building of buildings) rearBuilding(game, group, building);
 }
@@ -302,9 +302,9 @@ function river(game, group) {
     bridgeShape.box(0.14, 1.1, 14, PAL.woodLight, x, 1.05, 0);
     for (let z = -6; z <= 6; z += 2) bridgeShape.box(0.2, 1.4, 0.2, PAL.woodDark, x, 0.7, z);
   }
-  for (const x of [-5.5, 5.5, -9, 9]) {
-    bridgeShape.cyl(0.1, 0.13, 1.7, 6, PAL.cactusDark, x, 0.85, -7.2);
-    bridgeShape.cone(0.14, 0.35, 6, 0x829d56, x, 1.85, -7.2);
+  for (const [x, z, h] of [[-10.5, -8.1, 1.25], [10.8, -6.6, 1.8]]) {
+    bridgeShape.cyl(0.1, 0.13, h, 6, PAL.cactusDark, x, h / 2, z);
+    bridgeShape.cone(0.14, 0.3, 6, 0x829d56, x, h + 0.15, z);
   }
   const bridge = meshOf(bridgeShape);
   bridge.position.set(0, 0, riverCenter(0));
@@ -326,7 +326,7 @@ function river(game, group) {
 function streetDetails(game, group) {
   const s = new Shape();
   // One telegraph line leads through town and keeps the center of the street open.
-  const poleX = -5.8, poleZ = [-28, -14, 0, 14, 25];
+  const poleX = -5.8, poleZ = [-28, -14, 0, 14];
   for (const z of poleZ) {
     s.box(0.16, 4.1, 0.16, PAL.woodDark, poleX, 2.05, z);
     s.box(1.25, 0.13, 0.13, PAL.woodLight, poleX, 3.72, z);
@@ -337,9 +337,9 @@ function streetDetails(game, group) {
     for (const x of [poleX - 0.45, poleX + 0.45]) s.cyl(0.025, 0.025, length, 5, PAL.iron, x, 3.84, z, Math.PI / 2);
   }
   // The water tower and storage sit in the back lot by the livery.
-  s.cyl(2.2, 2.05, 3.1, 12, PAL.wood, -32, 7.2, 18);
-  for (const x of [-33.8, -30.2]) for (const z of [16.2, 19.8]) s.box(0.26, 7, 0.26, PAL.woodDark, x, 3.5, z);
-  s.cone(2.4, 1.2, 12, PAL.iron, -32, 9.35, 18);
+  s.cyl(2.2, 2.05, 3.1, 12, PAL.wood, -32, 7.2, 10);
+  for (const x of [-33.8, -30.2]) for (const z of [8.2, 11.8]) s.box(0.26, 7, 0.26, PAL.woodDark, x, 3.5, z);
+  s.cone(2.4, 1.2, 12, PAL.iron, -32, 9.35, 10);
   for (const x of [-35, -30, 31, 35]) {
     const cactus = cactusShape(1.8 + Math.abs(x % 3), x + 40);
     for (const part of cactus.parts) s.parts.push(part);

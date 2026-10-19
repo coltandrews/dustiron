@@ -239,6 +239,10 @@ test('store doors, room saves, seats, and the walk-out exit keep one player stat
   const site = game.frontier.sites.find((item) => item.id === 'saloon');
   place(game, site.x, site.z);
   game.frontier.tick(1 / 60);
+  assert.equal(game.frontier.inside, false);
+  assert.equal(game.townActions.nearest().kind, 'door');
+  assert.equal(game.townActions.hint(), 'Press [E] to Enter');
+  game.townActions.open();
   assert.equal(game.frontier.inside, true);
   assert.equal(game.locationName, 'Mercy Crossing');
   const room = game.frontier.rooms.get('saloon');

@@ -1,4 +1,5 @@
 // HUD, reticle and full-screen cards. Plain DOM over the canvas.
+import * as THREE from 'three';
 
 const $ = (id) => document.getElementById(id);
 
@@ -58,6 +59,7 @@ export class UI {
     this.hurtT = 0;
     this.toastT = 0;
     this.hintT = 12;
+    this.doorPoint = new THREE.Vector3();
     this.el.screens.interaction.addEventListener('keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
       if (/^Digit[1-9]$/.test(event.code)) {
@@ -138,7 +140,9 @@ export class UI {
   showInteraction({ title, text, actions = [], mode = 'resident' }, onAction) {
     const screen = this.el.screens.interaction;
     screen.dataset.mode = mode;
-    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Choose your play' : 'Your move';
+    const shopModes = ['guns', 'doctor', 'maps', 'clothes', 'saloon'];
+    screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
+    screen.querySelector('.choice-label').textContent = mode === 'blackjack' ? 'Choose your play' : shopModes.includes(mode) ? 'Available' : 'Your reply';
     this.el.interactionTitle.textContent = title;
     this.el.interactionEyebrow.textContent = interactionLabels[mode] ?? interactionLabels.resident;
     this.el.interactionMark.textContent = title.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'DI';
@@ -147,9 +151,8 @@ export class UI {
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
     box.replaceChildren();
-    const shopModes = ['guns', 'doctor', 'maps', 'clothes', 'saloon'];
     const menuActions = [...actions.filter((item) => item.id !== 'close'), {
-      id: 'close', label: mode === 'blackjack' ? 'Leave the table' : shopModes.includes(mode) ? 'Leave the counter' : 'End conversation',
+      id: 'close', label: mode === 'blackjack' ? 'Leave the table' : shopModes.includes(mode) ? 'Leave the counter' : 'Goodbye',
     }];
     for (const [index, action] of menuActions.entries()) {
       const button = document.createElement('button');
@@ -285,6 +288,19 @@ export class UI {
     e.bounty.textContent = `$${game.run.bounty}`;
     e.bandages.textContent = `${game.run.bandages} bandage${game.run.bandages === 1 ? '' : 's'} · H`;
     e.interactionHint.textContent = game.interactionHint || '';
+    const doorEntry = game.interactionHint === 'Press [E] to Enter';
+    e.interactionHint.classList.toggle('door-entry', doorEntry);
+    if (doorEntry) {
+      const door = game.townActions.nearest();
+      const projected = door ? this.doorPoint.set(door.x, 1.35, door.z).project(game.rig.camera) : null;
+      if (projected) {
+        e.interactionHint.style.left = `${(projected.x + 1) * 50}%`;
+        e.interactionHint.style.top = `${(1 - projected.y) * 50}%`;
+      }
+    } else {
+      e.interactionHint.style.left = '';
+      e.interactionHint.style.top = '';
+    }
     e.interactionHint.hidden = !game.interactionHint || game.state !== 'playing';
 
     // Weapon, ammo, slots.
@@ -317,7 +333,8 @@ export class UI {
     e.reload.style.strokeDashoffset = `${circ * (1 - gun.reloadProgress)}`;
     e.reload.style.opacity = gun.reloading ? 1 : 0;
     e.reticle.classList.toggle('empty', gun.ammo === 0);
-    e.reticle.hidden = inTown;
+    e.reticle.classList.toggle('town-reticle', inTown);
+    e.reticle.hidden = false;
 
     // Damage vignette.
     this.hurtT = Math.max(0, this.hurtT - dt);

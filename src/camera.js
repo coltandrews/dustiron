@@ -64,6 +64,7 @@ export class CameraRig {
    */
   update(dt, focus, aim, beforeShake) {
     const c = T.camera;
+    this.targetDistance = Math.max(c.minDistance, Math.min(c.maxDistance, this.targetDistance));
     if (c.fov !== this.camera.fov) { this.camera.fov = c.fov; this.camera.updateProjectionMatrix(); }
     this.time += dt;
     this.distance += (this.targetDistance - this.distance) * Math.min(1, dt * 10);

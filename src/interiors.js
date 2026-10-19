@@ -25,7 +25,9 @@ function roomShell(game, root, center, color) {
     s.box(0.07, 1.42, 0.18, PAL.woodLight, center.x + x, 2.6, center.z - 6.63);
     s.box(2.16, 0.07, 0.18, PAL.woodLight, center.x + x, 2.6, center.z - 6.63);
   }
-  s.box(7, 0.04, 4.5, 0x8a4938, center.x, 0.2, center.z + 0.5);
+  s.box(5.8, 0.04, 3.5, 0x8a4938, center.x, 0.2, center.z + 0.7);
+  for (const x of [-2.82, 2.82]) s.box(0.08, 0.025, 3.3, 0xc18a54, center.x + x, 0.23, center.z + 0.7);
+  for (const z of [-0.98, 2.38]) s.box(5.7, 0.025, 0.08, 0xc18a54, center.x, 0.23, center.z + z);
   root.add(meshOf(s));
   game.physics.fixedBox(center.x, 2.4, center.z - 7.1, 9.25, 2.4, 0.15, 0, GROUPS.world);
   game.physics.fixedBox(center.x - 9.1, 2.4, center.z, 0.15, 2.4, 7.25, 0, GROUPS.world);
@@ -85,22 +87,22 @@ function wallLantern(shape, x, y, z) {
 
 function horse(shape, x, z) {
   const coat = 0x704631, dark = 0x3d2b23, mane = 0x2a211c;
-  shape.add(new THREE.SphereGeometry(1, 10, 6), coat, x, 1.55, z, 0, 0, 0, 1.55, 0.74, 0.68);
-  shape.add(new THREE.SphereGeometry(1, 9, 6), coat, x, 2.18, z + 0.75, -0.3, 0, 0, 0.52, 0.9, 0.46);
-  shape.add(new THREE.SphereGeometry(1, 9, 6), coat, x, 2.78, z + 1.18, 0, 0, 0, 0.48, 0.52, 0.42);
-  shape.add(new THREE.SphereGeometry(1, 8, 5), dark, x, 2.62, z + 1.55, 0, 0, 0, 0.4, 0.28, 0.52);
+  shape.add(new THREE.SphereGeometry(1, 10, 6), coat, x, 1.55, z, 0, 0, 0, 0.68, 0.74, 1.5);
+  shape.add(new THREE.SphereGeometry(1, 9, 6), coat, x, 2.12, z + 1.02, -0.36, 0, 0, 0.48, 0.82, 0.5);
+  shape.add(new THREE.SphereGeometry(1, 9, 6), coat, x, 2.65, z + 1.52, -0.18, 0, 0, 0.45, 0.44, 0.62);
+  shape.add(new THREE.SphereGeometry(1, 8, 5), dark, x, 2.54, z + 1.92, 0, 0, 0, 0.38, 0.25, 0.42);
   for (const side of [-1, 1]) {
-    shape.cone(0.15, 0.55, 6, coat, x + side * 0.2, 3.24, z + 1.06, side * 0.08, 0, side * 0.16);
-    for (const dz of [-0.38, 0.36]) {
-      shape.cyl(0.12, 0.18, 1.35, 7, coat, x + side * 0.92, 0.74, z + dz);
-      shape.box(0.3, 0.18, 0.42, dark, x + side * 0.92, 0.1, z + dz + 0.06);
+    shape.cone(0.14, 0.5, 6, coat, x + side * 0.2, 3.13, z + 1.48, side * 0.08, 0, side * 0.16);
+    for (const dz of [-0.85, 0.82]) {
+      shape.cyl(0.11, 0.16, 1.35, 7, coat, x + side * 0.38, 0.74, z + dz);
+      shape.box(0.25, 0.18, 0.38, dark, x + side * 0.38, 0.1, z + dz + 0.06);
     }
   }
-  shape.box(0.16, 1.25, 0.18, mane, x, 2.45, z + 0.4, -0.42);
-  shape.cone(0.25, 1.2, 7, mane, x, 1.52, z - 1.15, -1.0);
-  shape.box(1.45, 0.22, 1.0, mane, x, 1.95, z - 0.02);
-  shape.box(1.3, 0.12, 1.25, 0x9a6337, x, 2.08, z - 0.02);
-  shape.cyl(0.06, 0.06, 1.55, 7, PAL.brass, x, 1.5, z + 0.58, 0, 0, Math.PI / 2);
+  shape.box(0.15, 1.2, 0.18, mane, x, 2.36, z + 0.68, -0.5);
+  shape.cone(0.22, 1.25, 7, mane, x, 1.5, z - 1.65, -0.92);
+  shape.box(1.18, 0.2, 0.9, mane, x, 1.95, z - 0.05);
+  shape.box(1.08, 0.12, 1.15, 0x9a6337, x, 2.08, z - 0.05);
+  shape.cyl(0.055, 0.055, 1.2, 7, PAL.brass, x, 1.55, z + 0.48, 0, 0, Math.PI / 2);
 }
 
 function gunsInterior(game, room) {
@@ -112,7 +114,14 @@ function gunsInterior(game, room) {
     s.box(0.08, 0.08, 2.2, PAL.iron, room.center.x + x, 3.6, room.center.z - 6.65, 0, 0, Math.PI / 2);
     s.box(0.18, 0.16, 0.7, PAL.wood, room.center.x + x - 0.7, 3.6, room.center.z - 6.5, 0, 0, Math.PI / 2);
   }
-  s.box(1.3, 1.3, 1.3, PAL.plank, room.center.x - 6.7, 0.78, room.center.z + 3.5);
+  const crateX = room.center.x - 6.7, crateZ = room.center.z + 3.5;
+  s.box(1.3, 1.3, 1.3, PAL.plank, crateX, 0.72, crateZ);
+  for (const dx of [-0.57, 0.57]) for (const dz of [-0.57, 0.57]) s.box(0.13, 1.42, 0.13, PAL.woodDark, crateX + dx, 0.72, crateZ + dz);
+  for (const y of [0.12, 1.32]) {
+    s.box(1.4, 0.13, 0.13, PAL.woodDark, crateX, y, crateZ + 0.59);
+    s.box(0.13, 0.13, 1.4, PAL.woodDark, crateX - 0.59, y, crateZ);
+  }
+  s.box(1.55, 0.11, 0.12, PAL.woodDark, crateX, 0.72, crateZ + 0.67, 0, 0, Math.PI / 4);
   wallLantern(s, room.center.x, 3.45, room.center.z - 6.6);
   for (const x of [-6.9, -5.7, 5.7, 6.9]) s.cyl(0.22, 0.25, 0.72, 8, PAL.iron, room.center.x + x, 0.58, room.center.z - 5.8);
   room.root.add(meshOf(s));
@@ -122,27 +131,49 @@ function doctorInterior(game, room) {
   counter(game, room.root, room.center, 6, -3.6, 0xc7b898);
   const s = new Shape();
   shelf(s, room.center.x + 5.8, room.center.z - 6.4, 0x537c73, PAL.canvas);
-  s.box(4.4, 0.85, 2.1, PAL.canvas, room.center.x - 4.8, 0.55, room.center.z - 1);
-  s.box(4.4, 0.15, 2.1, 0xe7ddc8, room.center.x - 4.8, 1.02, room.center.z - 1);
-  s.box(0.25, 1.3, 0.25, PAL.woodDark, room.center.x - 6.5, 0.65, room.center.z - 1.8);
+  const bedX = room.center.x - 5.5, bedZ = room.center.z + 0.25;
+  s.box(2.2, 0.18, 4.5, PAL.woodDark, bedX, 0.72, bedZ);
+  s.box(1.92, 0.28, 4.15, 0xd8ccb2, bedX, 0.91, bedZ);
+  s.box(1.55, 0.22, 0.88, 0xeee2c8, bedX, 1.13, bedZ - 1.5);
+  for (const dx of [-0.86, 0.86]) for (const dz of [-1.9, 1.9]) s.cyl(0.1, 0.14, 0.72, 7, PAL.wood, bedX + dx, 0.36, bedZ + dz);
+  s.box(2.35, 1.35, 0.18, PAL.woodDark, bedX, 1.02, bedZ - 2.18);
+  const basinX = room.center.x + 5.8, basinZ = room.center.z + 2.7;
+  s.box(1.65, 0.14, 1.25, PAL.wood, basinX, 0.74, basinZ);
+  for (const dx of [-0.66, 0.66]) for (const dz of [-0.46, 0.46]) s.cyl(0.07, 0.09, 0.7, 7, PAL.woodDark, basinX + dx, 0.36, basinZ + dz);
+  s.add(new THREE.TorusGeometry(0.48, 0.09, 6, 12), PAL.canvas, basinX, 0.92, basinZ, Math.PI / 2);
+  s.cyl(0.39, 0.39, 0.04, 12, 0x668d8c, basinX, 0.9, basinZ);
+  s.box(0.75, 0.85, 0.08, PAL.woodDark, basinX, 1.18, basinZ - 0.56);
+  s.box(0.55, 0.62, 0.06, 0x8aa3a1, basinX, 1.2, basinZ - 0.61);
   for (let i = 0; i < 4; i++) s.cyl(0.18, 0.2, 0.55, 8, i % 2 ? 0x587c5d : PAL.brass, room.center.x - 1.5 + i * 0.7, 1.5, room.center.z - 6.65);
   wallLantern(s, room.center.x - 3.4, 3.45, room.center.z - 6.6);
   for (let i = 0; i < 3; i++) s.add(new THREE.SphereGeometry(0.22, 7, 5), i % 2 ? 0x8d3941 : 0xe1d0a5, room.center.x + 2.3 + i * 0.45, 1.38, room.center.z - 3.3, 0, 0, 0, 1, 0.7, 1);
   room.root.add(meshOf(s));
+  game.physics.fixedBox(bedX, 0.75, bedZ, 1.12, 0.75, 2.28, 0, GROUPS.world);
 }
 
 function sheriffInterior(game, room) {
   counter(game, room.root, room.center, 5.5, -2.7, 0x66523b);
   const s = new Shape();
-  s.box(4.5, 3.9, 3.4, 0x3d3732, room.center.x - 6.5, 1.95, room.center.z - 4.9);
-  for (const x of [-8.2, -7.35, -6.5, -5.65, -4.8]) s.box(0.12, 3.8, 0.15, PAL.iron, x, 1.9, room.center.z - 3.18);
-  s.box(3.7, 0.14, 1, PAL.wood, room.center.x + 4.8, 0.72, room.center.z + 1.7);
+  const cellFront = room.center.z - 3.18, cellSide = room.center.x - 4.3;
+  s.box(4.45, 0.08, 3.4, 0x514037, room.center.x - 6.5, 0.23, room.center.z - 4.9);
+  for (const dx of [-8.2, -7.35, -6.5, -5.65, -4.8]) s.box(0.12, 3.8, 0.15, PAL.iron, room.center.x + dx, 1.9, cellFront);
+  for (const dz of [-6.45, -5.65, -4.85, -4.05, -3.25]) s.box(0.15, 3.8, 0.12, PAL.iron, cellSide, 1.9, room.center.z + dz);
+  s.box(4.5, 0.14, 0.18, PAL.iron, room.center.x - 6.5, 0.42, cellFront);
+  s.box(4.5, 0.14, 0.18, PAL.iron, room.center.x - 6.5, 3.68, cellFront);
+  s.box(0.18, 0.14, 3.45, PAL.iron, cellSide, 3.68, room.center.z - 4.9);
+  s.box(2.7, 0.16, 1.05, PAL.woodDark, room.center.x - 6.55, 0.48, room.center.z - 5.45);
+  s.box(2.45, 0.18, 0.85, PAL.canvasDark, room.center.x - 6.55, 0.65, room.center.z - 5.45);
+  s.box(3.9, 0.18, 1.35, PAL.wood, room.center.x + 4.8, 0.78, room.center.z + 1.7);
+  s.box(3.55, 0.55, 1.08, 0x66523b, room.center.x + 4.8, 0.48, room.center.z + 1.7);
   for (const x of [3.4, 6.2]) s.box(0.12, 0.72, 0.7, PAL.woodDark, room.center.x + x, 0.36, room.center.z + 1.7);
   s.box(1.6, 0.08, 1.15, PAL.canvas, room.center.x + 1.2, 1.18, room.center.z - 2.7);
   wallLantern(s, room.center.x, 3.5, room.center.z - 6.6);
   s.cyl(0.42, 0.5, 0.18, 8, PAL.brass, room.center.x + 5.9, 1.05, room.center.z + 1.7);
   s.cone(0.34, 0.32, 8, PAL.brass, room.center.x + 5.9, 1.3, room.center.z + 1.7);
   room.root.add(meshOf(s));
+  game.physics.fixedBox(room.center.x - 6.5, 1.9, cellFront, 2.25, 1.9, 0.12, 0, GROUPS.world);
+  game.physics.fixedBox(cellSide, 1.9, room.center.z - 4.9, 0.12, 1.9, 1.72, 0, GROUPS.world);
+  game.physics.fixedBox(room.center.x + 4.8, 0.8, room.center.z + 1.7, 2, 0.8, 0.72, 0, GROUPS.world);
 }
 
 function mapsInterior(game, room) {
@@ -152,20 +183,20 @@ function mapsInterior(game, room) {
     s.cyl(0.2, 0.2, 2.4, 10, PAL.canvas, room.center.x + x, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
     s.cyl(0.24, 0.24, 0.06, 10, PAL.woodDark, room.center.x + x - 1.2, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
   }
-  const tableX = room.center.x - 3.4, tableZ = room.center.z + 1.2, tableYaw = 0.24;
-  s.box(5.8, 0.2, 3.8, PAL.woodDark, tableX, 0.92, tableZ, 0, tableYaw);
-  s.box(5.45, 0.11, 3.45, PAL.canvas, tableX, 1.08, tableZ, 0, tableYaw);
-  for (const dx of [-2.42, 2.42]) for (const dz of [-1.42, 1.42]) {
+  const tableX = room.center.x - 2.8, tableZ = room.center.z + 1.05, tableYaw = 0;
+  s.box(5.2, 0.2, 2.8, PAL.woodDark, tableX, 0.92, tableZ);
+  s.box(4.88, 0.11, 2.5, 0xd8c18c, tableX, 1.08, tableZ);
+  for (const dx of [-2.15, 2.15]) for (const dz of [-1, 1]) {
     const leg = localPoint(tableX, tableZ, dx, dz, tableYaw);
     s.cyl(0.11, 0.16, 0.9, 7, PAL.wood, leg.x, 0.46, leg.z);
   }
   for (let i = -2; i <= 2; i++) {
     const line = localPoint(tableX, tableZ, i * 0.86, 0, tableYaw);
-    s.box(0.045, 0.035, 2.95, i ? PAL.wood : PAL.red, line.x, 1.15, line.z, 0, tableYaw);
+    s.box(0.045, 0.035, 2.15, i ? PAL.wood : PAL.red, line.x, 1.15, line.z);
   }
-  for (const dz of [-1.22, 1.22]) {
+  for (const dz of [-0.92, 0.92]) {
     const rail = localPoint(tableX, tableZ, 0, dz, tableYaw);
-    s.cyl(0.12, 0.12, 4.95, 10, PAL.woodLight, rail.x, 1.18, rail.z, 0, 0, Math.PI / 2 + tableYaw);
+    s.cyl(0.1, 0.1, 4.35, 10, PAL.woodLight, rail.x, 1.18, rail.z, 0, 0, Math.PI / 2);
   }
   s.cyl(0.32, 0.32, 0.08, 14, PAL.brass, tableX + 1.6, 1.22, tableZ - 0.7);
   s.cone(0.22, 0.32, 4, PAL.red, tableX + 1.6, 1.28, tableZ - 0.7, 0, Math.PI / 4);
@@ -173,6 +204,7 @@ function mapsInterior(game, room) {
   s.cyl(0.52, 0.52, 0.18, 12, PAL.brass, room.center.x + 5.6, 1.3, room.center.z - 3.1, Math.PI / 2);
   s.cyl(0.06, 0.06, 2.4, 8, PAL.iron, room.center.x + 5.6, 1.3, room.center.z - 2.0, Math.PI / 2);
   room.root.add(meshOf(s));
+  game.physics.fixedBox(tableX, 0.9, tableZ, 2.65, 0.9, 1.45, 0, GROUPS.world);
 }
 
 function clothesInterior(game, room) {
@@ -274,11 +306,18 @@ function saloonPatron(room, x, z, yaw, name, blueShirt) {
 
 function stableInterior(game, room) {
   const s = new Shape();
-  for (const x of [-5.8, 0, 5.8]) {
-    s.box(5.2, 1.1, 0.18, PAL.wood, room.center.x + x, 0.58, room.center.z - 3.3);
-    for (const dx of [-2.5, 2.5]) s.box(0.22, 3.5, 0.22, PAL.woodDark, room.center.x + x + dx, 1.75, room.center.z - 3.3);
+  for (const x of [-6, -2, 2, 6]) {
+    s.box(0.18, 1.35, 5.4, PAL.wood, room.center.x + x, 0.72, room.center.z - 3.25);
+    s.box(0.22, 3.5, 0.22, PAL.woodDark, room.center.x + x, 1.75, room.center.z - 5.9);
+    s.box(0.22, 2.2, 0.22, PAL.woodDark, room.center.x + x, 1.1, room.center.z - 0.6);
+    game.physics.fixedBox(room.center.x + x, 0.72, room.center.z - 3.25, 0.1, 0.72, 2.7, 0, GROUPS.world);
   }
-  horse(s, room.center.x, room.center.z - 5);
+  for (const x of [-4, 0, 4]) {
+    s.box(3.65, 0.16, 0.18, PAL.woodLight, room.center.x + x, 0.45, room.center.z - 0.58);
+    s.box(3.65, 0.16, 0.18, PAL.woodLight, room.center.x + x, 1.08, room.center.z - 0.58);
+    game.physics.fixedBox(room.center.x + x, 0.75, room.center.z - 0.58, 1.82, 0.75, 0.1, 0, GROUPS.world);
+  }
+  horse(s, room.center.x, room.center.z - 3.75);
   for (let i = 0; i < 12; i++) s.box(0.04, 0.04, 1.7, 0xc3a65a, room.center.x - 6.5 + (i % 4) * 0.25, 0.45 + Math.floor(i / 4) * 0.1, room.center.z + 2.7, 0, i * 0.1);
   for (const x of [-6.2, 6.2]) {
     s.cyl(0.52, 0.52, 0.9, 10, 0xbd9149, room.center.x + x, 0.52, room.center.z - 4.8, 0, 0, Math.PI / 2);
@@ -286,7 +325,7 @@ function stableInterior(game, room) {
   }
   wallLantern(s, room.center.x, 3.45, room.center.z - 6.6);
   room.root.add(meshOf(s));
-  counter(game, room.root, room.center, 4.5, 0.2, PAL.wood);
+  counter(game, room.root, room.center, 4.5, 2.65, PAL.wood);
 }
 
 const detailBuilders = { guns: gunsInterior, doctor: doctorInterior, sheriff: sheriffInterior, maps: mapsInterior, clothes: clothesInterior, saloon: saloonInterior, stable: stableInterior };
@@ -298,7 +337,7 @@ function shopkeeper(room, spec) {
   const look = { shirt: shirts[spec.kind], vest: PAL.woodDark, hat: 0xb49366, band: PAL.woodDark, pants: 0x494844 };
   const model = addRollPivot(makeCharacter(look));
   showGun(model, null); model.arm.rotation.x = 1.1;
-  const keeperOffset = { guns: -3.75, doctor: -4.45, sheriff: -3.65, maps: -4.05, clothes: -4.15, saloon: -5.25, stable: -0.75 };
+  const keeperOffset = { guns: -3.75, doctor: -4.45, sheriff: -3.65, maps: -4.05, clothes: -4.15, saloon: -5.25, stable: 1.7 };
   const keeperZ = room.center.z + keeperOffset[spec.kind];
   const npc = { id: `${spec.id}-keeper`, name: names[spec.kind], label: names[spec.kind], kind: spec.kind,
     x: room.center.x, z: keeperZ, yaw: 0, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };

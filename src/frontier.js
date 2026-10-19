@@ -33,24 +33,37 @@ function offsetPath(points, offset) {
   });
 }
 
+function smoothPath(points, samplesPerSection = 4) {
+  if (points.length < 3) return points;
+  const curve = new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(point.x, 0, point.z)), false, 'centripetal');
+  return curve.getPoints((points.length - 1) * samplesPerSection).map((point) => ({ x: point.x, z: point.z }));
+}
+
 function pathMesh(points, width, colors, y = 0.018) {
   const positions = [], normals = [], vertexColors = [];
   const shades = colors.map((color) => new THREE.Color(color));
+  const edges = points.map((point, index) => {
+    const before = points[Math.max(0, index - 1)], after = points[Math.min(points.length - 1, index + 1)];
+    const dx = after.x - before.x, dz = after.z - before.z, length = Math.hypot(dx, dz) || 1;
+    const halfWidth = (typeof width === 'function' ? width(index / (points.length - 1)) : width) / 2;
+    const nx = -dz / length, nz = dx / length;
+    return {
+      left: { x: point.x + nx * halfWidth, z: point.z + nz * halfWidth },
+      right: { x: point.x - nx * halfWidth, z: point.z - nz * halfWidth },
+    };
+  });
+  const addColor = (color) => vertexColors.push(color.r, color.g, color.b);
   for (let i = 0; i < points.length - 1; i++) {
-    const a = points[i], b = points[i + 1], dx = b.x - a.x, dz = b.z - a.z;
-    const length = Math.hypot(dx, dz) || 1, nx = -dz / length, nz = dx / length;
-    const wa = (typeof width === 'function' ? width(i / (points.length - 1)) : width) / 2;
-    const wb = (typeof width === 'function' ? width((i + 1) / (points.length - 1)) : width) / 2;
+    const a = edges[i], b = edges[i + 1];
     const vertices = [
-      a.x + nx * wa, y, a.z + nz * wa, b.x - nx * wb, y, b.z - nz * wb, b.x + nx * wb, y, b.z + nz * wb,
-      a.x + nx * wa, y, a.z + nz * wa, a.x - nx * wa, y, a.z - nz * wa, b.x - nx * wb, y, b.z - nz * wb,
+      a.left.x, y, a.left.z, b.left.x, y, b.left.z, b.right.x, y, b.right.z,
+      a.left.x, y, a.left.z, b.right.x, y, b.right.z, a.right.x, y, a.right.z,
     ];
     positions.push(...vertices);
-    const color = shades[i % shades.length];
-    for (let j = 0; j < 6; j++) {
-      normals.push(0, 1, 0);
-      vertexColors.push(color.r, color.g, color.b);
-    }
+    const colorA = shades[i % shades.length], colorB = shades[(i + 1) % shades.length];
+    addColor(colorA); addColor(colorB); addColor(colorB);
+    addColor(colorA); addColor(colorB); addColor(colorA);
+    for (let j = 0; j < 6; j++) normals.push(0, 1, 0);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -72,13 +85,25 @@ function addRoad(group, points, width, withRuts = true) {
 }
 
 function paths(group, world) {
+  const tapered = (base, variation = 0) => (t) => {
+    const endScale = Math.min(1, 0.35 + t * 3.2, 0.35 + (1 - t) * 3.2);
+    return (base + Math.sin(t * Math.PI * 3) * variation) * endScale;
+  };
   const mainStreet = [
-    { x: -2.5, z: -45 }, { x: 0.8, z: -34 }, { x: -1.1, z: -23 }, { x: 0.7, z: -11 },
+    { x: -3.5, z: -54 }, { x: -2.5, z: -45 }, { x: 0.8, z: -34 }, { x: -1.1, z: -23 }, { x: 0.7, z: -11 },
     { x: -0.6, z: 1 }, { x: 0.8, z: 13 }, { x: 1.2, z: 22 }, { x: 0, z: 30 }, { x: -1.8, z: 43 },
+    { x: -3.8, z: 53 }, { x: -1.2, z: 62 },
   ];
-  addRoad(group, mainStreet, (t) => 8.6 + Math.sin(t * Math.PI * 3) * 1.2);
-  addRoad(group, [{ x: -35, z: -8 }, { x: -24, z: -6 }, { x: -12, z: -7 }, { x: 0, z: -5 }, { x: 13, z: -6 }, { x: 24, z: -9 }, { x: 36, z: -7 }], 4.7);
-  addRoad(group, [{ x: -34, z: 15 }, { x: -23, z: 13 }, { x: -12, z: 15 }, { x: 0, z: 14 }, { x: 13, z: 16 }, { x: 25, z: 13 }, { x: 35, z: 16 }], 4.2);
+  addRoad(group, smoothPath(mainStreet), tapered(7.2, 0.65));
+  for (const [side, z] of [[-1, -18], [1, -18], [-1, -6], [1, -6], [-1, 6], [1, 6], [-1, 16]]) {
+    const x = side * 7.4;
+    const porchPath = smoothPath([
+      { x: side * 1.8, z: z + side * 0.25 },
+      { x: side * 4.2, z: z - side * 0.35 },
+      { x, z },
+    ], 5);
+    addRoad(group, porchPath, (t) => 2.4 - t * 0.8 + Math.sin(t * Math.PI) * 0.14, false);
+  }
   for (const [index, camp] of (world.camps ?? []).entries()) {
     const points = campTrailPoints(camp, index);
     if (points.length) addRoad(group, points, (t) => 4.6 + Math.sin(t * Math.PI * 4 + index) * 0.45);
@@ -241,6 +266,9 @@ export function buildFrontier(game, world) {
   paths(outdoor, world);
   desert(game, outdoor, world, rng);
   const sites = buildTown(game, outdoor), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
+  const doors = sites.map((site) => ({
+    id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
+  }));
   let active = null, seated = null, doorCooldown = 0;
 
   const enter = (site, saved = null) => {
@@ -272,7 +300,7 @@ export function buildFrontier(game, world) {
     get inside() { return !!active; },
     get seated() { return seated; },
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
-    interactions() { return active ? active.points : npcs; },
+    interactions() { return active ? active.points : [...doors, ...npcs]; },
     cameraFocus() { return active?.center ?? null; },
     restore(saved) {
       if (!saved) return false;
@@ -314,10 +342,6 @@ export function buildFrontier(game, world) {
           if (distance <= npc.speed * dt + 0.01) { npc.next = (npc.next + 1) % npc.route.length; npc.wait = 2.5; }
         }
         npc.animation.speed = speed; npc.animation.dt = dt; animateCharacter(npc.model, npc.animation); npc.model.arm.rotation.x = 1.1;
-      }
-      if (doorCooldown <= 0 && game.player) {
-        const site = sites.find((point) => Math.hypot(point.x - game.player.x, point.z - game.player.z) < 1.05);
-        if (site) enter(site);
       }
     },
     render(alpha) {

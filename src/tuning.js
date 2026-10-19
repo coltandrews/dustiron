@@ -10,7 +10,7 @@ export const T = {
     pitchDeg: 55,
     distance: 28,
     minDistance: 20,
-    maxDistance: 48,
+    maxDistance: 36,
     zoomStep: 2,
     followHalfLife: 0.06,
     lookAhead: 3,

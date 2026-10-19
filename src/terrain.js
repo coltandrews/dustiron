@@ -26,7 +26,7 @@ export function campTrailPoints(camp, index = 0, segments = 18) {
   const distance = Math.hypot(camp.x, camp.z);
   if (distance < 1) return [];
   const dx = camp.x / distance, dz = camp.z / distance;
-  const start = { x: dx * 31, z: dz * 31 };
+  const start = { x: dx * 44, z: dz * 44 };
   const end = { x: camp.x - dx * 25, z: camp.z - dz * 25 };
   const bend = trailBend(camp, index) * Math.min(26, distance * 0.18);
   const control = {

@@ -6,9 +6,9 @@ const stock = {
   guns: ['ammo', 'shotgun', 'rifle'], doctor: ['heal', 'bandage'], maps: ['map'], clothes: ['coat'], saloon: ['drink'],
 };
 const sayings = {
-  clara: 'The doctor sells bandages. Press H to use one on the trail. You have one life, so come back before it is too late.',
+  clara: 'Doctor Finch keeps bandages ready for the trail. Press H when you need one. You have one life, so come back before it is too late.',
   elias: 'Travel fills in your map. The map seller can mark roads and camp landmarks. Press M to see your map.',
-  nora: 'Martha and Silas know who is wanted. Look for the red hat at a camp. Take the proof to the sheriff for payment.',
+  nora: 'Martha and Silas hear every bad name that comes through town. Ask them about work. Look for a red hat at the camps, then take the proof to Sheriff Boone.',
 };
 
 export class TownActions {
@@ -20,7 +20,7 @@ export class TownActions {
     let best = null, distance = 3;
     for (const point of g.frontier.interactions()) {
       const d = Math.hypot(point.x - g.player.x, point.z - g.player.z);
-      const range = point.kind === 'seat' ? 1.15 : 3;
+      const range = point.kind === 'seat' ? 1.15 : point.kind === 'door' ? 2.2 : 3;
       if (d < range && d < distance) { best = point; distance = d; }
     }
     return best;
@@ -28,12 +28,21 @@ export class TownActions {
 
   hint() {
     const point = this.nearest();
-    return point ? `E · ${point.kind === 'seat' ? 'Sit down' : point.kind === 'blackjack' ? 'Play blackjack' : point.name ? 'Talk to ' + point.name : point.label}` : '';
+    if (!point) return '';
+    if (point.kind === 'door') return 'Press [E] to Enter';
+    return `E · ${point.kind === 'seat' ? 'Sit down' : point.kind === 'blackjack' ? 'Play blackjack' : point.name ? 'Talk to ' + point.name : point.label}`;
   }
 
   open() {
     const point = this.nearest();
     if (!point) return;
+    if (point.kind === 'door') {
+      if (this.game.frontier.enter(point.siteId)) {
+        this.game.input.clear();
+        this.game.save();
+      }
+      return;
+    }
     if (point.kind === 'seat') {
       if (this.game.frontier.sit(point)) this.game.ui.toast('Press a movement key to stand.');
       return;
@@ -65,10 +74,12 @@ export class TownActions {
         ? [{ id: 'blackjack:hit', label: 'Hit' }, { id: 'blackjack:stand', label: 'Stand' }]
         : [{ id: 'blackjack:deal', label: 'Deal a hand · $5', disabled: life.bounty < 5 }];
     } else if (stock[point.kind]) {
-      text = point.kind === 'guns' ? `You have $${life.bounty}. Ammo is for your selected ${g.player.gun.def.name.toLowerCase()}. Use 1–3 or Q before you enter to select a gun.`
-        : point.kind === 'clothes' ? `The trail coat changes your clothes. It gives no extra armor. You have $${life.bounty}.`
-          : point.kind === 'saloon' ? `A whiskey restores some Dead Eye focus. You have $${life.bounty}.`
-          : `You have $${life.bounty}.`;
+      text = point.kind === 'guns' ? `Heading out again? I can load your ${g.player.gun.def.name.toLowerCase()} or sell you a better gun. Choose your weapon with 1–3 or Q before you come to my counter. You have $${life.bounty}.`
+        : point.kind === 'doctor' ? `Let me have a look at you. I can treat your wounds or sell you a clean bandage for the trail. You have $${life.bounty}.`
+          : point.kind === 'maps' ? `The open land is easy to get lost in. This map shows the roads and the places that matter. You have $${life.bounty}.`
+            : point.kind === 'clothes' ? `That dust will ruin a good shirt. This trail coat will change your clothes, but it will not stop a bullet. You have $${life.bounty}.`
+              : point.kind === 'saloon' ? `You look like the trail took something out of you. A whiskey will steady your focus. You have $${life.bounty}.`
+                : `What can I get for you? You have $${life.bounty}.`;
       actions = stock[point.kind].map((id) => {
         const item = CATALOGUE[id];
         const owned = life.unlocked.includes(id) || (id === 'coat' && life.coat) || (id === 'map' && life.hasMap);
@@ -77,7 +88,9 @@ export class TownActions {
       });
     } else if (point.kind === 'bounty') {
       const camps = point.id === 'martha' ? life.world.camps.slice(0, 2) : life.world.camps.slice(2);
-      text = 'These outlaws wear red hats with a gold band. Search the marked areas on your map. Kill the target, then take the proof to the sheriff.';
+      text = point.id === 'martha'
+        ? 'Keep your voice down. I know two men who are wanted. They wear red hats with a gold band. Search the marked areas, then take proof to Sheriff Boone.'
+        : 'I heard about an outlaw camp beyond town. The wanted man wears a red hat with a gold band. Bring proof to Sheriff Boone if you finish the job.';
       for (const camp of camps) {
         const status = life.contracts[camp.id].status;
         const direction = `${camp.z < 0 ? 'north' : 'south'}${camp.x < 0 ? 'west' : 'east'}`;
@@ -86,16 +99,16 @@ export class TownActions {
           : `${camp.targetName} · ${status === 'active' ? 'In progress' : status === 'proof' ? 'Ready for payment' : 'Paid'}`, disabled: status !== 'offered' });
       }
     } else if (point.kind === 'sheriff') {
-      text = life.world.camps.map((camp) => {
+      text = `If you have proof, set it on my desk. I pay for finished work, not stories.\n\n${life.world.camps.map((camp) => {
         const status = life.contracts[camp.id].status;
         return `${camp.targetName}: ${status === 'offered' ? 'Ask the townspeople' : status === 'active' ? 'Find the target' : status === 'proof' ? 'Proof ready' : 'Paid'}`;
-      }).join('\n');
+      }).join('\n')}`;
       const ready = Object.values(life.contracts).some((c) => c.status === 'proof');
       actions = [{ id: 'claim', label: 'Claim bounty payments', disabled: !ready }, { id: 'work', label: 'Town work for emergency ammo' }];
       if (Object.values(life.contracts).every((c) => c.status === 'paid')) text += '\nAll three bounties are paid. This region is clear. You can keep this life and explore.';
     } else if (point.kind === 'stable') {
-      text = 'The stable hand keeps trail horses and tack here. The horses are still being trained for the open range.';
-    } else text = sayings[point.id] ?? 'Stay safe out there. Return to town for supplies.';
+      text = 'These horses are not ready for the open range yet. Come back when I have one that will carry you through gunfire.';
+    } else text = sayings[point.id] ?? 'The road gets quiet after sundown. Keep your gun clean and come back in one piece.';
     g.ui.showInteraction({
       title: point.label ?? point.name,
       text: point.kind === 'blackjack' || !message ? text : `${message}\n\n${text}`,
