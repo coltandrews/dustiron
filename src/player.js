@@ -95,7 +95,7 @@ export class Player {
     if (!this.run.items.bandage) { g.ui.toast('No bandages. The doctor sells them.'); return; }
     this.bandageT = 0;
     this.gun.reloading = false;
-    g.audio.play('reloadTick', { vol: 0.5, pitch: 0.6 });
+    g.audio.play('bandage', { vol: 0.7 });
   }
 
   tickCare(dt) {
@@ -108,6 +108,7 @@ export class Player {
         const healed = Math.min(P.hp - this.hp, P.bandageHeal);
         this.hp += healed;
         g.ui.toast(`Bandaged · +${Math.round(healed)} health`);
+        g.audio.play('heal', { bus: 'ui', vol: 0.6 });
         g.save();
       }
     }
@@ -183,9 +184,12 @@ export class Player {
     this.speedNow = Math.hypot(mv.x, mv.z) / dt;
 
     // Footsteps.
-    if (!this.rolling && this.speedNow > 1) {
+    if (!this.rolling && this.speedNow > 1 && !g.horse?.mounted) {
       this.stepT -= dt * this.speedNow;
-      if (this.stepT <= 0) { this.stepT = 2.1; g.audio.play('footstep', { vol: 0.35, vary: 0.15 }); }
+      if (this.stepT <= 0) {
+        this.stepT = 2.1;
+        g.audio.play(g.frontier?.inside ? 'stepWood' : 'stepDirt', { vol: this.sneaking ? 0.16 : 0.32, vary: 0.12, reverb: 0.1 });
+      }
     }
 
     // Aim.
@@ -201,11 +205,14 @@ export class Player {
     if (intent.switchTo !== null) { this.switchTo(intent.switchTo); intent.switchTo = null; }
     const gun = this.gun;
     const reload = gun.update(gunDt);
-    if (reload === 'round') g.audio.play('reloadTick', { vol: 0.5 });
-    else if (reload === 'done') g.audio.play('reloadDone', { vol: 0.8 });
+    if (reload === 'round') g.audio.play(gun.def.loadSound, { vol: 0.55 });
+    else if (reload === 'done') {
+      g.audio.play(gun.def.loadSound, { vol: 0.55 });
+      g.audio.play(gun.def.reloadEnd, { vol: 0.8, delay: 0.12 });
+    }
     this.recoil = Math.max(0, this.recoil - gunDt * 3);
     if (this.speedNow < 0.8 && !this.rolling) this.steadyT += gunDt; else this.steadyT = 0;
-    if (intent.reload) { intent.reload = false; if (!this.bandaging && gun.startReload()) g.audio.play('reloadTick', { vol: 0.6 }); }
+    if (intent.reload) { intent.reload = false; if (!this.bandaging && gun.startReload()) this.reloadStarted(); }
     this.emptyClickT -= gunDt;
     if (!g.inTown() && !this.rolling && !this.bandaging && (intent.fireHeld || intent.firePressed)) {
       if (gun.canFire()) fireShot(this);
@@ -214,12 +221,12 @@ export class Player {
         this.recoil = Math.min(1, this.recoil + 0.25);
         g.audio.play('dryClick', { vol: 0.9 });
         g.ui.emptyClick();
-        if (gun.startReload()) g.audio.play('reloadTick', { vol: 0.6, delay: 0.1 });
+        if (gun.startReload()) this.reloadStarted(0.1);
         else if (gun.reserve <= 0) g.ui.toast('Out of ammunition');
       }
     }
     intent.firePressed = false;
-    if (gun.ammo <= 0 && !gun.reloading && gun.cooldown < -0.15 && !this.bandaging) gun.startReload();
+    if (gun.ammo <= 0 && !gun.reloading && gun.cooldown < -0.15 && !this.bandaging && gun.startReload()) this.reloadStarted();
     this.tickCare(dt);
 
     // Threshold regeneration.
@@ -228,6 +235,11 @@ export class Player {
       const cap = Math.min(P.hp, Math.ceil(this.hp / P.regenStep - 1e-6) * P.regenStep);
       if (this.hp < cap) this.hp = Math.min(cap, this.hp + P.regenRate * dt);
     }
+  }
+
+  reloadStarted(delay = 0) {
+    const start = this.gun.def.reloadStart;
+    if (start) this.game.audio.play(start, { vol: 0.7, delay });
   }
 
   muzzle() {

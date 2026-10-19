@@ -128,6 +128,10 @@ kbd {
 .lede { margin: 0 0 18px; font-size: 16px; line-height: 1.45; max-width: 54ch; color: #e3d1b1; }
 .rule { height: 1px; margin: 0 0 14px; background: #6f4d2a; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sound-settings { margin: 0 0 18px; padding: 10px 14px 6px; border: 1px solid #6e4c2b; border-radius: 2px; }
+.sound-settings legend { padding: 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--paper-2); }
+.sound-settings label { display: grid; grid-template-columns: 6.5em 1fr; align-items: center; gap: 10px; padding: 4px 0; font-size: 14px; color: #e3d1b1; }
+.sound-settings input[type="range"] { width: 100%; accent-color: #c8873e; cursor: pointer; }
 .btn { appearance: none; display: flex; align-items: center; gap: 10px; border: 1px solid #6e4c2b; border-radius: 2px; background: #3a2519; color: var(--paper); font: 600 16px/1.2 var(--body); letter-spacing: 0.02em; padding: 11px 16px; text-align: left; cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s; }
 .btn:hover { background: #4a3020; border-color: #c9a15c; }
 .btn:focus-visible { outline: 2px solid #f0c978; outline-offset: 2px; }

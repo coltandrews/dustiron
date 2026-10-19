@@ -67,5 +67,12 @@ export const T = {
 
   explosion: { radius: 4, damage: 80, impulse: 26, chainDelay: 0.15, trauma: 0.7 },
 
+  // Sound. Distances are in metres; volumes are 0..1 before the player's sliders.
+  audio: {
+    falloff: 14, maxDistance: 90, muffleFrom: 12, muffleRate: 10, maxVoices: 32,
+    deadEyeCutoff: 900, deadEyePitch: 0.8, pauseCutoff: 1200, lowHealth: 30, lowHealthCutoff: 4200,
+    tensionRise: 0.6, tensionFall: 6, combatRange: 50, bpm: 92,
+  },
+
   run: { saveInterval: 2, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
 };

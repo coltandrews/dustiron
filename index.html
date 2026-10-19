@@ -115,6 +115,13 @@
     <div class="card small pause-card">
       <h2>Paused</h2>
       <p class="lede" id="save-status">Game saved.</p>
+      <fieldset class="sound-settings">
+        <legend>Sound</legend>
+        <label><span>Master</span><input type="range" id="vol-master" min="0" max="100" step="1"></label>
+        <label><span>Music</span><input type="range" id="vol-music" min="0" max="100" step="1"></label>
+        <label><span>Effects</span><input type="range" id="vol-sfx" min="0" max="100" step="1"></label>
+        <label><span>Ambience</span><input type="range" id="vol-ambience" min="0" max="100" step="1"></label>
+      </fieldset>
       <div class="actions stack">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit" class="btn" type="button">Save and quit</button>

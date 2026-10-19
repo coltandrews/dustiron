@@ -69,10 +69,10 @@ export function fireShot(player) {
       } else if (owner && owner.damage) {
         const surface = owner.damage(def.damage * fall * mult, hit.x, hit.y, hit.z, rx, rz, def.impulse, 'player');
         g.fx.impact(surface === 'cloth' || surface === 'plant' ? 'dirt' : surface, hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
-        g.audio.at(surface === 'wood' || surface === 'water' ? 'hitWood' : 'hitDirt', hit.x, hit.z, { vol: 0.6 });
+        g.audio.impact(surface, hit.x, hit.z, 0.6);
       } else {
         g.fx.impact('dirt', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
-        g.audio.at('hitDirt', hit.x, hit.z, { vol: 0.5 });
+        g.audio.impact('dirt', hit.x, hit.z, 0.5);
       }
       break;
     }
@@ -81,7 +81,9 @@ export function fireShot(player) {
 
   g.fx.muzzle(mz.x, mz.y, mz.z, dx, dz, def.pellets > 1);
   if (def.key !== 'shotgun') g.fx.casing(player.x, 1.0, player.z, dx, dz);
-  g.audio.play(def.sound, { vol: 1, vary: 0.06, pitch: def.pitch });
+  g.audio.play(def.sound, { vol: 1, vary: 0.06, pitch: def.pitch, reverb: 0.4 });
+  if (def.cycle) g.audio.play(def.cycle, { vol: 0.5, delay: def.interval * 0.45 });
+  if (def.key !== 'shotgun') g.audio.play('casing', { vol: 0.22, delay: 0.35 + Math.random() * 0.1, pan: Math.random() * 0.4 - 0.2 });
   g.addTrauma(def.trauma);
   g.noise(player.x, player.z, T.enemy.hearRange);
   g.stats.shots++;

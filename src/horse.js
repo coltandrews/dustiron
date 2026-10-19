@@ -53,6 +53,8 @@ export class Horse {
     p.bandageT = -1;
     this.game.rig.ride = 6;
     this.game.tips.done('mount');
+    this.game.audio.play('saddle', { vol: 0.7 });
+    this.game.audio.play('snort', { vol: 0.4, delay: 0.35 });
     return true;
   }
 
@@ -74,6 +76,8 @@ export class Horse {
       // A spooked horse bolts a short way and waits.
       this.x += Math.sin(this.yaw) * 12; this.z += Math.cos(this.yaw) * 12;
       g.ui.toast(`${this.name} throws you and bolts`, 3);
+      g.audio.play('whinny', { vol: 0.9 });
+      g.audio.play('bodyFall', { vol: 0.8, delay: 0.25 });
     }
     if (g.inTown() && !this.data.owned && this.data.left) {
       g.ui.toast('The stable hand leads Old Dusty home. Your rental is over.', 4);
@@ -111,9 +115,10 @@ export class Horse {
     const p = this.game.player;
     if (this.mounted) return;
     const d = Math.hypot(this.x - p.x, this.z - p.z);
-    this.game.audio.play('uiClick', { vol: 0.9, pitch: 2.2 });
+    this.game.audio.play('whistle', { vol: 0.6, reverb: 0.45, vary: 0.03 });
     if (d > T.horse.whistleRange) { this.game.ui.toast(`${this.name} is too far away to hear you`); return; }
     this.called = true;
+    this.game.audio.at('whinny', this.x, this.z, { vol: 0.9, delay: 0.8, reverb: 0.4 });
   }
 
   spook(amount) {

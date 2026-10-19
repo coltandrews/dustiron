@@ -9,6 +9,9 @@ import { chooseCover } from './cover.js';
 import { rand, randSpread } from './rng.js';
 import { surrender, tickCaptive } from './enemy-captive.js';
 
+// How each bandit gun sounds: [sound, pitch].
+const GUN_SOUNDS = { rifle: ['rifle', 1.05], repeater: ['rifle', 1.2], shotgun: ['shotgun', 1], heavy: ['revolver', 0.8], pistol: ['enemyShot', 0.95] };
+
 const DEG = Math.PI / 180;
 
 export const BANDIT_TYPES = {
@@ -290,7 +293,8 @@ export class Bandit {
     this.ammo--;
     this.markSpotted(); // muzzle flashes give away a shooter's position
     g.fx.muzzle(mz.x, mz.y, mz.z, Math.sin(this.aimYaw), Math.cos(this.aimYaw), def.pellets > 1);
-    g.audio.at('enemyShot', this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: { rifle: 1.12, shotgun: 0.8, heavy: 0.78, repeater: 1.2 }[def.gun] ?? 0.92 });
+    const gunSound = GUN_SOUNDS[def.gun] ?? GUN_SOUNDS.pistol;
+    g.audio.at(gunSound[0], this.x, this.z, { vol: def.gun === 'rifle' ? 1 : 0.8, pitch: gunSound[1], reverb: 0.35 });
     g.addTrauma(0.04);
     if (P.alive) { this.lastSeenX = P.x; this.lastSeenZ = P.z; }
   }

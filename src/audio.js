@@ -1,192 +1,278 @@
 // Web Audio with every sound synthesized in code: no files to download.
-// Buses: sfx -> low-pass (swept by Dead Eye) -> master; reverb send; ui; ambience.
+// Graph: voice -> [distance muffle] -> pan -> sfx -> world filter -> master -> limiter.
+// The world filter carries Dead Eye, pause and low-health muffling. Reverb has two
+// rooms (open desert with mesa echoes, a wooden interior) that crossfade.
+// Music (audio-music.js) and ambience (audio-ambience.js) read the game each frame.
+import { T } from './tuning.js';
+import { bankJobs, makeImpulse } from './audio-bank.js';
+import { Music } from './audio-music.js';
+import { Ambience } from './audio-ambience.js';
 
-const TAU = Math.PI * 2;
+const SETTINGS_KEY = 'dustiron.audio.v1';
+const COMBAT = new Set(['toCover', 'hold', 'peek', 'aim', 'flank', 'charge', 'open']);
+const AWARE = new Set(['alert', 'search']);
+const IMPACT = { wood: 'hitWood', metal: 'hitMetal', stone: 'hitStone', water: 'splash', flesh: 'hitFlesh' };
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 export class Audio {
   constructor() {
     this.ctx = null;
     this.buffers = {};
+    this.jobs = [];
+    this.recent = {};
+    this.lastVariant = {};
     this.active = 0;
-    this.maxVoices = 28;
     this.listenerX = 0;
     this.listenerZ = 0;
     this.muted = false;
+    this.deadEye = false;
+    this.volumes = { master: 0.85, music: 0.65, sfx: 1, ambience: 0.8 };
+    this.scene = 'title';
+    this.tension = 0;
+    this.heartT = 0;
+    this.filterTarget = { world: 20000, music: 20000 };
+    this.inside = null;
+    this.loadSettings();
   }
+
+  // ---------- settings ----------
+
+  loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+      if (!s) return;
+      for (const k of Object.keys(this.volumes)) if (Number.isFinite(s[k])) this.volumes[k] = clamp01(s[k]);
+      if (typeof s.muted === 'boolean') this.muted = s.muted;
+    } catch { /* storage blocked: keep defaults */ }
+  }
+
+  saveSettings() {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...this.volumes, muted: this.muted })); } catch { /* ignore */ }
+  }
+
+  setVolume(kind, v) {
+    if (!(kind in this.volumes)) return;
+    this.volumes[kind] = clamp01(v);
+    this.applyVolumes();
+    this.saveSettings();
+  }
+
+  setMuted(m) {
+    this.muted = m;
+    this.applyVolumes();
+    this.saveSettings();
+  }
+
+  applyVolumes() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, v = this.volumes;
+    this.master.gain.setTargetAtTime(this.muted ? 0 : v.master, t, 0.05);
+    this.sfx.gain.setTargetAtTime(v.sfx, t, 0.05);
+    this.ui.gain.setTargetAtTime(0.6 * v.sfx, t, 0.05);
+    this.musicBus.gain.setTargetAtTime(v.music, t, 0.05);
+    this.amb.gain.setTargetAtTime(v.ambience, t, 0.05);
+  }
+
+  // ---------- setup ----------
 
   /** Must run from a user gesture (browsers block audio until then). */
   unlock() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    const ctx = (this.ctx = new AC());
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
-    comp.connect(ctx.destination);
-    this.master = ctx.createGain(); this.master.gain.value = 0.85; this.master.connect(comp);
-    this.lp = ctx.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 20000; this.lp.Q.value = 0.7;
-    this.lp.connect(this.master);
-    this.sfx = ctx.createGain(); this.sfx.connect(this.lp);
-    this.reverb = ctx.createConvolver(); this.reverb.buffer = this.makeImpulse(1.7);
-    this.reverbOut = ctx.createGain(); this.reverbOut.gain.value = 0.3;
-    this.reverb.connect(this.reverbOut); this.reverbOut.connect(this.lp);
-    this.ui = ctx.createGain(); this.ui.gain.value = 0.6; this.ui.connect(this.master);
-    this.amb = ctx.createGain(); this.amb.gain.value = 0.0; this.amb.connect(this.master);
-    this.build();
-    this.startAmbience();
+    const ctx = (this.ctx = new AC({ latencyHint: 'interactive' }));
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -10; limiter.knee.value = 6; limiter.ratio.value = 12;
+    limiter.attack.value = 0.002; limiter.release.value = 0.25;
+    limiter.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.connect(limiter);
+    this.world = ctx.createBiquadFilter(); this.world.type = 'lowpass'; this.world.frequency.value = 20000; this.world.Q.value = 0.7;
+    this.world.connect(this.master);
+    this.sfx = ctx.createGain(); this.sfx.connect(this.world);
+    this.ui = ctx.createGain(); this.ui.connect(this.master);
+    this.amb = ctx.createGain(); this.amb.connect(this.world);
+    this.musicBus = ctx.createGain();
+    this.musicFilter = ctx.createBiquadFilter(); this.musicFilter.type = 'lowpass'; this.musicFilter.frequency.value = 20000;
+    this.musicBus.connect(this.musicFilter); this.musicFilter.connect(this.master);
+
+    // Two reverb rooms behind one send; only the gains change when you walk indoors.
+    this.revIn = ctx.createGain();
+    const room = (impulse, gain) => {
+      const conv = ctx.createConvolver(); conv.buffer = impulse;
+      const g = ctx.createGain(); g.gain.value = gain;
+      this.revIn.connect(conv); conv.connect(g); g.connect(this.sfx);
+      return g;
+    };
+    this.outdoorVerb = room(makeImpulse(ctx, 'desert'), 0.32);
+    this.roomVerb = room(makeImpulse(ctx, 'room'), 0);
+    this.applyVolumes();
+
+    this.jobs = bankJobs(ctx);
+    this.buildSome(60);
+    this.music = new Music(this);
+    this.ambience = new Ambience(this);
+    const resume = () => { if (ctx.state === 'suspended') ctx.resume(); };
+    addEventListener('pointerdown', resume);
+    addEventListener('keydown', resume);
   }
 
-  setMuted(m) {
-    this.muted = m;
-    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.85, this.ctx.currentTime, 0.05);
+  /** Synthesizes queued sounds until the time budget (ms) runs out. */
+  buildSome(budget) {
+    const end = performance.now() + budget;
+    while (this.jobs.length && performance.now() < end) {
+      const [name, make] = this.jobs.shift();
+      const out = make();
+      if (out.render) {
+        // A set of variants: keep the first now, queue the others at the back.
+        this.buffers[name] = [out.render(0)];
+        for (let i = 1; i < out.count; i++) this.jobs.push([name, () => ({ extra: out.render(i) })]);
+      } else if (out.extra) this.buffers[name].push(out.extra);
+      else this.buffers[name] = out;
+    }
   }
 
-  setDeadEye(on) {
-    if (!this.ctx) return;
-    this.lp.frequency.setTargetAtTime(on ? 900 : 20000, this.ctx.currentTime, on ? 0.06 : 0.2);
-  }
-
-  setAmbience(level) {
-    if (this.amb) this.amb.gain.setTargetAtTime(level, this.ctx.currentTime, 0.8);
-  }
+  // ---------- one-shots ----------
 
   setListener(x, z) { this.listenerX = x; this.listenerZ = z; }
 
-  /** Play a sound positioned in the world (pan and distance from the listener). */
+  /** Play a sound positioned in the world: distance sets volume, pan, muffling and reverb. */
   at(name, x, z, opts = {}) {
+    const A = T.audio;
     const dx = x - this.listenerX, dz = z - this.listenerZ;
     const d = Math.hypot(dx, dz);
-    const vol = (opts.vol ?? 1) / (1 + d / 14);
-    this.play(name, { ...opts, vol, pan: Math.max(-0.85, Math.min(0.85, dx / 16)) });
+    if (d > A.maxDistance) return;
+    const cutoff = d > A.muffleFrom ? Math.max(700, 18000 / (1 + (d - A.muffleFrom) / A.muffleRate)) : 0;
+    this.play(name, {
+      ...opts,
+      vol: (opts.vol ?? 1) / (1 + d / A.falloff),
+      pan: Math.max(-0.85, Math.min(0.85, dx / 16)),
+      reverb: (opts.reverb ?? 0.25) + Math.min(0.5, d / 60),
+      cutoff,
+    });
   }
 
-  play(name, { vol = 1, pan = 0, pitch = 1, vary = 0.06, reverb = 0.25, bus = 'sfx', delay = 0 } = {}) {
+  /** The impact sound for a surface, positioned in the world. */
+  impact(surface, x, z, vol = 0.6) {
+    const name = IMPACT[surface] ?? 'hitDirt';
+    this.at(name, x, z, { vol });
+    if ((surface === 'metal' || surface === 'stone') && Math.random() < 0.35) this.at('ricochet', x, z, { vol: vol * 0.8, vary: 0.2, delay: 0.02 });
+  }
+
+  play(name, { vol = 1, pan = 0, pitch = 1, vary = 0.06, reverb = 0.25, bus = 'sfx', delay = 0, cutoff = 0, gap = 0.03 } = {}) {
     const ctx = this.ctx;
-    if (!ctx || this.muted) return;
-    const buffer = this.buffers[name];
-    if (!buffer) return;
-    if (this.active >= this.maxVoices && vol < 0.5) return;
+    if (!ctx || this.muted || vol <= 0.002) return;
+    const set = this.buffers[name];
+    if (!set) return;
+    const start = ctx.currentTime + delay;
+    // The same sound twice in one instant only stacks louder: skip the copy.
+    const prev = this.recent[name];
+    if (prev !== undefined && Math.abs(start - prev) < gap) return;
+    if (this.active >= T.audio.maxVoices && (vol < 0.5 || this.active >= T.audio.maxVoices + 8)) return;
+    this.recent[name] = start;
+    let buffer = set;
+    if (Array.isArray(set)) {
+      let i = Math.floor(Math.random() * set.length);
+      if (set.length > 1 && i === this.lastVariant[name]) i = (i + 1) % set.length;
+      this.lastVariant[name] = i;
+      buffer = set[i];
+    }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
-    src.playbackRate.value = pitch * (1 + (Math.random() * 2 - 1) * vary);
+    let rate = pitch * (1 + (Math.random() * 2 - 1) * vary);
+    if (this.deadEye && bus === 'sfx') rate *= T.audio.deadEyePitch;
+    src.playbackRate.value = rate;
     const g = ctx.createGain(); g.gain.value = vol;
-    const p = ctx.createStereoPanner(); p.pan.value = pan;
-    src.connect(g); g.connect(p);
-    p.connect(bus === 'ui' ? this.ui : this.sfx);
-    if (reverb > 0 && bus !== 'ui') { const s = ctx.createGain(); s.gain.value = reverb; p.connect(s); s.connect(this.reverb); }
-    this.active++;
-    src.onended = () => { this.active--; src.disconnect(); g.disconnect(); p.disconnect(); };
-    src.start(ctx.currentTime + delay);
-  }
-
-  // ---------- synthesis ----------
-
-  makeBuffer(dur, fn, channels = 1) {
-    const sr = this.ctx.sampleRate;
-    const n = Math.max(1, Math.floor(dur * sr));
-    const buf = this.ctx.createBuffer(channels, n, sr);
-    for (let c = 0; c < channels; c++) {
-      const d = buf.getChannelData(c);
-      const state = { lp: 0, lp2: 0, hp: 0 };
-      let peak = 0;
-      for (let i = 0; i < n; i++) {
-        const v = fn(i / sr, state, sr);
-        d[i] = v;
-        if (Math.abs(v) > peak) peak = Math.abs(v);
-      }
-      if (peak > 0.98) for (let i = 0; i < n; i++) d[i] *= 0.95 / peak;
+    src.connect(g);
+    let tail = g, lp = null;
+    if (cutoff > 0) {
+      lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cutoff;
+      g.connect(lp); tail = lp;
     }
-    return buf;
+    const p = ctx.createStereoPanner(); p.pan.value = pan;
+    tail.connect(p);
+    const out = bus === 'ui' ? this.ui : bus === 'music' ? this.musicBus : this.sfx;
+    p.connect(out);
+    let send = null;
+    if (reverb > 0 && bus === 'sfx') { send = ctx.createGain(); send.gain.value = reverb; p.connect(send); send.connect(this.revIn); }
+    this.active++;
+    src.onended = () => {
+      this.active--;
+      src.disconnect(); g.disconnect(); p.disconnect();
+      if (lp) lp.disconnect();
+      if (send) send.disconnect();
+    };
+    src.start(start);
   }
 
-  makeImpulse(dur) {
-    return this.makeBuffer(dur, (t) => (Math.random() * 2 - 1) * Math.exp(-t * 3.2) * (t < 0.01 ? t / 0.01 : 1), 2);
+  /** Musical cues: 'detect', 'victory', 'death', 'reward', 'quest'. */
+  cue(name) { this.music?.cue(name); }
+
+  setDeadEye(on) {
+    if (!this.ctx || this.deadEye === on) { this.deadEye = on; return; }
+    this.deadEye = on;
+    if (!on) this.play('deadEyeOut', { vol: 0.7, reverb: 0.3 });
   }
 
-  build() {
-    const N = () => Math.random() * 2 - 1;
-    const lp = (s, x, fc, sr, key = 'lp') => { const a = 1 - Math.exp((-TAU * fc) / sr); s[key] += a * (x - s[key]); return s[key]; };
-    const sweep = (t, a, b, k) => b + (a - b) * Math.exp(-t * k);
+  // ---------- per frame ----------
 
-    const shot = (bodyStart, bodyEnd, bodyDecay, thumpHz, thumpAmt, crackAmt, dur) => this.makeBuffer(dur, (t, s, sr) => {
-      const n = N();
-      const low = lp(s, n, 7000, sr, 'lp2');
-      const crack = (n - low) * Math.exp(-t * 110) * crackAmt + n * Math.exp(-t * 160) * 0.5 * crackAmt;
-      const body = lp(s, n, sweep(t, bodyStart, bodyEnd, 10), sr) * Math.exp(-t * bodyDecay) * 1.6;
-      const thump = Math.sin(TAU * (thumpHz - thumpHz * 0.45 * Math.min(1, t * 6)) * t) * Math.exp(-t * 18) * thumpAmt;
-      return crack + body + thump;
-    });
+  /** Reads the game once per frame: scene, combat tension, rooms and filters. */
+  update(game, dt) {
+    if (!this.ctx) return;
+    // Render the rest of the bank in small slices; never mid-fight, when a hitch would hurt.
+    if (this.jobs.length && !(game.state === 'playing' && this.tension > 0.05)) this.buildSome(game.state === 'playing' ? 4 : 10);
+    const A = T.audio, p = game.player, state = game.state;
+    const inside = !!(p && game.frontier?.inside);
+    const site = inside ? game.run?.interior?.id : null;
 
-    const B = this.buffers;
-    B.revolver = shot(3200, 260, 8, 85, 0.9, 1, 0.8);
-    B.enemyShot = shot(2600, 220, 9, 75, 0.7, 0.8, 0.7);
-    B.shotgun = shot(2200, 160, 5.5, 60, 1.2, 1, 1.1);
-    B.rifle = shot(4200, 300, 6, 95, 0.8, 1.3, 1.0);
+    // Tension: 0.5 when outlaws are looking for you, 1 when they are fighting.
+    let target = 0;
+    if (p && p.alive && !inside && state !== 'title') {
+      for (const e of game.enemies) {
+        if (!e.alive || !e.knows || target >= 1) continue;
+        if (Math.abs(e.x - p.x) > A.combatRange || Math.abs(e.z - p.z) > A.combatRange) continue;
+        target = Math.max(target, COMBAT.has(e.state) ? 1 : AWARE.has(e.state) ? 0.5 : 0.3);
+      }
+      if (p.sinceHit < 2.5) target = 1;
+    }
+    const before = this.tension;
+    const rate = target > this.tension ? A.tensionRise : A.tensionFall;
+    this.tension += (target - this.tension) * Math.min(1, dt / rate);
+    if (target === 0 && this.tension < 0.02) this.tension = 0;
+    if (before < 0.05 && target >= 0.5) this.cue('detect');
 
-    const click = (t, at, hz, decay) => (t >= at ? Math.sin(TAU * hz * (t - at)) * Math.exp(-(t - at) * decay) : 0);
-    B.dryClick = this.makeBuffer(0.12, (t) => click(t, 0, 2600, 260) * 0.7 + click(t, 0.035, 1900, 300) * 0.5 + N() * Math.exp(-t * 400) * 0.3);
-    B.reloadTick = this.makeBuffer(0.08, (t) => click(t, 0, 3100, 200) * 0.5 + N() * Math.exp(-t * 350) * 0.35);
-    B.reloadDone = this.makeBuffer(0.25, (t, s, sr) => click(t, 0, 1500, 120) * 0.7 + click(t, 0.06, 2400, 160) * 0.6 + lp(s, N(), 400, sr) * Math.exp(-t * 30) * 0.8);
-    B.switch = this.makeBuffer(0.18, (t, s, sr) => click(t, 0, 900, 90) * 0.6 + lp(s, N(), 900, sr) * Math.exp(-t * 40) * 0.6);
+    this.scene = state === 'title' || !p ? 'title'
+      : state === 'dead' || state === 'dying' ? 'dead'
+        : site === 'saloon' ? 'saloon'
+          : inside ? 'interior'
+            : game.inTown() ? 'town' : 'frontier';
 
-    B.whiz = this.makeBuffer(0.32, (t, s, sr) => {
-      const env = Math.sin(Math.PI * Math.min(1, t / 0.32)) ** 2;
-      const x = N();
-      const hp = x - lp(s, x, sweep(t, 2400, 900, 6), sr);
-      return lp(s, hp, 5200, sr, 'lp2') * env * 0.9;
-    });
+    if (inside !== this.inside) {
+      this.inside = inside;
+      const t = this.ctx.currentTime;
+      this.outdoorVerb.gain.setTargetAtTime(inside ? 0.02 : 0.32, t, 0.15);
+      this.roomVerb.gain.setTargetAtTime(inside ? 0.35 : 0, t, 0.15);
+    }
 
-    B.hitFlesh = this.makeBuffer(0.22, (t, s, sr) => lp(s, N(), 650, sr) * Math.exp(-t * 26) * 2 + Math.sin(TAU * 120 * t) * Math.exp(-t * 32) * 0.7);
-    B.hitWood = this.makeBuffer(0.2, (t, s, sr) => lp(s, N(), 1700, sr) * Math.exp(-t * 38) * 1.4 + Math.sin(TAU * 310 * t) * Math.exp(-t * 34) * 0.6);
-    B.hitDirt = this.makeBuffer(0.18, (t, s, sr) => lp(s, N(), 900, sr) * Math.exp(-t * 30) * 1.6);
-    B.hitMetal = this.makeBuffer(0.3, (t) => (Math.sin(TAU * 1850 * t) * 0.5 + Math.sin(TAU * 2770 * t) * 0.3) * Math.exp(-t * 16) + N() * Math.exp(-t * 200) * 0.3);
+    // A low-health heartbeat outside Dead Eye; Dead Eye keeps its own.
+    const lowHp = p && p.alive && p.hp < A.lowHealth && state === 'playing';
+    this.heartT -= dt;
+    if ((lowHp || (this.deadEye && state === 'playing')) && this.heartT <= 0) {
+      this.heartT = this.deadEye ? 0.75 : 0.55 + (p.hp / A.lowHealth) * 0.4;
+      this.play('heartbeat', { vol: this.deadEye ? 0.8 : 0.55, reverb: 0, bus: 'ui' });
+    }
 
-    const knocks = Array.from({ length: 7 }, () => [Math.random() * 0.28, 180 + Math.random() * 260]);
-    B.crateBreak = this.makeBuffer(0.55, (t, s, sr) => {
-      let v = lp(s, N(), 2200, sr) * Math.exp(-t * 9) * 1.2;
-      for (const [at, hz] of knocks) v += click(t, at, hz, 40) * 0.5;
-      return v;
-    });
-    B.barrelBreak = this.makeBuffer(0.8, (t, s, sr) => {
-      let v = lp(s, N(), 1800, sr) * Math.exp(-t * 7) * 1.1;
-      const x = N();
-      v += (x - lp(s, x, 1500, sr, 'lp2')) * Math.exp(-t * 4) * 0.5;
-      for (const [at, hz] of knocks) v += click(t, at * 1.2, hz * 0.8, 35) * 0.45;
-      return v;
-    });
-    B.explosion = this.makeBuffer(2.4, (t, s, sr) => {
-      const body = lp(s, N(), sweep(t, 1500, 70, 2.2), sr) * Math.exp(-t * 1.9) * 2.4;
-      const sub = Math.sin(TAU * (48 - 18 * Math.min(1, t)) * t) * Math.exp(-t * 3.5) * 1.3;
-      const crackle = Math.random() < 0.004 * Math.exp(-t * 2) ? N() * 2 : 0;
-      return body + sub + crackle + N() * Math.exp(-t * 60) * 0.8;
-    });
-    B.footstep = this.makeBuffer(0.09, (t, s, sr) => lp(s, N(), 520, sr) * Math.exp(-t * 55) * 1.4);
-    B.roll = this.makeBuffer(0.4, (t, s, sr) => lp(s, N(), 480, sr) * Math.sin(Math.PI * Math.min(1, t / 0.4)) * 1.6);
-    B.hurt = this.makeBuffer(0.32, (t, s, sr) => Math.sin(TAU * sweep(t, 190, 95, 6) * t + Math.sin(TAU * 30 * t) * 0.6) * Math.exp(-t * 9) * 0.7 + lp(s, N(), 700, sr) * Math.exp(-t * 18) * 0.8);
-    B.enemyHurt = this.makeBuffer(0.25, (t, s, sr) => Math.sin(TAU * sweep(t, 160, 110, 8) * t) * Math.exp(-t * 12) * 0.55 + lp(s, N(), 600, sr) * Math.exp(-t * 20) * 0.6);
-    B.enemyDeath = this.makeBuffer(0.55, (t, s, sr) => Math.sin(TAU * sweep(t, 170, 70, 4) * t + Math.sin(TAU * 22 * t)) * Math.exp(-t * 5) * 0.6 + lp(s, N(), 500, sr) * Math.exp(-t * 8) * 0.6);
-    B.bodyFall = this.makeBuffer(0.3, (t, s, sr) => lp(s, N(), 350, sr) * Math.exp(-t * 16) * 2 + Math.sin(TAU * 60 * t) * Math.exp(-t * 20) * 0.6);
-    B.deadEyeIn = this.makeBuffer(0.9, (t, s, sr) => {
-      const rise = Math.min(1, t / 0.25);
-      return lp(s, N(), 300 + 2500 * rise * Math.exp(-t * 3), sr) * Math.exp(-t * 3) * 1.4 + Math.sin(TAU * 52 * t) * Math.exp(-t * 4) * 0.8;
-    });
-    B.heartbeat = this.makeBuffer(0.5, (t) => (click(t, 0, 52, 22) + click(t, 0.17, 46, 26) * 0.75) * 1.1);
-    B.coin = this.makeBuffer(0.9, (t) => [0, 0.09, 0.18].reduce((v, at, i) => v + click(t, at, [1320, 1568, 2093][i], 7) * 0.4, 0));
-    B.uiClick = this.makeBuffer(0.06, (t) => click(t, 0, 1400, 140) * 0.6);
-    B.alert = this.makeBuffer(0.3, (t) => click(t, 0, 660, 14) * 0.25 + click(t, 0.08, 880, 14) * 0.25);
-    B.fuse = this.makeBuffer(0.3, (t, s, sr) => { const x = N(); return (x - lp(s, x, 3000, sr)) * 0.5 * (1 - t / 0.3); });
-    B.wind = this.makeBuffer(6, (t, s, sr) => {
-      const cut = 260 + 180 * Math.sin(TAU * t / 6) + 90 * Math.sin(TAU * t / 1.5);
-      const fade = Math.min(1, t / 0.3, (6 - t) / 0.3);
-      return lp(s, lp(s, N(), cut, sr, 'lp2'), cut, sr) * 2.4 * fade;
-    });
+    const paused = state === 'paused';
+    this.setFilters(
+      this.deadEye ? A.deadEyeCutoff : paused ? A.pauseCutoff : lowHp ? A.lowHealthCutoff : 20000,
+      paused ? 1600 : this.deadEye ? 1400 : site && site !== 'saloon' ? 2600 : 20000,
+    );
+    this.music.update(game, dt);
+    this.ambience.update(game, dt);
   }
 
-  startAmbience() {
-    const src = this.ctx.createBufferSource();
-    src.buffer = this.buffers.wind;
-    src.loop = true;
-    src.connect(this.amb);
-    src.start();
+  setFilters(world, music) {
+    const t = this.ctx.currentTime, f = this.filterTarget;
+    if (f.world !== world) { this.world.frequency.setTargetAtTime(world, t, world < f.world ? 0.06 : 0.25); f.world = world; }
+    if (f.music !== music) { this.musicFilter.frequency.setTargetAtTime(music, t, 0.2); f.music = music; }
   }
 }

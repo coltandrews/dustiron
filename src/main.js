@@ -53,13 +53,18 @@ async function boot() {
     quitToTitle: () => game.quitToTitle(),
   });
   ui.setContinue(loadSave());
+  ui.bindSound(audio);
   ui.show('title');
+  // Browsers only allow sound after a gesture: the first click or key starts the title theme.
+  const firstGesture = () => audio.unlock();
+  addEventListener('pointerdown', firstGesture, { once: true });
+  addEventListener('keydown', firstGesture, { once: true });
 
   addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
-    else if (e.code === 'KeyN') audio.setMuted(!audio.muted);
+    else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));

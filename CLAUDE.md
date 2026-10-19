@@ -11,6 +11,7 @@ Top-down western shooter. Plain JavaScript ES modules, Three.js r186 (`WebGLRend
 - No allocations in per-frame paths: reuse vectors, pool effects.
 - Models are built in code (`models.js`) as vertex-colored, flat-shaded geometry sharing `MAT.solid`.
 - Keep files under about 300 lines; edit one file per change where possible.
+- Sound is synthesized in code, nothing is downloaded. `audio.js` is the engine (buses, distance, Dead Eye, settings); sounds are defined in `audio-bank.js` / `audio-bank-world.js`; `audio-music.js` is the adaptive score and `audio-ambience.js` the beds, horse hooves and random world sounds. Gameplay calls `audio.play(name)`, `audio.at(name, x, z)`, `audio.impact(surface, x, z)` and `audio.cue(name)`; weapons name their own reload and action sounds in `weapons.js`.
 - `index.html` has an import map so the game also runs without a bundler. After changing `src/`, run `node tools/bundle.mjs` to refresh `dist-single/`.
 
 ## Testing

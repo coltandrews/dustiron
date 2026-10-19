@@ -33,7 +33,7 @@ function makeGame(t) {
     showInteraction(menu, action) { this.menu = menu; this.action = action; },
     questNote(text) { this.notes = [...(this.notes ?? []), text]; }, setTip() {}, emptyClick() {}, showJournal() {},
   };
-  const audio = { setDeadEye() {}, setAmbience() {}, play() {}, at() {}, setListener() {} };
+  const audio = { setDeadEye() {}, play() {}, at() {}, impact() {}, cue() {}, update() {}, setListener() {} };
   const input = { clear() {}, pressed: () => false, held: () => false, takeWheel: () => 0,
     moveAxis: () => ({ x: 0, z: 0 }), mouse: { ndcX: 0, ndcY: 0 } };
   const render = { scene: new THREE.Scene(), flash: new THREE.PointLight(), focusShadow() {}, renderer: { render() {} } };

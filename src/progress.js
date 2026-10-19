@@ -8,7 +8,7 @@ import { effectActive, AMMO, ammoMax } from './items.js';
 export function questEvent(game, event) {
   const notes = applyQuestEvent(game.run, game.questDefs, event);
   for (const note of notes) game.ui.questNote(note);
-  if (notes.length) { game.audio.play('reloadDone', { bus: 'ui', vol: 0.7, pitch: 1.5 }); game.save(); }
+  if (notes.length) { game.audio.cue('quest'); game.save(); }
   return notes;
 }
 

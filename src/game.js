@@ -75,7 +75,6 @@ export class Game {
     this.navDirty = true;
     this.flanker = null;
     this.camp = { x: 0, z: 0, t: 0 };
-    this.heartT = 0;
 
     this.deadEye = {
       meter: 0, active: false,
@@ -155,7 +154,6 @@ export class Game {
     this.ui.show(null);
     if (run.migrated) this.ui.toast('Your old life is now in Mercy Crossing. Your money and guns are kept.', 6);
     delete run.migrated;
-    this.audio.setAmbience(0.13);
     this.save();
   }
 
@@ -248,7 +246,8 @@ export class Game {
     this.run.bounty += chest.lootMoney;
     gun.reserve = Math.min(ammoMax(this.run, gun.def.ammoType), gun.reserve + chest.lootAmmo);
     this.fx.emit('dust', chest.x, 0.7, chest.z, 5, 0, 1, Math.PI, 0.5);
-    this.audio.play('coin', { bus: 'ui', vol: 0.65 });
+    this.audio.at('chestOpen', chest.x, chest.z, { vol: 0.8 });
+    this.audio.play('coin', { bus: 'ui', vol: 0.65, delay: 0.25 });
     this.ui.toast(`Found $${chest.lootMoney} and ${chest.lootAmmo} ${gun.def.name.toLowerCase()} rounds.`, 3.5);
     this.save();
     return true;
@@ -300,7 +299,7 @@ export class Game {
     this.setDeadEye(false);
     this.input.fireHeld = false;
     this.ui.showJournal(this);
-    this.audio.play('uiClick', { bus: 'ui' });
+    this.audio.play('page', { bus: 'ui', vol: 0.8 });
   }
 
   closeJournal() {
@@ -314,7 +313,6 @@ export class Game {
     this.save();
     this.unload();
     this.state = 'title';
-    this.audio.setAmbience(0);
     this.ui.setContinue(loadSave());
     this.ui.show('title');
   }
@@ -331,7 +329,7 @@ export class Game {
     this.input.fireHeld = false;
     this.ui.show('map');
     this.mapView.draw(this);
-    this.audio.play('uiClick', { bus: 'ui' });
+    this.audio.play('page', { bus: 'ui', vol: 0.9, pitch: 0.8 });
   }
 
   closeMap() {
@@ -358,6 +356,7 @@ export class Game {
     this.deathT = 1.8;
     this.slowmo = { scale: T.run.deathSlowmo, t: 1.2, target: T.run.deathSlowmo };
     this.setDeadEye(false);
+    this.audio.cue('death');
     this.addTrauma(0.6);
     this.tokens.holders.clear();
   }
@@ -378,6 +377,7 @@ export class Game {
     if (enemyKilled(this, e)) {
       this.slowmo = { scale: 0.3, t: T.run.killSlowmoTime, target: 0.3 };
       this.ui.toast(`${camp.name} is quiet now.`, 4);
+      this.audio.cue('victory');
     }
     this.save();
   }
@@ -432,6 +432,7 @@ export class Game {
     const E = T.explosion;
     this.fx.explosion(x, z);
     this.audio.at('explosion', x, z, { vol: 1.5, reverb: 0.5, vary: 0.08 });
+    this.audio.at('debris', x, z, { vol: 0.7, delay: 0.25 });
     this.addTrauma(E.trauma);
     this.hitStop(T.hitStop.explosion);
     this.noise(x, z, 30);
@@ -518,7 +519,7 @@ export class Game {
     de.active = on;
     this.audio.setDeadEye(on);
     this.ui.el.app.classList.toggle('deadeye', on);
-    if (on) { this.audio.play('deadEyeIn', { vol: 0.9, reverb: 0.4 }); this.heartT = 0; }
+    if (on) this.audio.play('deadEyeIn', { vol: 0.9, reverb: 0.4 });
   }
 
   // ---------- per frame ----------
@@ -579,6 +580,7 @@ export class Game {
   /** Real-time updates and rendering. */
   frame(dt, alpha) {
     this.realTime += dt;
+    this.audio.update(this, dt);
     if (this.hitStopT > 0) this.hitStopT -= dt;
 
     if (this.slowmo.t > 0) {
@@ -590,14 +592,12 @@ export class Game {
     const de = this.deadEye;
     if (de.active) {
       de.meter -= dt / T.deadEye.maxRealTime;
-      this.heartT -= dt;
-      if (this.heartT <= 0) { this.heartT = 0.75; this.audio.play('heartbeat', { vol: 0.8, reverb: 0 }); }
       if (de.meter <= 0) { de.meter = 0; this.setDeadEye(false); }
     }
 
     if (this.deathT > 0) {
       this.deathT -= dt;
-      if (this.deathT <= 0) { this.state = 'dead'; this.ui.showDead(this.run); this.audio.setAmbience(0.05); }
+      if (this.deathT <= 0) { this.state = 'dead'; this.ui.showDead(this.run); }
     }
     if (this.state === 'playing') {
       this.saveT -= dt;

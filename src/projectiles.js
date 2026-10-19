@@ -62,6 +62,7 @@ export class Projectiles {
         let surface = 'dirt';
         if (owner && owner.damage) surface = owner.damage(p.dmg * 0.5, hit.x, hit.y, hit.z, p.dx, p.dz, 0.5, 'enemy');
         g.fx.impact(surface === 'cloth' || surface === 'plant' ? 'dirt' : surface, hit.x, hit.y, hit.z, hit.nx, hit.nz, p.dx, p.dz);
+        g.audio.impact(surface, hit.x, hit.z, 0.4);
         this.kill(p);
         continue;
       }

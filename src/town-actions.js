@@ -251,7 +251,7 @@ export class TownActions {
     if (id.startsWith('offer:')) { this.view = { offer: id.slice(6) }; this.draw(); return; }
     if (id.startsWith('accept:')) {
       result = accept(life, defs, id.slice(7)); this.view = null;
-      if (result.ok) { g.ui.questNote(result.message); g.audio.play('reloadDone', { bus: 'ui', vol: 0.8, pitch: 1.3 }); }
+      if (result.ok) { g.ui.questNote(result.message); g.audio.play('quillNote', { bus: 'ui', vol: 0.8 }); }
     } else if (id.startsWith('turnin:')) result = turnIn(life, defs, id.slice(7), npc);
     else if (id.startsWith('buy:') && shop) {
       const item = id.slice(4);
@@ -287,14 +287,27 @@ export class TownActions {
       result = move === 'deal' ? startBlackjack(life, Number(bet)) : moves[move]?.(life);
     }
     if (!result) return;
+    if (!result.ok) g.audio.play('uiClick', { bus: 'ui', vol: 0.5, pitch: 0.7 });
     if (result.ok) {
       g.player.refreshInventory(life);
       g.save();
-      if (id.startsWith('buy:') || id.startsWith('turnin:')) g.audio.play('coin', { bus: 'ui', vol: 0.7 });
+      if (id.startsWith('buy:')) g.audio.play('register', { bus: 'ui', vol: 0.6 });
+      if (id.startsWith('turnin:')) { g.audio.play('coin', { bus: 'ui', vol: 0.7 }); g.audio.cue('reward'); }
+      if (id.startsWith('blackjack:')) this.blackjackSound(id.split(':')[1], life.blackjack);
       if (id.startsWith('turnin:')) g.ui.questNote(result.message);
     }
     const alreadyShown = result.ok && (id.startsWith('accept:') || id.startsWith('turnin:'));
     this.draw(alreadyShown ? null : { text: result.message, spoken: resultIsSpeech });
+  }
+
+  /** Cards on the felt, then chips or a groan when the hand settles. */
+  blackjackSound(move, state) {
+    const a = this.game.audio;
+    if (move === 'deal') { for (let i = 0; i < 4; i++) a.play('card', { bus: 'ui', vol: 0.6, delay: i * 0.12 }); a.play('chips', { bus: 'ui', vol: 0.5 }); }
+    else a.play('card', { bus: 'ui', vol: 0.6 });
+    if (state.phase !== 'done') return;
+    if (state.outcome === 'win' || state.outcome === 'blackjack') { a.play('chips', { bus: 'ui', vol: 0.7, delay: 0.35 }); a.play('coin', { bus: 'ui', vol: 0.6, delay: 0.45 }); }
+    else if (state.outcome === 'lose') a.play('lose', { bus: 'ui', vol: 0.6, delay: 0.3 });
   }
 }
 

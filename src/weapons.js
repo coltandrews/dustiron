@@ -8,26 +8,31 @@ export const WEAPONS = {
     key: 'revolver', name: 'Revolver', ammoType: 'pistol', damage: 34, pellets: 1, interval: 0.24, mag: 6,
     reloadPerRound: 0.42, spreadDeg: 1.4, bloomDeg: 0.9, bloomMaxDeg: 5, bloomRecover: 0.35, moveSpreadDeg: 2.2,
     range: 22, impulse: 1.6, knockback: 1.6, pierce: 0, trauma: 0.25, sound: 'revolver', pitch: 1, layout: 'cylinder', wear: 0.0018, moveMult: 1,
+    cycle: null, reloadStart: 'cylinderOpen', loadSound: 'loadPistol', reloadEnd: 'cylinderClose',
   },
   heavy: {
     key: 'heavy', name: 'Heavy revolver', ammoType: 'heavy', damage: 58, pellets: 1, interval: 0.55, mag: 5,
     reloadPerRound: 0.55, spreadDeg: 1.2, bloomDeg: 2.6, bloomMaxDeg: 7, bloomRecover: 0.55, moveSpreadDeg: 3,
     range: 24, impulse: 2.6, knockback: 3, pierce: 0, trauma: 0.42, sound: 'revolver', pitch: 0.78, layout: 'cylinder', wear: 0.0022, moveMult: 1,
+    cycle: null, reloadStart: 'cylinderOpen', loadSound: 'loadPistol', reloadEnd: 'cylinderClose',
   },
   repeater: {
     key: 'repeater', name: 'Repeater', ammoType: 'rifle', damage: 30, pellets: 1, interval: 0.32, mag: 10,
     reloadPerRound: 0.36, spreadDeg: 1.0, bloomDeg: 0.7, bloomMaxDeg: 4, bloomRecover: 0.3, moveSpreadDeg: 2.6,
     range: 30, impulse: 1.8, knockback: 1.8, pierce: 0, trauma: 0.28, sound: 'rifle', pitch: 1.25, layout: 'row', wear: 0.0016, moveMult: 0.95,
+    cycle: 'lever', reloadStart: null, loadSound: 'loadRifle', reloadEnd: 'lever',
   },
   shotgun: {
     key: 'shotgun', name: 'Shotgun', ammoType: 'shells', damage: 12, pellets: 7, interval: 0.85, mag: 2,
     reloadPerRound: 0.6, spreadDeg: 9, bloomDeg: 0, bloomMaxDeg: 0, bloomRecover: 0.3, moveSpreadDeg: 2,
     range: 9, impulse: 0.9, knockback: 3.2, pierce: 0, trauma: 0.45, sound: 'shotgun', pitch: 1, layout: 'row', wear: 0.003, moveMult: 1,
+    cycle: null, reloadStart: 'breakOpen', loadSound: 'loadShell', reloadEnd: 'breakClose',
   },
   rifle: {
     key: 'rifle', name: 'Rifle', ammoType: 'rifle', damage: 80, pellets: 1, interval: 1.1, mag: 5,
     reloadPerRound: 0.6, spreadDeg: 0.25, bloomDeg: 1.2, bloomMaxDeg: 2, bloomRecover: 0.6, moveSpreadDeg: 6,
     range: 42, impulse: 2.6, knockback: 2.2, pierce: 1, trauma: 0.35, sound: 'rifle', pitch: 1, layout: 'row', wear: 0.0012, moveMult: 0.85,
+    cycle: 'bolt', reloadStart: null, loadSound: 'loadRifle', reloadEnd: 'bolt',
   },
 };
 

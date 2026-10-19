@@ -86,6 +86,17 @@ export class UI {
     on('btn-map-close', handlers.closeMap);
   }
 
+  /** Volume sliders on the pause card. They save as they move. */
+  bindSound(audio) {
+    for (const kind of ['master', 'music', 'sfx', 'ambience']) {
+      const el = $(`vol-${kind}`);
+      if (!el) continue;
+      el.value = Math.round(audio.volumes[kind] * 100);
+      el.addEventListener('input', () => audio.setVolume(kind, el.value / 100));
+      el.addEventListener('change', () => { audio.play('uiClick', { bus: 'ui' }); el.blur(); });
+    }
+  }
+
   show(name) {
     for (const [k, el] of Object.entries(this.el.screens)) el.hidden = k !== name;
     const playing = name === null || name === 'interaction' || name === 'dead' || name === 'journal';
