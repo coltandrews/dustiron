@@ -80,12 +80,7 @@ export function turnToward(current, target, maxStep) {
   return current + Math.max(-maxStep, Math.min(maxStep, d));
 }
 
-/** Converts a character's living model into a tumbling physics corpse. */
+/** Converts a character's living model into an articulated physics body. */
 export function makeCorpse(game, model, x, z, yaw, dirX, dirZ, force, tall = 1) {
-  const pivot = new THREE.Group();
-  game.levelGroup.add(pivot);
-  model.root.position.set(0, -0.92 * tall, 0);
-  model.root.rotation.set(0, 0, 0);
-  pivot.add(model.root);
-  return game.spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall);
+  return game.spawnCorpse(model, x, z, yaw, dirX, dirZ, force, tall);
 }

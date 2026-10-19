@@ -653,7 +653,8 @@ const GROUPS = {
   debris: groups(G.DEBRIS, G.GROUND | G.WORLD | G.PROP),
   player: groups(G.PLAYER, G.WORLD | G.PROP | G.ENEMY | G.SHOT),
   enemy: groups(G.ENEMY, G.WORLD | G.PROP | G.PLAYER | G.ENEMY | G.SHOT),
-  corpse: groups(G.CORPSE, G.GROUND | G.WORLD | G.PROP | G.CORPSE),
+  // Joined body parts must not collide with each other.
+  corpse: groups(G.CORPSE, G.GROUND | G.WORLD | G.PROP),
   // Query groups
   playerMove: groups(G.PLAYER, G.WORLD | G.PROP | G.ENEMY),
   enemyMove: groups(G.ENEMY, G.WORLD | G.PROP | G.PLAYER | G.ENEMY),
@@ -1777,24 +1778,28 @@ function makeCharacter(look) {
   const mk = (shape) => { const m = meshOf(shape, material); return m; };
 
   // Legs pivot at the hip; each shin hangs from a knee so sitting and walking bend naturally.
-  const legs = [], knees = [];
+  const legs = [], knees = [], thighs = [], shins = [];
   for (const side of [-1, 1]) {
     const pivot = new THREE.Group();
     pivot.position.set(side * 0.12, 0.82 * tall, 0);
     const thigh = new Shape();
     thigh.box(0.17, 0.42 * tall, 0.2, look.pants, 0, -0.2 * tall, 0);
-    pivot.add(mk(thigh));
+    const thighMesh = mk(thigh);
+    pivot.add(thighMesh);
     const knee = new THREE.Group();
     knee.position.y = -0.4 * tall;
     const shin = new Shape();
     shin.box(0.16, 0.32 * tall, 0.19, look.pants, 0, -0.16 * tall, 0);
     shin.box(0.19, 0.14, 0.28, PAL.boots, 0, -0.42 * tall + 0.07, 0.03);
     shin.box(0.2, 0.035, 0.31, PAL.black, 0, -0.42 * tall + 0.018, 0.035);
-    knee.add(mk(shin));
+    const shinMesh = mk(shin);
+    knee.add(shinMesh);
     pivot.add(knee);
     body.add(pivot);
     legs.push(pivot);
     knees.push(knee);
+    thighs.push(thighMesh);
+    shins.push(shinMesh);
   }
 
   const torso = new Shape();
@@ -1819,7 +1824,8 @@ function makeCharacter(look) {
   torso.cyl(0.15, 0.18, 0.2, 8, look.hat, 0, 1.86 * tall, 0);
   torso.box(0.05, 0.04, 0.22, PAL.black, 0, 1.965 * tall, 0);
   torso.cyl(0.185, 0.185, 0.045, 8, look.band, 0, 1.78 * tall, 0);
-  body.add(mk(torso));
+  const torsoMesh = mk(torso);
+  body.add(torsoMesh);
 
   // Gun arm pivots at the right shoulder.
   const arm = new THREE.Group();
@@ -1838,7 +1844,7 @@ function makeCharacter(look) {
   }
   body.add(arm);
 
-  return { root, body, legs, knees, arm, guns, material, tall };
+  return { root, body, legs, knees, thighs, shins, torso: torsoMesh, arm, guns, material, tall };
 }
 
 /** Muzzle position in character-local space (x right, z forward). */
@@ -2248,6 +2254,7 @@ const { rand } = __m.rng;
 const PROP_DEFS = {
   crate: { hp: 40, body: 'box', half: [0.55, 0.55, 0.55], density: 2.2, surface: 'wood', frag: 'plank', frags: 6, cover: true, sound: 'crateBreak' },
   barrel: { hp: 60, body: 'cyl', r: 0.42, halfH: 0.575, density: 2.6, surface: 'water', frag: 'stave', frags: 5, cover: true, sound: 'barrelBreak' },
+  supply: { indestructible: true, body: 'fixedBox', half: [0.72, 0.45, 0.48], surface: 'wood', cover: false },
   tnt: { hp: 20, body: 'cyl', r: 0.42, halfH: 0.575, density: 1.6, surface: 'wood', frag: 'redStave', frags: 4, cover: true, explosive: true, sound: 'barrelBreak' },
   fence: { hp: 25, body: 'fixedBox', half: [1.1, 0.575, 0.08], surface: 'wood', frag: 'rail', frags: 3, cover: false, sound: 'crateBreak' },
   wagon: { indestructible: true, body: 'fixedBox', half: [1.12, 0.75, 1.65], surface: 'wood', cover: true },
@@ -2284,6 +2291,9 @@ class Prop {
     this.ry = spec.ry ?? 0;
     this.fuse = -1;
     this.flash = 0;
+    this.looted = Boolean(spec.looted);
+    this.lootMoney = Number.isSafeInteger(spec.lootMoney) ? spec.lootMoney : 0;
+    this.lootAmmo = Number.isSafeInteger(spec.lootAmmo) ? spec.lootAmmo : 0;
     this.build(spec);
   }
 
@@ -2316,9 +2326,32 @@ class Prop {
 
     this.material = def.indestructible ? MAT.solid : MAT.solid.clone();
     if (!def.indestructible) { this.material.emissive = new THREE.Color(0xfff2d0); this.material.emissiveIntensity = 0; }
-    this.mesh = new THREE.Mesh(geo, this.material);
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
+    if (kind === 'supply') {
+      this.mesh = new THREE.Group();
+      const base = new Shape();
+      base.box(1.36, 0.62, 0.86, PAL.wood, 0, 0.31, 0);
+      base.box(1.42, 0.1, 0.92, PAL.woodDark, 0, 0.08, 0);
+      for (const x of [-0.58, 0.58]) base.box(0.1, 0.68, 0.92, PAL.iron, x, 0.34, 0);
+      base.box(0.28, 0.3, 0.06, PAL.brass, 0, 0.42, 0.47);
+      base.box(0.1, 0.13, 0.07, PAL.black, 0, 0.42, 0.5);
+      const baseMesh = new THREE.Mesh(cachedGeo('supply-base', () => base), this.material);
+      this.mesh.add(baseMesh);
+
+      const lid = new Shape();
+      lid.box(1.42, 0.2, 0.84, PAL.woodLight, 0, 0, 0.4);
+      lid.box(1.48, 0.08, 0.9, PAL.woodDark, 0, 0.06, 0.4);
+      for (const x of [-0.6, 0.6]) lid.box(0.1, 0.25, 0.9, PAL.iron, x, 0, 0.4);
+      this.lid = new THREE.Group();
+      this.lid.position.set(0, 0.7, -0.42);
+      this.lid.add(new THREE.Mesh(cachedGeo('supply-lid', () => lid), this.material));
+      this.lid.rotation.x = this.looted ? -1.15 : 0;
+      this.mesh.add(this.lid);
+    } else this.mesh = new THREE.Mesh(geo, this.material);
+    this.mesh.traverse((part) => {
+      if (!part.isMesh) return;
+      part.castShadow = true;
+      part.receiveShadow = true;
+    });
     game.levelGroup.add(this.mesh);
 
     if (def.body === 'box' || def.body === 'cyl') {
@@ -2401,6 +2434,11 @@ class Prop {
     if (!this.alive || !this.def.cover) return false;
     if (this.kind === 'rock') return this.coverOk;
     return true;
+  }
+
+  setLooted(looted, instant = false) {
+    this.looted = Boolean(looted);
+    if (instant && this.lid) this.lid.rotation.x = this.looted ? -1.15 : 0;
   }
 
   coverPoints() {
@@ -2494,6 +2532,10 @@ class Prop {
     if (this.flash > 0) {
       this.flash -= realDt;
       this.material.emissiveIntensity = this.flash > 0 ? 0.55 : 0;
+    }
+    if (this.lid) {
+      const target = this.looted ? -1.15 : 0;
+      this.lid.rotation.x += (target - this.lid.rotation.x) * Math.min(1, realDt * 9);
     }
     if (this.flame) {
       const f = 1 + Math.sin(time * 17) * 0.08 + Math.sin(time * 29) * 0.06;
@@ -2646,14 +2688,9 @@ function turnToward(current, target, maxStep) {
   return current + Math.max(-maxStep, Math.min(maxStep, d));
 }
 
-/** Converts a character's living model into a tumbling physics corpse. */
+/** Converts a character's living model into an articulated physics body. */
 function makeCorpse(game, model, x, z, yaw, dirX, dirZ, force, tall = 1) {
-  const pivot = new THREE.Group();
-  game.levelGroup.add(pivot);
-  model.root.position.set(0, -0.92 * tall, 0);
-  model.root.rotation.set(0, 0, 0);
-  pivot.add(model.root);
-  return game.spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall);
+  return game.spawnCorpse(model, x, z, yaw, dirX, dirZ, force, tall);
 }
 
 return { addRollPivot, animateCharacter, SEAT_HIP, poseSeated, showGun, angleDelta, turnToward, makeCorpse };
@@ -3987,6 +4024,7 @@ function validActors(actors, props) {
     ids.add(actor.id);
     if (!(Number.isFinite(actor.hp) || (props && actor.hp === null))) return false;
     if (actor.alive && actor.hp !== null && actor.hp <= 0) return false;
+    if (props && actor.looted !== undefined && typeof actor.looted !== 'boolean') return false;
     return actor.body === undefined || validBody(actor.body);
   });
 }
@@ -4961,7 +4999,6 @@ function patron(room, name, look, x, z, yaw, phase = 0) {
   room.npcs.push(npc);
   return npc;
 }
-
 
 return { townsperson, patron };
 })();
@@ -6443,6 +6480,23 @@ function generateCamp(seed, camp) {
     }
   }
 
+  // Supply chests are added after all existing camp data. This keeps old prop
+  // IDs and enemy positions stable when a saved life receives this feature.
+  const supplies = 2 + Math.min(1, camp);
+  for (let i = 0; i < supplies; i++) {
+    for (let t = 0; t < 60; t++) {
+      const x = rng.range(-H + 3, H - 3), z = rng.range(-17, 10);
+      if (!free(x, z, 0.8, 1.2)) continue;
+      if (enemies.some((enemy) => Math.hypot(enemy.x - x, enemy.z - z) < 1.6)) continue;
+      put('supply', x, z, 0.8, {
+        ry: rng.range(-Math.PI, Math.PI),
+        lootMoney: rng.int(4 + camp * 2, 10 + camp * 4),
+        lootAmmo: rng.int(4 + camp * 2, 8 + camp * 3),
+      });
+      break;
+    }
+  }
+
   const names = ['Coyote Wash', 'Dry Gulch', 'Rattler Flats', 'Buzzard Mesa', 'Red Hollow', 'Cinder Draw', 'Bone Creek', 'Dead Man\'s Bend', 'Copper Notch', 'Sidewinder Pass'];
   return { props, enemies, campfire: cf, name: names[(seed + camp * 3) % names.length] };
 }
@@ -6566,6 +6620,7 @@ function buildEncounters(game) {
       if (old) {
         if (Number.isFinite(old.hp)) p.hp = old.hp;
         p.fuse = old.fuse ?? -1;
+        if (old.looted !== undefined) p.setLooted(old.looted, true);
         if (p.body && old.body) {
           p.body.setTranslation(old.body.position, true);
           p.body.setRotation(old.body.rotation, true);
@@ -6618,6 +6673,7 @@ function captureEncounters(game) {
     }
     for (const p of camp.props) {
       const data = { id: p.id, alive: p.alive, hp: Number.isFinite(p.hp) ? p.hp : null, fuse: p.fuse, x: p.x, z: p.z, ry: p.ry };
+      if (p.kind === 'supply') data.looted = p.looted;
       if (p.body) data.body = {
         position: { ...p.body.translation() }, rotation: { ...p.body.rotation() },
         velocity: { ...p.body.linvel() }, angularVelocity: { ...p.body.angvel() },
@@ -6954,8 +7010,7 @@ __m.game = (() => {
 // explosions, and the order everything updates in each tick.
 
 const { T } = __m.tuning;
-const { Physics, GROUPS } = __m.physics;
-const { PhysObj } = __m.physics;
+const { Physics, GROUPS, PhysObj, RAPIER } = __m.physics;
 const { FX } = __m.fx;
 const { MAT, PAL } = __m.models;
 const { Debris, sharedGeometries } = __m.props;
@@ -7157,6 +7212,35 @@ class Game {
     return !!this.player && (this.frontier?.inside || Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius);
   }
 
+  nearestLoot() {
+    if (!this.player?.alive || this.inTown()) return null;
+    let nearest = null, best = 2;
+    for (const prop of this.props) {
+      if (!prop.alive || prop.kind !== 'supply' || prop.looted) continue;
+      const distance = Math.hypot(prop.x - this.player.x, prop.z - this.player.z);
+      if (distance < best) { nearest = prop; best = distance; }
+    }
+    return nearest;
+  }
+
+  lootHint() {
+    return this.nearestLoot() ? 'Press [E] to Loot Supplies' : '';
+  }
+
+  lootNearest() {
+    const chest = this.nearestLoot();
+    if (!chest) return false;
+    chest.setLooted(true);
+    const gun = this.player.gun;
+    this.run.bounty += chest.lootMoney;
+    gun.reserve += chest.lootAmmo;
+    this.fx.emit('dust', chest.x, 0.7, chest.z, 5, 0, 1, Math.PI, 0.5);
+    this.audio.play('coin', { bus: 'ui', vol: 0.65 });
+    this.ui.toast(`Found $${chest.lootMoney} and ${chest.lootAmmo} ${gun.def.name.toLowerCase()} rounds.`, 3.5);
+    this.save();
+    return true;
+  }
+
   useBandage() {
     if (!this.player.alive || this.player.hp >= T.player.hp) return;
     if (!this.run.bandages) { this.ui.toast('No bandages. Visit the doctor in town.'); return; }
@@ -7242,16 +7326,50 @@ class Game {
     this.save();
   }
 
-  spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall) {
-    const { body } = this.physics.dynamic({
-      x, y: 0.92 * tall, z, ry: yaw, shape: { type: 'box', hx: 0.26, hy: 0.9 * tall, hz: 0.2 },
-      density: 1.4, friction: 0.9, restitution: 0.05, group: GROUPS.corpse, linDamp: 0.9, angDamp: 1.4,
-    });
-    body.setLinvel({ x: dirX * force, y: 1.8, z: dirZ * force }, true);
-    body.setAngvel({ x: dirZ * 5, y: (Math.random() - 0.5) * 2, z: -dirX * 5 }, true);
-    const obj = this.physics.track(new PhysObj(body, pivot));
-    this.corpses.push(obj);
-    return obj;
+  spawnCorpse(model, x, z, yaw, dirX, dirZ, force, tall) {
+    this.levelGroup.remove(model.root);
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    const rotation = { x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) };
+    const parts = [];
+    const addPart = (object, lx, ly, lz, shape, vx, vy, vz) => {
+      object.removeFromParent();
+      object.position.set(vx, vy, vz);
+      object.rotation.set(0, 0, 0);
+      const mesh = new THREE.Group();
+      mesh.add(object);
+      this.levelGroup.add(mesh);
+      const px = x + lx * c + lz * s, pz = z - lx * s + lz * c;
+      const { body } = this.physics.dynamic({
+        x: px, y: ly, z: pz, rot: rotation, shape,
+        density: 1.4, friction: 0.9, restitution: 0.03, group: GROUPS.corpse, linDamp: 0.9, angDamp: 1.7,
+      });
+      body.setLinvel({ x: dirX * force, y: 1.6, z: dirZ * force }, true);
+      body.setAngvel({ x: dirZ * 3 + (Math.random() - 0.5), y: (Math.random() - 0.5) * 1.5, z: -dirX * 3 + (Math.random() - 0.5) }, true);
+      const obj = this.physics.track(new PhysObj(body, mesh));
+      this.corpses.push(obj);
+      parts.push(obj);
+      return obj;
+    };
+    const torso = addPart(model.torso, 0, 1.32 * tall, 0, { type: 'box', hx: 0.34, hy: 0.5 * tall, hz: 0.24 }, 0, -1.32 * tall, 0);
+    const arm = addPart(model.arm, 0.29, 1.32 * tall, 0.22, { type: 'box', hx: 0.15, hy: 0.15, hz: 0.3 }, 0, 0, -0.22);
+    const thighs = [], shins = [];
+    for (let i = 0; i < 2; i++) {
+      const side = i ? 1 : -1;
+      thighs.push(addPart(model.thighs[i], side * 0.12, 0.62 * tall, 0,
+        { type: 'box', hx: 0.12, hy: 0.22 * tall, hz: 0.13 }, 0, 0.2 * tall, 0));
+      shins.push(addPart(model.shins[i], side * 0.12, 0.2 * tall, 0,
+        { type: 'box', hx: 0.13, hy: 0.23 * tall, hz: 0.15 }, 0, 0.22 * tall, 0));
+    }
+    const joint = (a, b, anchorA, anchorB) => this.physics.world.createImpulseJoint(
+      RAPIER.JointData.spherical(anchorA, anchorB), a.body, b.body, true);
+    joint(torso, arm, { x: 0.29, y: 0.02 * tall, z: 0 }, { x: 0, y: 0, z: -0.22 });
+    for (let i = 0; i < 2; i++) {
+      const side = i ? 1 : -1;
+      joint(torso, thighs[i], { x: side * 0.12, y: -0.5 * tall, z: 0 }, { x: 0, y: 0.2 * tall, z: 0 });
+      joint(thighs[i], shins[i], { x: 0, y: -0.22 * tall, z: 0 }, { x: 0, y: 0.22 * tall, z: 0 });
+    }
+    torso.parts = parts;
+    return torso;
   }
 
   explode(x, z) {
@@ -7362,7 +7480,10 @@ class Game {
       it.fireHeld = false;
       return;
     }
-    if (this.state === 'playing' && inp.pressed('interact') && this.townActions.nearest()) { this.townActions.open(); return; }
+    if (this.state === 'playing' && inp.pressed('interact')) {
+      if (this.townActions.nearest()) { this.townActions.open(); return; }
+      if (this.lootNearest()) return;
+    }
     if (this.state === 'playing' && inp.pressed('bandage')) this.useBandage();
     it.move = inp.moveAxis();
     this.rig.place(0);
@@ -7467,7 +7588,7 @@ class Game {
     if (p) {
       const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
       this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
-      this.interactionHint = this.townActions.hint();
+      this.interactionHint = this.townActions.hint() || this.lootHint();
       this.frontier.render(alpha);
       const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);

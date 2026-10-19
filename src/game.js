@@ -2,8 +2,7 @@
 // explosions, and the order everything updates in each tick.
 import * as THREE from 'three';
 import { T } from './tuning.js';
-import { Physics, GROUPS } from './physics.js';
-import { PhysObj } from './physics.js';
+import { Physics, GROUPS, PhysObj, RAPIER } from './physics.js';
 import { FX } from './fx.js';
 import { MAT, PAL } from './models.js';
 import { Debris, sharedGeometries } from './props.js';
@@ -206,6 +205,35 @@ export class Game {
     return !!this.player && (this.frontier?.inside || Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius);
   }
 
+  nearestLoot() {
+    if (!this.player?.alive || this.inTown()) return null;
+    let nearest = null, best = 2;
+    for (const prop of this.props) {
+      if (!prop.alive || prop.kind !== 'supply' || prop.looted) continue;
+      const distance = Math.hypot(prop.x - this.player.x, prop.z - this.player.z);
+      if (distance < best) { nearest = prop; best = distance; }
+    }
+    return nearest;
+  }
+
+  lootHint() {
+    return this.nearestLoot() ? 'Press [E] to Loot Supplies' : '';
+  }
+
+  lootNearest() {
+    const chest = this.nearestLoot();
+    if (!chest) return false;
+    chest.setLooted(true);
+    const gun = this.player.gun;
+    this.run.bounty += chest.lootMoney;
+    gun.reserve += chest.lootAmmo;
+    this.fx.emit('dust', chest.x, 0.7, chest.z, 5, 0, 1, Math.PI, 0.5);
+    this.audio.play('coin', { bus: 'ui', vol: 0.65 });
+    this.ui.toast(`Found $${chest.lootMoney} and ${chest.lootAmmo} ${gun.def.name.toLowerCase()} rounds.`, 3.5);
+    this.save();
+    return true;
+  }
+
   useBandage() {
     if (!this.player.alive || this.player.hp >= T.player.hp) return;
     if (!this.run.bandages) { this.ui.toast('No bandages. Visit the doctor in town.'); return; }
@@ -291,16 +319,50 @@ export class Game {
     this.save();
   }
 
-  spawnCorpse(pivot, x, z, yaw, dirX, dirZ, force, tall) {
-    const { body } = this.physics.dynamic({
-      x, y: 0.92 * tall, z, ry: yaw, shape: { type: 'box', hx: 0.26, hy: 0.9 * tall, hz: 0.2 },
-      density: 1.4, friction: 0.9, restitution: 0.05, group: GROUPS.corpse, linDamp: 0.9, angDamp: 1.4,
-    });
-    body.setLinvel({ x: dirX * force, y: 1.8, z: dirZ * force }, true);
-    body.setAngvel({ x: dirZ * 5, y: (Math.random() - 0.5) * 2, z: -dirX * 5 }, true);
-    const obj = this.physics.track(new PhysObj(body, pivot));
-    this.corpses.push(obj);
-    return obj;
+  spawnCorpse(model, x, z, yaw, dirX, dirZ, force, tall) {
+    this.levelGroup.remove(model.root);
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    const rotation = { x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) };
+    const parts = [];
+    const addPart = (object, lx, ly, lz, shape, vx, vy, vz) => {
+      object.removeFromParent();
+      object.position.set(vx, vy, vz);
+      object.rotation.set(0, 0, 0);
+      const mesh = new THREE.Group();
+      mesh.add(object);
+      this.levelGroup.add(mesh);
+      const px = x + lx * c + lz * s, pz = z - lx * s + lz * c;
+      const { body } = this.physics.dynamic({
+        x: px, y: ly, z: pz, rot: rotation, shape,
+        density: 1.4, friction: 0.9, restitution: 0.03, group: GROUPS.corpse, linDamp: 0.9, angDamp: 1.7,
+      });
+      body.setLinvel({ x: dirX * force, y: 1.6, z: dirZ * force }, true);
+      body.setAngvel({ x: dirZ * 3 + (Math.random() - 0.5), y: (Math.random() - 0.5) * 1.5, z: -dirX * 3 + (Math.random() - 0.5) }, true);
+      const obj = this.physics.track(new PhysObj(body, mesh));
+      this.corpses.push(obj);
+      parts.push(obj);
+      return obj;
+    };
+    const torso = addPart(model.torso, 0, 1.32 * tall, 0, { type: 'box', hx: 0.34, hy: 0.5 * tall, hz: 0.24 }, 0, -1.32 * tall, 0);
+    const arm = addPart(model.arm, 0.29, 1.32 * tall, 0.22, { type: 'box', hx: 0.15, hy: 0.15, hz: 0.3 }, 0, 0, -0.22);
+    const thighs = [], shins = [];
+    for (let i = 0; i < 2; i++) {
+      const side = i ? 1 : -1;
+      thighs.push(addPart(model.thighs[i], side * 0.12, 0.62 * tall, 0,
+        { type: 'box', hx: 0.12, hy: 0.22 * tall, hz: 0.13 }, 0, 0.2 * tall, 0));
+      shins.push(addPart(model.shins[i], side * 0.12, 0.2 * tall, 0,
+        { type: 'box', hx: 0.13, hy: 0.23 * tall, hz: 0.15 }, 0, 0.22 * tall, 0));
+    }
+    const joint = (a, b, anchorA, anchorB) => this.physics.world.createImpulseJoint(
+      RAPIER.JointData.spherical(anchorA, anchorB), a.body, b.body, true);
+    joint(torso, arm, { x: 0.29, y: 0.02 * tall, z: 0 }, { x: 0, y: 0, z: -0.22 });
+    for (let i = 0; i < 2; i++) {
+      const side = i ? 1 : -1;
+      joint(torso, thighs[i], { x: side * 0.12, y: -0.5 * tall, z: 0 }, { x: 0, y: 0.2 * tall, z: 0 });
+      joint(thighs[i], shins[i], { x: 0, y: -0.22 * tall, z: 0 }, { x: 0, y: 0.22 * tall, z: 0 });
+    }
+    torso.parts = parts;
+    return torso;
   }
 
   explode(x, z) {
@@ -411,7 +473,10 @@ export class Game {
       it.fireHeld = false;
       return;
     }
-    if (this.state === 'playing' && inp.pressed('interact') && this.townActions.nearest()) { this.townActions.open(); return; }
+    if (this.state === 'playing' && inp.pressed('interact')) {
+      if (this.townActions.nearest()) { this.townActions.open(); return; }
+      if (this.lootNearest()) return;
+    }
     if (this.state === 'playing' && inp.pressed('bandage')) this.useBandage();
     it.move = inp.moveAxis();
     this.rig.place(0);
@@ -516,7 +581,7 @@ export class Game {
     if (p) {
       const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
       this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
-      this.interactionHint = this.townActions.hint();
+      this.interactionHint = this.townActions.hint() || this.lootHint();
       this.frontier.render(alpha);
       const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);

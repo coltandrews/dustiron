@@ -42,6 +42,7 @@ test('camps place actors and navigation at their separate world positions', (t) 
     assert.ok(Math.hypot(camp.x, camp.z) > 80);
     assert.ok(camp.enemies.length > 0);
     assert.ok(camp.props.length > 0);
+    assert.ok(camp.props.filter((prop) => prop.kind === 'supply').length >= 2);
     for (const actor of [...camp.enemies, ...camp.props]) {
       assert.ok(Math.abs(actor.x - camp.x) <= 23, `${actor.id} x is outside its camp`);
       assert.ok(Math.abs(actor.z - camp.z) <= 23, `${actor.id} z is outside its camp`);
@@ -78,6 +79,19 @@ test('dead enemies and broken props stay absent through repeated save and reload
   const again = gameFor(t, saved).encounters.find((item) => item.id === camp.id);
   assert.equal(again.enemies.some((item) => item.id === enemy.id), false);
   assert.equal(again.props.some((item) => item.id === prop.id), false);
+});
+
+test('opened supply chests keep their state after save and reload', (t) => {
+  const first = gameFor(t), camp = first.encounters[0];
+  const chest = camp.props.find((prop) => prop.kind === 'supply');
+  assert.ok(chest);
+  assert.equal(chest.looted, false);
+  chest.setLooted(true, true);
+  const restored = gameFor(t, savedLife(first)).encounters.find((item) => item.id === camp.id);
+  const after = restored.props.find((prop) => prop.id === chest.id);
+  assert.ok(after);
+  assert.equal(after.looted, true);
+  assert.equal(after.lid.rotation.x, -1.15);
 });
 
 test('damaged props keep health, fuse, body transform, and motion on reload', (t) => {

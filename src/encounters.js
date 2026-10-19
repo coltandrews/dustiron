@@ -24,6 +24,7 @@ export function buildEncounters(game) {
       if (old) {
         if (Number.isFinite(old.hp)) p.hp = old.hp;
         p.fuse = old.fuse ?? -1;
+        if (old.looted !== undefined) p.setLooted(old.looted, true);
         if (p.body && old.body) {
           p.body.setTranslation(old.body.position, true);
           p.body.setRotation(old.body.rotation, true);
@@ -76,6 +77,7 @@ export function captureEncounters(game) {
     }
     for (const p of camp.props) {
       const data = { id: p.id, alive: p.alive, hp: Number.isFinite(p.hp) ? p.hp : null, fuse: p.fuse, x: p.x, z: p.z, ry: p.ry };
+      if (p.kind === 'supply') data.looted = p.looted;
       if (p.body) data.body = {
         position: { ...p.body.translation() }, rotation: { ...p.body.rotation() },
         velocity: { ...p.body.linvel() }, angularVelocity: { ...p.body.angvel() },

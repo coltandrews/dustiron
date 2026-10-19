@@ -121,6 +121,23 @@ export function generateCamp(seed, camp) {
     }
   }
 
+  // Supply chests are added after all existing camp data. This keeps old prop
+  // IDs and enemy positions stable when a saved life receives this feature.
+  const supplies = 2 + Math.min(1, camp);
+  for (let i = 0; i < supplies; i++) {
+    for (let t = 0; t < 60; t++) {
+      const x = rng.range(-H + 3, H - 3), z = rng.range(-17, 10);
+      if (!free(x, z, 0.8, 1.2)) continue;
+      if (enemies.some((enemy) => Math.hypot(enemy.x - x, enemy.z - z) < 1.6)) continue;
+      put('supply', x, z, 0.8, {
+        ry: rng.range(-Math.PI, Math.PI),
+        lootMoney: rng.int(4 + camp * 2, 10 + camp * 4),
+        lootAmmo: rng.int(4 + camp * 2, 8 + camp * 3),
+      });
+      break;
+    }
+  }
+
   const names = ['Coyote Wash', 'Dry Gulch', 'Rattler Flats', 'Buzzard Mesa', 'Red Hollow', 'Cinder Draw', 'Bone Creek', 'Dead Man\'s Bend', 'Copper Notch', 'Sidewinder Pass'];
   return { props, enemies, campfire: cf, name: names[(seed + camp * 3) % names.length] };
 }

@@ -11,6 +11,7 @@ import { rand } from './rng.js';
 export const PROP_DEFS = {
   crate: { hp: 40, body: 'box', half: [0.55, 0.55, 0.55], density: 2.2, surface: 'wood', frag: 'plank', frags: 6, cover: true, sound: 'crateBreak' },
   barrel: { hp: 60, body: 'cyl', r: 0.42, halfH: 0.575, density: 2.6, surface: 'water', frag: 'stave', frags: 5, cover: true, sound: 'barrelBreak' },
+  supply: { indestructible: true, body: 'fixedBox', half: [0.72, 0.45, 0.48], surface: 'wood', cover: false },
   tnt: { hp: 20, body: 'cyl', r: 0.42, halfH: 0.575, density: 1.6, surface: 'wood', frag: 'redStave', frags: 4, cover: true, explosive: true, sound: 'barrelBreak' },
   fence: { hp: 25, body: 'fixedBox', half: [1.1, 0.575, 0.08], surface: 'wood', frag: 'rail', frags: 3, cover: false, sound: 'crateBreak' },
   wagon: { indestructible: true, body: 'fixedBox', half: [1.12, 0.75, 1.65], surface: 'wood', cover: true },
@@ -47,6 +48,9 @@ export class Prop {
     this.ry = spec.ry ?? 0;
     this.fuse = -1;
     this.flash = 0;
+    this.looted = Boolean(spec.looted);
+    this.lootMoney = Number.isSafeInteger(spec.lootMoney) ? spec.lootMoney : 0;
+    this.lootAmmo = Number.isSafeInteger(spec.lootAmmo) ? spec.lootAmmo : 0;
     this.build(spec);
   }
 
@@ -79,9 +83,32 @@ export class Prop {
 
     this.material = def.indestructible ? MAT.solid : MAT.solid.clone();
     if (!def.indestructible) { this.material.emissive = new THREE.Color(0xfff2d0); this.material.emissiveIntensity = 0; }
-    this.mesh = new THREE.Mesh(geo, this.material);
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
+    if (kind === 'supply') {
+      this.mesh = new THREE.Group();
+      const base = new Shape();
+      base.box(1.36, 0.62, 0.86, PAL.wood, 0, 0.31, 0);
+      base.box(1.42, 0.1, 0.92, PAL.woodDark, 0, 0.08, 0);
+      for (const x of [-0.58, 0.58]) base.box(0.1, 0.68, 0.92, PAL.iron, x, 0.34, 0);
+      base.box(0.28, 0.3, 0.06, PAL.brass, 0, 0.42, 0.47);
+      base.box(0.1, 0.13, 0.07, PAL.black, 0, 0.42, 0.5);
+      const baseMesh = new THREE.Mesh(cachedGeo('supply-base', () => base), this.material);
+      this.mesh.add(baseMesh);
+
+      const lid = new Shape();
+      lid.box(1.42, 0.2, 0.84, PAL.woodLight, 0, 0, 0.4);
+      lid.box(1.48, 0.08, 0.9, PAL.woodDark, 0, 0.06, 0.4);
+      for (const x of [-0.6, 0.6]) lid.box(0.1, 0.25, 0.9, PAL.iron, x, 0, 0.4);
+      this.lid = new THREE.Group();
+      this.lid.position.set(0, 0.7, -0.42);
+      this.lid.add(new THREE.Mesh(cachedGeo('supply-lid', () => lid), this.material));
+      this.lid.rotation.x = this.looted ? -1.15 : 0;
+      this.mesh.add(this.lid);
+    } else this.mesh = new THREE.Mesh(geo, this.material);
+    this.mesh.traverse((part) => {
+      if (!part.isMesh) return;
+      part.castShadow = true;
+      part.receiveShadow = true;
+    });
     game.levelGroup.add(this.mesh);
 
     if (def.body === 'box' || def.body === 'cyl') {
@@ -164,6 +191,11 @@ export class Prop {
     if (!this.alive || !this.def.cover) return false;
     if (this.kind === 'rock') return this.coverOk;
     return true;
+  }
+
+  setLooted(looted, instant = false) {
+    this.looted = Boolean(looted);
+    if (instant && this.lid) this.lid.rotation.x = this.looted ? -1.15 : 0;
   }
 
   coverPoints() {
@@ -257,6 +289,10 @@ export class Prop {
     if (this.flash > 0) {
       this.flash -= realDt;
       this.material.emissiveIntensity = this.flash > 0 ? 0.55 : 0;
+    }
+    if (this.lid) {
+      const target = this.looted ? -1.15 : 0;
+      this.lid.rotation.x += (target - this.lid.rotation.x) * Math.min(1, realDt * 9);
     }
     if (this.flame) {
       const f = 1 + Math.sin(time * 17) * 0.08 + Math.sin(time * 29) * 0.06;

@@ -124,6 +124,33 @@ test('a new world saves, town protects the player, and travel uses finite ammuni
   game.frame(1 / 60, 0.5);
 });
 
+test('camp supply chests give money and selected-gun ammunition one time', (t) => {
+  const game = makeGame(t);
+  startLife(game, 0.19876);
+  const camp = game.encounters[0];
+  const chest = camp.props.find((prop) => prop.kind === 'supply');
+  assert.ok(chest);
+  place(game, chest.x, chest.z);
+  assert.equal(game.nearestLoot(), chest);
+  assert.equal(game.lootHint(), 'Press [E] to Loot Supplies');
+  const money = game.run.bounty, reserve = game.player.gun.reserve;
+  assert.equal(game.lootNearest(), true);
+  assert.equal(game.run.bounty, money + chest.lootMoney);
+  assert.equal(game.player.gun.reserve, reserve + chest.lootAmmo);
+  assert.equal(game.nearestLoot(), null);
+  assert.equal(game.lootNearest(), false);
+  assert.equal(game.run.bounty, money + chest.lootMoney);
+  assert.equal(game.player.gun.reserve, reserve + chest.lootAmmo);
+
+  const saved = loadSave();
+  assert.ok(saved);
+  assert.equal(saved.camps[camp.id].props.find((prop) => prop.id === chest.id).looted, true);
+  game.continueRun(saved);
+  const restored = game.encounters.find((item) => item.id === camp.id).props.find((prop) => prop.id === chest.id);
+  assert.ok(restored);
+  assert.equal(restored.looted, true);
+});
+
 test('bounty, shopping, save, death, and a new life share one consistent record', (t) => {
   const game = makeGame(t);
   startLife(game, 0.23456);
@@ -138,6 +165,8 @@ test('bounty, shopping, save, death, and a new life share one consistent record'
   game.player.gun.ammo = 2; game.player.gun.reserve = 9;
   const hit = target.onHit(1000, 1, 0, 1);
   assert.equal(hit.killed, true);
+  assert.equal(game.corpses.length, 6);
+  assert.equal(new Set(game.corpses.map((corpse) => corpse.body.handle)).size, 6);
   game.onEnemyKilled(target, hit.crit);
   assert.equal(game.run.contracts[camp.id].status, 'proof');
   assert.equal(game.run.bounty, 0);

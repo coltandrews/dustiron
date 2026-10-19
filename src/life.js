@@ -106,6 +106,7 @@ function validActors(actors, props) {
     ids.add(actor.id);
     if (!(Number.isFinite(actor.hp) || (props && actor.hp === null))) return false;
     if (actor.alive && actor.hp !== null && actor.hp <= 0) return false;
+    if (props && actor.looted !== undefined && typeof actor.looted !== 'boolean') return false;
     return actor.body === undefined || validBody(actor.body);
   });
 }

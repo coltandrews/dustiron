@@ -21,7 +21,8 @@ export const GROUPS = {
   debris: groups(G.DEBRIS, G.GROUND | G.WORLD | G.PROP),
   player: groups(G.PLAYER, G.WORLD | G.PROP | G.ENEMY | G.SHOT),
   enemy: groups(G.ENEMY, G.WORLD | G.PROP | G.PLAYER | G.ENEMY | G.SHOT),
-  corpse: groups(G.CORPSE, G.GROUND | G.WORLD | G.PROP | G.CORPSE),
+  // Joined body parts must not collide with each other.
+  corpse: groups(G.CORPSE, G.GROUND | G.WORLD | G.PROP),
   // Query groups
   playerMove: groups(G.PLAYER, G.WORLD | G.PROP | G.ENEMY),
   enemyMove: groups(G.ENEMY, G.WORLD | G.PROP | G.PLAYER | G.ENEMY),
