@@ -175,6 +175,9 @@ export class UI {
 
   showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null, npcSpeech = false }, onAction) {
     const screen = this.el.screens.interaction;
+    if (this.dealerTimer) { clearTimeout(this.dealerTimer); this.dealerTimer = null; }
+    screen.classList.remove('dealer-resolving');
+    this.blackjackAnimationMs = 0;
     screen.dataset.mode = mode;
     screen.dataset.phase = blackjack?.state?.phase ?? '';
     const shopModes = ['shop'];
@@ -228,8 +231,26 @@ export class UI {
       button.addEventListener('click', (event) => { event.stopPropagation(); onAction(action.id); });
       box.appendChild(button);
     }
+    const dealerResolving = mode === 'blackjack' && this.blackjackAnimationMs > 0;
+    if (dealerResolving) {
+      screen.classList.add('dealer-resolving');
+      for (const button of box.querySelectorAll('button:not(.interaction-close):not(:disabled)')) {
+        button.disabled = true;
+        button.dataset.dealerLock = 'true';
+      }
+    }
     this.show('interaction');
-    (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
+    if (!dealerResolving) (preferredFocus || box.querySelector('button:not(:disabled)'))?.focus();
+    else this.dealerTimer = setTimeout(() => {
+      this.dealerTimer = null;
+      if (screen.hidden || screen.dataset.mode !== 'blackjack' || screen.dataset.phase !== 'done') return;
+      screen.classList.remove('dealer-resolving');
+      for (const button of box.querySelectorAll('[data-dealer-lock]')) {
+        button.disabled = false;
+        delete button.dataset.dealerLock;
+      }
+      box.querySelector('.bet-chip:not(:disabled)')?.focus();
+    }, this.blackjackAnimationMs);
   }
 
   renderInteractionText(text, mode, blackjack = null, npcSpeech = false) {
@@ -257,15 +278,35 @@ export class UI {
           : state.phase === 'done' ? 'lose' : '');
     board.dataset.outcome = outcome;
     const previous = this.blackjackRender?.hand === state.hand ? this.blackjackRender : null;
+    const dealerResolving = previous?.phase === 'playing' && state.phase === 'done';
+    const previousDealerCount = previous?.counts?.dealer ?? state.dealer.length;
+    const dealerDraws = dealerResolving ? Math.max(0, state.dealer.length - previousDealerCount) : 0;
+    const holeDelay = 420, drawDelay = 1080, drawStep = 760;
+    const resultDelay = dealerResolving
+      ? dealerDraws ? drawDelay + (dealerDraws - 1) * drawStep + 620 : holeDelay + 720
+      : 0;
+    this.blackjackAnimationMs = dealerResolving ? resultDelay + 420 : 0;
     const suits = ['♠', '♥', '♣', '♦'];
     const suitUses = new Map();
 
-    const makeCard = (rank, index, hidden, previousCount) => {
+    const makeCard = (rank, index, hidden, previousCount, key) => {
       const card = document.createElement('i');
       const suitIndex = suitUses.get(rank) ?? 0;
       suitUses.set(rank, suitIndex + 1);
       const suit = suits[suitIndex];
-      card.className = `playing-card${hidden ? ' hidden-card' : ['♥', '♦'].includes(suit) ? ' red-card' : ''}${index >= previousCount ? ' deal-card' : ''}`;
+      const classes = ['playing-card'];
+      if (hidden) classes.push('hidden-card');
+      else if (['♥', '♦'].includes(suit)) classes.push('red-card');
+      if (key === 'dealer' && dealerResolving) {
+        if (index === 1 && index < previousCount) {
+          classes.push('dealer-hole-reveal');
+          card.style.setProperty('--dealer-delay', `${holeDelay}ms`);
+        } else if (index >= previousCount) {
+          classes.push('dealer-draw');
+          card.style.setProperty('--dealer-delay', `${drawDelay + (index - previousCount) * drawStep}ms`);
+        }
+      } else if (index >= previousCount) classes.push('deal-card');
+      card.className = classes.join(' ');
       if (!hidden) {
         const value = document.createElement('b');
         value.textContent = cardName(rank);
@@ -286,10 +327,11 @@ export class UI {
       cards.className = 'playing-cards';
       const previousCount = previous?.counts?.[key] ?? 0;
       for (const [index, rank] of cardsInHand.entries()) {
-        cards.appendChild(makeCard(rank, index, hidden && index > 0, previousCount));
+        cards.appendChild(makeCard(rank, index, hidden && index > 0, previousCount, key));
       }
       const score = document.createElement('b');
-      score.className = 'hand-score';
+      score.className = `hand-score${key === 'dealer' && dealerResolving ? ' dealer-score-reveal' : ''}`;
+      if (key === 'dealer' && dealerResolving) score.style.setProperty('--dealer-result-delay', `${resultDelay}ms`);
       score.textContent = hidden ? '?' : handValue(cardsInHand);
       row.append(owner, cards, score);
       return row;
@@ -317,7 +359,8 @@ export class UI {
     if (state.phase === 'done') {
       const result = document.createElement('div');
       const net = Number.isFinite(state.net) ? state.net : null;
-      result.className = `blackjack-result result-${outcome || 'mixed'}`;
+      result.className = `blackjack-result result-${outcome || 'mixed'}${dealerResolving ? ' dealer-result-reveal' : ''}`;
+      if (dealerResolving) result.style.setProperty('--dealer-result-delay', `${resultDelay}ms`);
       const resultText = outcome === 'blackjack' ? 'BLACKJACK'
         : outcome === 'win' ? `YOU WIN${net === null ? '' : ` +$${net}`}`
           : outcome === 'lose' ? `YOU LOSE${net === null ? '' : ` $${Math.abs(net)}`}`
@@ -333,6 +376,7 @@ export class UI {
     box.appendChild(board);
     this.blackjackRender = {
       hand: state.hand,
+      phase: state.phase,
       counts: { dealer: state.dealer.length, player: state.player.length, split: state.split?.length ?? 0 },
     };
   }
