@@ -6,39 +6,83 @@ import { createRng } from './rng.js';
 import { GROUPS } from './physics.js';
 import { buildTown } from './town-buildings.js';
 import { buildInteriors, updateInteriorNpcs } from './interiors.js';
-import { RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverWidth } from './terrain.js';
+import { campTrailPoints, distanceToTrail, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverWidth } from './terrain.js';
 
 function ground(group, half, seed) {
   const geo = new THREE.PlaneGeometry(half * 2 + 30, half * 2 + 30, 80, 80).rotateX(-Math.PI / 2).toNonIndexed();
   const pos = geo.attributes.position, colors = new Float32Array(pos.count * 3);
-  const base = new THREE.Color(PAL.sand), shade = new THREE.Color(PAL.sandDark), c = new THREE.Color();
+  const base = new THREE.Color(PAL.sand), shade = new THREE.Color(PAL.sandDark);
+  const light = new THREE.Color(PAL.sandLight), c = new THREE.Color();
   for (let i = 0; i < pos.count; i += 3) {
     const x = pos.getX(i), z = pos.getZ(i);
-    const n = Math.sin(x * 0.09 + seed) * Math.cos(z * 0.07) * 0.15 + 0.18;
-    c.copy(base).lerp(shade, n);
+    const broad = Math.sin(x * 0.035 + seed) * Math.cos(z * 0.027 - seed * 0.3);
+    const grain = Math.sin(x * 0.19 + z * 0.13 + seed * 0.07) * 0.12;
+    const n = broad * 0.34 + grain;
+    c.copy(base).lerp(n < 0 ? light : shade, Math.min(0.5, Math.abs(n)));
     for (let j = 0; j < 3; j++) { colors[(i + j) * 3] = c.r; colors[(i + j) * 3 + 1] = c.g; colors[(i + j) * 3 + 2] = c.b; }
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   group.add(meshOf(geo, MAT.solid, false));
 }
 
-function road(shape, ax, az, bx, bz, width) {
-  const dx = bx - ax, dz = bz - az, length = Math.hypot(dx, dz);
-  shape.box(width, 0.025, length, 0xc79c68, (ax + bx) / 2, 0.005, (az + bz) / 2, 0, Math.atan2(dx, dz));
+function offsetPath(points, offset) {
+  return points.map((point, index) => {
+    const before = points[Math.max(0, index - 1)], after = points[Math.min(points.length - 1, index + 1)];
+    const dx = after.x - before.x, dz = after.z - before.z, length = Math.hypot(dx, dz) || 1;
+    return { x: point.x - dz / length * offset, z: point.z + dx / length * offset };
+  });
+}
+
+function pathMesh(points, width, colors, y = 0.018) {
+  const positions = [], normals = [], vertexColors = [];
+  const shades = colors.map((color) => new THREE.Color(color));
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1], dx = b.x - a.x, dz = b.z - a.z;
+    const length = Math.hypot(dx, dz) || 1, nx = -dz / length, nz = dx / length;
+    const wa = (typeof width === 'function' ? width(i / (points.length - 1)) : width) / 2;
+    const wb = (typeof width === 'function' ? width((i + 1) / (points.length - 1)) : width) / 2;
+    const vertices = [
+      a.x + nx * wa, y, a.z + nz * wa, b.x - nx * wb, y, b.z - nz * wb, b.x + nx * wb, y, b.z + nz * wb,
+      a.x + nx * wa, y, a.z + nz * wa, a.x - nx * wa, y, a.z - nz * wa, b.x - nx * wb, y, b.z - nz * wb,
+    ];
+    positions.push(...vertices);
+    const color = shades[i % shades.length];
+    for (let j = 0; j < 6; j++) {
+      normals.push(0, 1, 0);
+      vertexColors.push(color.r, color.g, color.b);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+  geometry.computeBoundingSphere();
+  return meshOf(geometry, MAT.solid, false);
+}
+
+function addRoad(group, points, width, withRuts = true) {
+  const edgeWidth = typeof width === 'function' ? (t) => width(t) + 0.9 : width + 0.9;
+  group.add(pathMesh(points, edgeWidth, [0x9f6843, 0xaa7248, 0x95613f], 0.012));
+  group.add(pathMesh(points, width, [0xb57a4a, 0xc08752, 0xaa7044, 0xbd8554]));
+  if (!withRuts) return;
+  const baseWidth = typeof width === 'function' ? width(0.5) : width;
+  const track = Math.min(1.5, baseWidth * 0.22);
+  group.add(pathMesh(offsetPath(points, track), 0.18, [0x95613f, 0xa36c46], 0.026));
+  group.add(pathMesh(offsetPath(points, -track), 0.18, [0x95613f, 0xa36c46], 0.026));
 }
 
 function paths(group, world) {
-  const s = new Shape();
-  s.cyl(33, 33, 0.02, 32, 0xc9a275, 0, 0.005, 0);
-  road(s, 0, -34, 0, 40, 10);
-  road(s, -34, 0, 34, 0, 7);
-  for (const c of world.camps ?? []) {
-    const length = Math.hypot(c.x, c.z);
-    if (length <= 60) continue;
-    const x = c.x / length, z = c.z / length;
-    road(s, x * 31, z * 31, c.x - x * 25, c.z - z * 25, 5);
+  const mainStreet = [
+    { x: -2.5, z: -45 }, { x: 0.8, z: -34 }, { x: -1.1, z: -23 }, { x: 0.7, z: -11 },
+    { x: -0.6, z: 1 }, { x: 0.8, z: 13 }, { x: 1.2, z: 22 }, { x: 0, z: 30 }, { x: -1.8, z: 43 },
+  ];
+  addRoad(group, mainStreet, (t) => 8.6 + Math.sin(t * Math.PI * 3) * 1.2);
+  addRoad(group, [{ x: -35, z: -8 }, { x: -24, z: -6 }, { x: -12, z: -7 }, { x: 0, z: -5 }, { x: 13, z: -6 }, { x: 24, z: -9 }, { x: 36, z: -7 }], 4.7);
+  addRoad(group, [{ x: -34, z: 15 }, { x: -23, z: 13 }, { x: -12, z: 15 }, { x: 0, z: 14 }, { x: 13, z: 16 }, { x: 25, z: 13 }, { x: 35, z: 16 }], 4.2);
+  for (const [index, camp] of (world.camps ?? []).entries()) {
+    const points = campTrailPoints(camp, index);
+    if (points.length) addRoad(group, points, (t) => 4.6 + Math.sin(t * Math.PI * 4 + index) * 0.45);
   }
-  group.add(meshOf(s, MAT.solid, false));
 }
 
 function cactusPatch(shape, rng, x, z) {
@@ -88,11 +132,8 @@ function desert(game, group, world, rng) {
   const half = world.half ?? 210, camps = world.camps ?? [], s = new Shape();
   const clear = (x, z, margin = 0) => Math.hypot(x, z) > 40 + margin
     && camps.every((c) => Math.hypot(x - c.x, z - c.z) > 34 + margin);
-  const besideRoad = (x, z, clearance = 4) => camps.every((c) => {
-    const length = c.x * c.x + c.z * c.z;
-    const t = Math.max(0, Math.min(1, (x * c.x + z * c.z) / length));
-    return Math.hypot(x - c.x * t, z - c.z * t) > clearance;
-  });
+  const trails = camps.map((camp, index) => campTrailPoints(camp, index));
+  const besideRoad = (x, z, clearance = 4) => trails.every((trail) => distanceToTrail(x, z, trail) > clearance);
   const dry = (x, z, margin = 0) => x < RIVER_MIN_X || x > RIVER_MAX_X
     || Math.abs(z - riverCenter(x)) > riverWidth(x) / 2 + margin;
 

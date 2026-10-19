@@ -46,12 +46,22 @@ function counter(game, root, center, width = 8, z = -3.2, color = PAL.wood) {
 }
 
 function chair(shape, x, z, yaw = 0, color = PAL.wood) {
-  shape.box(0.8, 0.13, 0.8, color, x, 0.62, z, 0, yaw);
-  for (const u of [-0.29, 0.29]) {
-    shape.cyl(0.055, 0.075, 1.5, 7, PAL.woodDark, x + Math.cos(yaw) * u, 1.15, z - Math.cos(yaw) * 0.36 - Math.sin(yaw) * u);
-    shape.cyl(0.05, 0.07, 0.68, 7, PAL.woodDark, x + Math.cos(yaw) * u, 0.32, z + Math.cos(yaw) * 0.3 - Math.sin(yaw) * u);
+  const point = (lx, lz) => ({
+    x: x + Math.cos(yaw) * lx + Math.sin(yaw) * lz,
+    z: z - Math.sin(yaw) * lx + Math.cos(yaw) * lz,
+  });
+  shape.box(0.82, 0.13, 0.72, color, x, 0.62, z, 0, yaw);
+  for (const lx of [-0.29, 0.29]) {
+    const back = point(lx, -0.3), front = point(lx, 0.27);
+    shape.cyl(0.055, 0.075, 1.5, 7, PAL.woodDark, back.x, 1.15, back.z);
+    shape.cyl(0.05, 0.07, 0.68, 7, PAL.woodDark, front.x, 0.32, front.z);
   }
-  for (const y of [0.92, 1.2, 1.47]) shape.box(0.72, 0.1, 0.1, y === 1.2 ? color : PAL.woodLight, x, y, z - Math.cos(yaw) * 0.36, 0, yaw);
+  const back = point(0, -0.31);
+  for (const y of [0.92, 1.2, 1.47]) shape.box(0.68, 0.1, 0.09, y === 1.2 ? color : PAL.woodLight, back.x, y, back.z, 0, yaw);
+}
+
+function localPoint(x, z, lx, lz, yaw) {
+  return { x: x + Math.cos(yaw) * lx + Math.sin(yaw) * lz, z: z - Math.sin(yaw) * lx + Math.cos(yaw) * lz };
 }
 
 function shelf(shape, x, z, color, items = PAL.brass) {
@@ -142,12 +152,21 @@ function mapsInterior(game, room) {
     s.cyl(0.2, 0.2, 2.4, 10, PAL.canvas, room.center.x + x, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
     s.cyl(0.24, 0.24, 0.06, 10, PAL.woodDark, room.center.x + x - 1.2, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
   }
-  const tableX = room.center.x - 3.6, tableZ = room.center.z + 1.5;
-  s.box(6.1, 0.2, 4.25, PAL.woodDark, tableX, 0.92, tableZ, 0, 0.3);
-  s.box(5.75, 0.11, 3.9, PAL.canvas, tableX, 1.08, tableZ, 0, 0.3);
-  for (const dx of [-2.55, 2.55]) for (const dz of [-1.65, 1.65]) s.cyl(0.11, 0.16, 0.9, 7, PAL.wood, tableX + dx, 0.46, tableZ + dz);
-  for (let i = -2; i <= 2; i++) s.box(0.045, 0.035, 3.25, i ? PAL.wood : PAL.red, tableX + i * 0.92, 1.15, tableZ, 0, 0.3);
-  for (const dz of [-1.45, 1.45]) s.cyl(0.12, 0.12, 5.35, 10, PAL.woodLight, tableX - Math.sin(0.3) * dz, 1.18, tableZ + Math.cos(0.3) * dz, 0, 0, Math.PI / 2 + 0.3);
+  const tableX = room.center.x - 3.4, tableZ = room.center.z + 1.2, tableYaw = 0.24;
+  s.box(5.8, 0.2, 3.8, PAL.woodDark, tableX, 0.92, tableZ, 0, tableYaw);
+  s.box(5.45, 0.11, 3.45, PAL.canvas, tableX, 1.08, tableZ, 0, tableYaw);
+  for (const dx of [-2.42, 2.42]) for (const dz of [-1.42, 1.42]) {
+    const leg = localPoint(tableX, tableZ, dx, dz, tableYaw);
+    s.cyl(0.11, 0.16, 0.9, 7, PAL.wood, leg.x, 0.46, leg.z);
+  }
+  for (let i = -2; i <= 2; i++) {
+    const line = localPoint(tableX, tableZ, i * 0.86, 0, tableYaw);
+    s.box(0.045, 0.035, 2.95, i ? PAL.wood : PAL.red, line.x, 1.15, line.z, 0, tableYaw);
+  }
+  for (const dz of [-1.22, 1.22]) {
+    const rail = localPoint(tableX, tableZ, 0, dz, tableYaw);
+    s.cyl(0.12, 0.12, 4.95, 10, PAL.woodLight, rail.x, 1.18, rail.z, 0, 0, Math.PI / 2 + tableYaw);
+  }
   s.cyl(0.32, 0.32, 0.08, 14, PAL.brass, tableX + 1.6, 1.22, tableZ - 0.7);
   s.cone(0.22, 0.32, 4, PAL.red, tableX + 1.6, 1.28, tableZ - 0.7, 0, Math.PI / 4);
   wallLantern(s, room.center.x + 3.6, 3.45, room.center.z - 6.6);
@@ -161,10 +180,10 @@ function clothesInterior(game, room) {
   const s = new Shape();
   shelf(s, room.center.x - 5.6, room.center.z - 6.4, 0x9e5b58, 0x4d6d72);
   shelf(s, room.center.x + 5.6, room.center.z - 6.4, 0xc49362, 0x765077);
-  for (const x of [-5, 0, 5]) {
-    s.cyl(0.09, 0.09, 2.3, 8, PAL.woodDark, room.center.x + x, 1.15, room.center.z + 2.4);
-    s.cone(0.72, 1.5, 6, x ? 0x4f7370 : 0x9a5b63, room.center.x + x, 1.9, room.center.z + 2.4);
-    s.cyl(0.28, 0.28, 0.08, 8, PAL.wood, room.center.x + x, 2.75, room.center.z + 2.4);
+  for (const [x, z, color] of [[-6.6, 1.2, 0x4f7370], [6.6, 1.2, 0x9a5b63], [-6.6, 4.1, 0xb98255]]) {
+    s.cyl(0.09, 0.09, 2.3, 8, PAL.woodDark, room.center.x + x, 1.15, room.center.z + z);
+    s.cone(0.72, 1.5, 6, color, room.center.x + x, 1.9, room.center.z + z);
+    s.cyl(0.28, 0.28, 0.08, 8, PAL.wood, room.center.x + x, 2.75, room.center.z + z);
   }
   wallLantern(s, room.center.x, 3.45, room.center.z - 6.6);
   for (const x of [-6.2, 6.2]) {
@@ -279,7 +298,8 @@ function shopkeeper(room, spec) {
   const look = { shirt: shirts[spec.kind], vest: PAL.woodDark, hat: 0xb49366, band: PAL.woodDark, pants: 0x494844 };
   const model = addRollPivot(makeCharacter(look));
   showGun(model, null); model.arm.rotation.x = 1.1;
-  const keeperZ = spec.kind === 'stable' ? room.center.z - 0.75 : room.center.z - 4.2;
+  const keeperOffset = { guns: -3.75, doctor: -4.45, sheriff: -3.65, maps: -4.05, clothes: -4.15, saloon: -5.25, stable: -0.75 };
+  const keeperZ = room.center.z + keeperOffset[spec.kind];
   const npc = { id: `${spec.id}-keeper`, name: names[spec.kind], label: names[spec.kind], kind: spec.kind,
     x: room.center.x, z: keeperZ, yaw: 0, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
   model.root.position.set(npc.x, 0, npc.z); room.root.add(model.root);
@@ -313,8 +333,11 @@ export function updateInteriorNpcs(room, player, dt) {
     if (npc.seated) {
       npc.model.legs[0].rotation.x = -1.25;
       npc.model.legs[1].rotation.x = -1.25;
-      npc.model.body.position.y -= 0.2;
+      npc.model.body.position.y = -0.2;
       npc.model.arm.rotation.x = 0.62;
-    } else npc.model.arm.rotation.x = 1.1;
+    } else {
+      npc.model.body.position.y = 0;
+      npc.model.arm.rotation.x = 1.1;
+    }
   }
 }

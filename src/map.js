@@ -1,6 +1,6 @@
 // The life map shows travelled land. Bought maps add roads; jobs add search areas.
 import { MAP_CELL, isDiscovered } from './life.js';
-import { RIVER_MAX_X, RIVER_MIN_X, riverCenter } from './terrain.js';
+import { campTrailPoints, RIVER_MAX_X, RIVER_MIN_X, riverCenter } from './terrain.js';
 
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
@@ -73,13 +73,10 @@ export class MapView {
 
     // Roads are drawn only where travelled until the player buys a map.
     ctx.strokeStyle = C.road; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
-    for (const road of world.roads) {
-      const dx = road.to.x - road.from.x, dz = road.to.z - road.from.z;
-      const steps = Math.ceil(Math.hypot(dx, dz) / 6);
-      for (let i = 0; i < steps; i++) {
-        const t = i / steps, next = (i + 1) / steps;
-        const x = road.from.x + dx * t, z = road.from.z + dz * t;
-        const nx = road.from.x + dx * next, nz = road.from.z + dz * next;
+    for (const [index, camp] of world.camps.entries()) {
+      const points = campTrailPoints(camp, index);
+      for (let i = 0; i < points.length - 1; i++) {
+        const { x, z } = points[i], { x: nx, z: nz } = points[i + 1];
         if (!life.hasMap && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
         ctx.moveTo(X(x), Y(z)); ctx.lineTo(X(nx), Y(nz));
       }
@@ -112,8 +109,9 @@ export class MapView {
     }
 
     const town = world.town;
-    ctx.fillStyle = 'rgba(239,220,187,0.35)'; ctx.beginPath();
-    ctx.arc(X(town.x), Y(town.z), town.radius * k, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(239,220,187,0.28)'; ctx.beginPath();
+    ctx.moveTo(X(-25), Y(-28)); ctx.lineTo(X(24), Y(-25)); ctx.lineTo(X(30), Y(21));
+    ctx.lineTo(X(13), Y(28)); ctx.lineTo(X(-28), Y(23)); ctx.closePath(); ctx.fill();
     ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
     ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
     ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();

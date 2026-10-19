@@ -3,7 +3,7 @@
 export const T = {
   sim: { hz: 60, maxFrame: 0.25, maxTicksPerFrame: 8 },
 
-  render: { maxPixelRatio: 1.5, shadowMapSize: 2048, shadowSpan: 17 },
+  render: { maxPixelRatio: 1.5, shadowMapSize: 2048, shadowSpan: 24 },
 
   camera: {
     fov: 35,

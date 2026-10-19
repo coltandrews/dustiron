@@ -553,7 +553,7 @@ __m.tuning = (() => {
 const T = {
   sim: { hz: 60, maxFrame: 0.25, maxTicksPerFrame: 8 },
 
-  render: { maxPixelRatio: 1.5, shadowMapSize: 2048, shadowSpan: 17 },
+  render: { maxPixelRatio: 1.5, shadowMapSize: 2048, shadowSpan: 24 },
 
   camera: {
     fov: 35,
@@ -819,18 +819,19 @@ function createRenderContext(container) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SKY);
-  scene.fog = new THREE.Fog(SKY, 42, 90);
+  scene.fog = new THREE.Fog(SKY, 48, 105);
 
-  const hemi = new THREE.HemisphereLight(0xffe2b8, 0x7a4a2e, 1.55);
+  const hemi = new THREE.HemisphereLight(0xffdfad, 0x65412f, 1.18);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xfff0d6, 2.4);
+  const sun = new THREE.DirectionalLight(0xffefd1, 2.7);
   sun.castShadow = true;
   const span = T.render.shadowSpan;
   sun.shadow.mapSize.set(T.render.shadowMapSize, T.render.shadowMapSize);
   Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 1, far: 80 });
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.03;
+  sun.shadow.radius = 2;
   scene.add(sun, sun.target);
   const sunOffset = new THREE.Vector3(-14, 26, 9);
   const texel = (span * 2) / T.render.shadowMapSize;
@@ -4161,7 +4162,46 @@ function riverTangent(x) {
   return Math.atan2(riverCenter(x + step) - riverCenter(x - step), step * 2);
 }
 
-return { RIVER_MIN_X, RIVER_MAX_X, riverCenter, riverWidth, riverTangent };
+function trailBend(camp, index) {
+  const value = Math.sin(camp.x * 12.9898 + camp.z * 78.233 + index * 31.17) * 43758.5453;
+  return (value - Math.floor(value)) * 2 - 1;
+}
+
+/** A stable curved trail from the town edge to one camp. */
+function campTrailPoints(camp, index = 0, segments = 18) {
+  const distance = Math.hypot(camp.x, camp.z);
+  if (distance < 1) return [];
+  const dx = camp.x / distance, dz = camp.z / distance;
+  const start = { x: dx * 31, z: dz * 31 };
+  const end = { x: camp.x - dx * 25, z: camp.z - dz * 25 };
+  const bend = trailBend(camp, index) * Math.min(26, distance * 0.18);
+  const control = {
+    x: (start.x + end.x) / 2 - dz * bend,
+    z: (start.z + end.z) / 2 + dx * bend,
+  };
+  const points = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments, u = 1 - t;
+    points.push({
+      x: u * u * start.x + 2 * u * t * control.x + t * t * end.x,
+      z: u * u * start.z + 2 * u * t * control.z + t * t * end.z,
+    });
+  }
+  return points;
+}
+
+function distanceToTrail(x, z, points) {
+  let nearest = Infinity;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1], dx = b.x - a.x, dz = b.z - a.z;
+    const lengthSq = dx * dx + dz * dz;
+    const t = lengthSq ? Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / lengthSq)) : 0;
+    nearest = Math.min(nearest, Math.hypot(x - a.x - dx * t, z - a.z - dz * t));
+  }
+  return nearest;
+}
+
+return { RIVER_MIN_X, RIVER_MAX_X, riverCenter, riverWidth, riverTangent, campTrailPoints, distanceToTrail };
 })();
 
 // ---- src/town-buildings.js ----
@@ -4341,6 +4381,77 @@ function makeBuilding(game, group, spec) {
   return { ...spec, x: spec.side * 8.55, z: spec.z, outsideX: spec.side * 7.1, outsideZ: spec.z };
 }
 
+function rearDoor(s, z, double = false) {
+  const xs = double ? [-0.58, 0.58] : [0];
+  for (const x of xs) {
+    s.box(double ? 1.02 : 1.3, 2.55, 0.16, PAL.woodDark, x, 1.28, z);
+    for (const y of [0.48, 1.22, 1.98]) s.box(double ? 0.82 : 1.08, 0.08, 0.19, PAL.woodLight, x, y, z + 0.1);
+    s.cyl(0.07, 0.07, 0.08, 6, PAL.brass, x + (double ? (x < 0 ? 0.3 : -0.3) : 0.42), 1.25, z + 0.16, Math.PI / 2);
+  }
+}
+
+function rearBuilding(game, group, spec) {
+  const s = new Shape(), front = spec.depth / 2 + 0.02;
+  s.box(spec.width, spec.height, spec.depth, spec.color, 0, spec.height / 2, 0);
+  for (let y = 0.4; y < spec.height; y += 0.5) s.box(spec.width - 0.25, 0.035, 0.08,
+    Math.round(y * 10) % 2 ? PAL.woodDark : spec.trim, 0, y, front + 0.03);
+  for (const x of [-spec.width / 2 + 0.12, spec.width / 2 - 0.12]) s.box(0.24, spec.height, 0.2, spec.trim, x, spec.height / 2, front + 0.1);
+
+  if (spec.type === 'hotel') {
+    rearDoor(s, front + 0.1, true);
+    for (const y of [2.2, 4.9]) for (const x of [-3.1, 3.1]) window(s, x, y, front + 0.12, 0x4f6a6e);
+    s.box(spec.width + 0.4, 0.2, 1.65, PAL.plank, 0, 3.45, front + 0.55);
+    for (let x = -4.4; x <= 4.4; x += 0.8) s.box(0.09, 0.9, 0.09, PAL.woodDark, x, 3.9, front + 1.25);
+    s.box(spec.width + 0.4, 0.12, 0.12, PAL.woodLight, 0, 4.32, front + 1.25);
+    s.box(spec.width + 0.5, 1.05, 0.3, 0x725039, 0, spec.height + 0.42, front);
+    for (const x of [-4.5, 4.5]) s.box(0.3, 1.55, 0.3, spec.trim, x, spec.height + 0.3, front);
+  } else if (spec.type === 'chapel') {
+    rearDoor(s, front + 0.1, true);
+    for (const x of [-2.05, 2.05]) window(s, x, 2.35, front + 0.12, 0x638287);
+    gableRoof(s, spec.width, spec.depth, spec.height - 0.05, 1.75, spec.roof);
+    s.box(1.75, 2.1, 1.75, spec.trim, 0, spec.height + 1.25, -0.7);
+    s.cone(1.4, 1.8, 4, spec.roof, 0, spec.height + 3.15, -0.7, 0, Math.PI / 4);
+    s.cyl(0.38, 0.46, 0.5, 8, PAL.brass, 0, spec.height + 1.35, front + 0.25);
+  } else if (spec.type === 'forge') {
+    gableRoof(s, spec.width, spec.depth, spec.height - 0.05, 1.4, spec.roof);
+    s.box(4.1, 3.0, 0.18, 0x2d2723, 1.45, 1.5, front + 0.12);
+    s.box(1.45, 2.6, 0.16, PAL.woodDark, -2.75, 1.3, front + 0.12);
+    s.box(1.65, 2.7, 1.65, PAL.rockDark, -2.6, spec.height + 0.4, -1.2);
+    s.box(1.9, 0.22, 1.9, PAL.iron, -2.6, spec.height + 1.72, -1.2);
+    s.box(spec.width + 0.4, 0.16, 2.1, PAL.plank, 0, 0.1, front + 0.8);
+  } else {
+    rearDoor(s, front + 0.1, spec.type === 'freight');
+    const windowX = spec.type === 'freight' ? [-3.3, 3.3] : [-1.9, 1.9];
+    for (const x of windowX) window(s, x, 2, front + 0.12, 0x526a6b);
+    gableRoof(s, spec.width, spec.depth, spec.height - 0.05, spec.type === 'freight' ? 1.45 : 1.15, spec.roof);
+    if (spec.type === 'cabin') {
+      s.box(spec.width + 0.35, 0.14, 1.5, PAL.plank, 0, 0.09, front + 0.58);
+      for (const x of [-spec.width / 2 + 0.28, spec.width / 2 - 0.28]) s.cyl(0.1, 0.13, 2.7, 7, PAL.woodLight, x, 1.35, front + 1.22);
+    }
+  }
+  if (spec.type !== 'hotel' && spec.type !== 'forge') {
+    const chimneyX = spec.type === 'chapel' ? 2.3 : -spec.width * 0.3;
+    s.box(0.75, 1.55, 0.75, PAL.rockDark, chimneyX, spec.height + 0.6, -spec.depth * 0.22);
+    s.box(0.9, 0.16, 0.9, PAL.iron, chimneyX, spec.height + 1.4, -spec.depth * 0.22);
+  }
+  const object = new THREE.Group();
+  object.position.set(spec.x, 0, spec.z); object.rotation.y = spec.ry;
+  object.add(meshOf(s)); group.add(object);
+  game.physics.fixedBox(spec.x, spec.height / 2, spec.z, spec.width / 2, spec.height / 2, spec.depth / 2, spec.ry, GROUPS.world);
+}
+
+function backstreetBuildings(game, group) {
+  const buildings = [
+    { type: 'forge', x: -25, z: -19, ry: Math.PI / 2, width: 8.2, depth: 7, height: 3.8, color: 0x73513a, trim: 0x9d7148, roof: 0x443832 },
+    { type: 'cabin', x: -26, z: 1, ry: Math.PI / 2 + 0.04, width: 6.6, depth: 6.2, height: 3.7, color: 0x806342, trim: 0xae8250, roof: 0x51402f },
+    { type: 'freight', x: -25, z: 20, ry: Math.PI / 2 - 0.03, width: 9.4, depth: 7.6, height: 4.2, color: 0x6b533d, trim: 0x9d7951, roof: 0x453b35 },
+    { type: 'hotel', x: 25, z: -18, ry: -Math.PI / 2 - 0.03, width: 10, depth: 7.4, height: 6.4, color: 0x926243, trim: 0xc08b58, roof: 0x594034 },
+    { type: 'chapel', x: 27, z: 2, ry: -Math.PI / 2 + 0.04, width: 6.8, depth: 8.2, height: 4.7, color: 0xb8a477, trim: 0xd5c294, roof: 0x5b4a3b },
+    { type: 'cabin', x: 25, z: 20, ry: -Math.PI / 2, width: 6.5, depth: 6, height: 3.6, color: 0x725841, trim: 0xa57a4c, roof: 0x48372c },
+  ];
+  for (const building of buildings) rearBuilding(game, group, building);
+}
+
 function river(game, group) {
   const strip = (extraWidth, y, colors) => {
     const positions = [], normals = [], vertexColors = [], steps = 42;
@@ -4421,45 +4532,65 @@ function river(game, group) {
 
 function streetDetails(game, group) {
   const s = new Shape();
-  // Water tower, telegraph poles, shade trees, and desert plants give a readable skyline.
-  for (const x of [-3.5, 3.5]) for (const z of [-24, -12, 0, 12, 21]) {
-    s.box(0.14, 3.6, 0.14, PAL.woodDark, x, 1.8, z);
-    s.box(1, 0.12, 0.12, PAL.woodLight, x, 3.35, z);
-    for (const u of [-0.35, 0.35]) s.cyl(0.08, 0.08, 0.16, 6, PAL.iron, x + u, 3.5, z);
+  // One telegraph line leads through town and keeps the center of the street open.
+  const poleX = -5.8, poleZ = [-28, -14, 0, 14, 25];
+  for (const z of poleZ) {
+    s.box(0.16, 4.1, 0.16, PAL.woodDark, poleX, 2.05, z);
+    s.box(1.25, 0.13, 0.13, PAL.woodLight, poleX, 3.72, z);
+    for (const u of [-0.45, 0.45]) s.cyl(0.08, 0.08, 0.18, 6, PAL.iron, poleX + u, 3.88, z);
   }
-  s.cyl(2.2, 2.05, 3.1, 12, PAL.wood, 20, 7.2, 18);
-  for (const x of [18.2, 21.8]) for (const z of [16.2, 19.8]) s.box(0.26, 7, 0.26, PAL.woodDark, x, 3.5, z);
-  s.cone(2.4, 1.2, 12, PAL.iron, 20, 9.35, 18);
-  for (const x of [-22, -18, 18, 22]) {
+  for (let i = 0; i < poleZ.length - 1; i++) {
+    const z = (poleZ[i] + poleZ[i + 1]) / 2, length = poleZ[i + 1] - poleZ[i];
+    for (const x of [poleX - 0.45, poleX + 0.45]) s.cyl(0.025, 0.025, length, 5, PAL.iron, x, 3.84, z, Math.PI / 2);
+  }
+  // The water tower and storage sit in the back lot by the livery.
+  s.cyl(2.2, 2.05, 3.1, 12, PAL.wood, -32, 7.2, 18);
+  for (const x of [-33.8, -30.2]) for (const z of [16.2, 19.8]) s.box(0.26, 7, 0.26, PAL.woodDark, x, 3.5, z);
+  s.cone(2.4, 1.2, 12, PAL.iron, -32, 9.35, 18);
+  for (const x of [-35, -30, 31, 35]) {
     const cactus = cactusShape(1.8 + Math.abs(x % 3), x + 40);
     for (const part of cactus.parts) s.parts.push(part);
     const count = cactus.parts.length;
-    for (let i = s.parts.length - count; i < s.parts.length; i++) s.parts[i].translate(x, 0, x < 0 ? 24 : -25);
+    for (let i = s.parts.length - count; i < s.parts.length; i++) s.parts[i].translate(x, 0, x < 0 ? -29 : 27);
   }
-  // Hitching rails, a water trough, hay, and sacks break up the street edges.
-  for (const x of [-7, 7]) for (const z of [-18, -6, 6, 18]) {
+  // Hitching rails stay at the porch edge and leave each door clear.
+  for (const x of [-7, 7]) for (const z of [-20.2, -8.2, 3.8, 15.8]) {
     s.cyl(0.11, 0.15, 1.25, 7, PAL.woodDark, x, 0.62, z - 1.6);
     s.cyl(0.11, 0.15, 1.25, 7, PAL.woodDark, x, 0.62, z + 1.6);
     s.cyl(0.1, 0.1, 3.4, 7, PAL.woodLight, x, 0.93, z, Math.PI / 2);
   }
-  s.box(2.6, 0.7, 1.1, PAL.woodDark, 5.8, 0.38, 13.4);
-  s.box(2.15, 0.52, 0.75, PAL.water, 5.8, 0.55, 13.4);
-  for (const x of [18.3, 19.4]) {
-    s.cyl(0.56, 0.56, 1.05, 10, 0xc19a4e, x, 0.58, 11.5, 0, 0, Math.PI / 2);
-    s.cyl(0.58, 0.58, 0.05, 10, 0x856530, x - 0.52, 0.58, 11.5, 0, 0, Math.PI / 2);
+  s.box(2.8, 0.72, 1.15, PAL.woodDark, -7.1, 0.38, 12.3);
+  s.box(2.3, 0.5, 0.78, PAL.water, -7.1, 0.56, 12.3);
+  for (const x of [-20.4, -19.2]) {
+    s.cyl(0.58, 0.58, 1.1, 10, 0xc19a4e, x, 0.6, 15.2, 0, 0, Math.PI / 2);
+    s.cyl(0.6, 0.6, 0.05, 10, 0x856530, x - 0.54, 0.6, 15.2, 0, 0, Math.PI / 2);
   }
-  for (const [x, z, ry] of [[-19, -12, 0.2], [-20, -13, -0.35], [18.5, -18, 0.5]]) {
+  for (const [x, z, ry] of [[-20.5, -23, 0.2], [-21.4, -22.1, -0.35], [20.5, 23, 0.5]]) {
     s.add(new THREE.SphereGeometry(0.55, 7, 5), PAL.canvasDark, x, 0.48, z, 0, ry, 0, 0.8, 1.15, 0.65);
     s.cyl(0.12, 0.04, 0.25, 5, PAL.woodDark, x, 1.08, z);
   }
+  // Small fenced yards join the front and back rows.
+  for (const side of [-1, 1]) {
+    const x = side * 19;
+    for (const z of [-25, -12, 1, 14, 25]) s.box(0.16, 1.15, 0.16, PAL.woodDark, x, 0.58, z);
+    for (const z of [-18.5, -5.5, 7.5, 19.5]) {
+      s.box(0.1, 0.12, 11.5, PAL.woodLight, x, 0.45, z, 0.03 * side, 0, 0);
+      s.box(0.1, 0.12, 11.5, PAL.woodLight, x, 0.95, z, -0.025 * side, 0, 0);
+    }
+  }
   group.add(meshOf(s));
-  const wagon = meshOf(wagonShape()); wagon.position.set(22, 0, -10); wagon.rotation.y = -0.35; group.add(wagon);
-  const crate = meshOf(crateShape(0.9)); crate.position.set(-7.4, 0.45, -20); group.add(crate);
-  const barrel = meshOf(barrelShape()); barrel.position.set(7.4, 0.58, 8); group.add(barrel);
+  const wagon = meshOf(wagonShape()); wagon.position.set(20.5, 0, -27); wagon.rotation.y = -0.52; group.add(wagon);
+  for (const [x, z, size] of [[-20.5, -15, 1], [-21.6, -15.4, 0.75], [20.2, -13.5, 0.9]]) {
+    const crate = meshOf(crateShape(size)); crate.position.set(x, size / 2, z); crate.rotation.y = x * 0.07; group.add(crate);
+  }
+  for (const [x, z] of [[-20.5, -17], [20.5, 15], [21.3, 15.5]]) {
+    const barrel = meshOf(barrelShape()); barrel.position.set(x, 0.58, z); group.add(barrel);
+  }
 }
 
 function buildTown(game, group) {
   const sites = STORES.map((spec) => makeBuilding(game, group, spec));
+  backstreetBuildings(game, group);
   river(game, group);
   streetDetails(game, group);
   return sites;
@@ -4517,12 +4648,22 @@ function counter(game, root, center, width = 8, z = -3.2, color = PAL.wood) {
 }
 
 function chair(shape, x, z, yaw = 0, color = PAL.wood) {
-  shape.box(0.8, 0.13, 0.8, color, x, 0.62, z, 0, yaw);
-  for (const u of [-0.29, 0.29]) {
-    shape.cyl(0.055, 0.075, 1.5, 7, PAL.woodDark, x + Math.cos(yaw) * u, 1.15, z - Math.cos(yaw) * 0.36 - Math.sin(yaw) * u);
-    shape.cyl(0.05, 0.07, 0.68, 7, PAL.woodDark, x + Math.cos(yaw) * u, 0.32, z + Math.cos(yaw) * 0.3 - Math.sin(yaw) * u);
+  const point = (lx, lz) => ({
+    x: x + Math.cos(yaw) * lx + Math.sin(yaw) * lz,
+    z: z - Math.sin(yaw) * lx + Math.cos(yaw) * lz,
+  });
+  shape.box(0.82, 0.13, 0.72, color, x, 0.62, z, 0, yaw);
+  for (const lx of [-0.29, 0.29]) {
+    const back = point(lx, -0.3), front = point(lx, 0.27);
+    shape.cyl(0.055, 0.075, 1.5, 7, PAL.woodDark, back.x, 1.15, back.z);
+    shape.cyl(0.05, 0.07, 0.68, 7, PAL.woodDark, front.x, 0.32, front.z);
   }
-  for (const y of [0.92, 1.2, 1.47]) shape.box(0.72, 0.1, 0.1, y === 1.2 ? color : PAL.woodLight, x, y, z - Math.cos(yaw) * 0.36, 0, yaw);
+  const back = point(0, -0.31);
+  for (const y of [0.92, 1.2, 1.47]) shape.box(0.68, 0.1, 0.09, y === 1.2 ? color : PAL.woodLight, back.x, y, back.z, 0, yaw);
+}
+
+function localPoint(x, z, lx, lz, yaw) {
+  return { x: x + Math.cos(yaw) * lx + Math.sin(yaw) * lz, z: z - Math.sin(yaw) * lx + Math.cos(yaw) * lz };
 }
 
 function shelf(shape, x, z, color, items = PAL.brass) {
@@ -4613,12 +4754,21 @@ function mapsInterior(game, room) {
     s.cyl(0.2, 0.2, 2.4, 10, PAL.canvas, room.center.x + x, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
     s.cyl(0.24, 0.24, 0.06, 10, PAL.woodDark, room.center.x + x - 1.2, 1.2, room.center.z - 6.5, 0, 0, Math.PI / 2);
   }
-  const tableX = room.center.x - 3.6, tableZ = room.center.z + 1.5;
-  s.box(6.1, 0.2, 4.25, PAL.woodDark, tableX, 0.92, tableZ, 0, 0.3);
-  s.box(5.75, 0.11, 3.9, PAL.canvas, tableX, 1.08, tableZ, 0, 0.3);
-  for (const dx of [-2.55, 2.55]) for (const dz of [-1.65, 1.65]) s.cyl(0.11, 0.16, 0.9, 7, PAL.wood, tableX + dx, 0.46, tableZ + dz);
-  for (let i = -2; i <= 2; i++) s.box(0.045, 0.035, 3.25, i ? PAL.wood : PAL.red, tableX + i * 0.92, 1.15, tableZ, 0, 0.3);
-  for (const dz of [-1.45, 1.45]) s.cyl(0.12, 0.12, 5.35, 10, PAL.woodLight, tableX - Math.sin(0.3) * dz, 1.18, tableZ + Math.cos(0.3) * dz, 0, 0, Math.PI / 2 + 0.3);
+  const tableX = room.center.x - 3.4, tableZ = room.center.z + 1.2, tableYaw = 0.24;
+  s.box(5.8, 0.2, 3.8, PAL.woodDark, tableX, 0.92, tableZ, 0, tableYaw);
+  s.box(5.45, 0.11, 3.45, PAL.canvas, tableX, 1.08, tableZ, 0, tableYaw);
+  for (const dx of [-2.42, 2.42]) for (const dz of [-1.42, 1.42]) {
+    const leg = localPoint(tableX, tableZ, dx, dz, tableYaw);
+    s.cyl(0.11, 0.16, 0.9, 7, PAL.wood, leg.x, 0.46, leg.z);
+  }
+  for (let i = -2; i <= 2; i++) {
+    const line = localPoint(tableX, tableZ, i * 0.86, 0, tableYaw);
+    s.box(0.045, 0.035, 2.95, i ? PAL.wood : PAL.red, line.x, 1.15, line.z, 0, tableYaw);
+  }
+  for (const dz of [-1.22, 1.22]) {
+    const rail = localPoint(tableX, tableZ, 0, dz, tableYaw);
+    s.cyl(0.12, 0.12, 4.95, 10, PAL.woodLight, rail.x, 1.18, rail.z, 0, 0, Math.PI / 2 + tableYaw);
+  }
   s.cyl(0.32, 0.32, 0.08, 14, PAL.brass, tableX + 1.6, 1.22, tableZ - 0.7);
   s.cone(0.22, 0.32, 4, PAL.red, tableX + 1.6, 1.28, tableZ - 0.7, 0, Math.PI / 4);
   wallLantern(s, room.center.x + 3.6, 3.45, room.center.z - 6.6);
@@ -4632,10 +4782,10 @@ function clothesInterior(game, room) {
   const s = new Shape();
   shelf(s, room.center.x - 5.6, room.center.z - 6.4, 0x9e5b58, 0x4d6d72);
   shelf(s, room.center.x + 5.6, room.center.z - 6.4, 0xc49362, 0x765077);
-  for (const x of [-5, 0, 5]) {
-    s.cyl(0.09, 0.09, 2.3, 8, PAL.woodDark, room.center.x + x, 1.15, room.center.z + 2.4);
-    s.cone(0.72, 1.5, 6, x ? 0x4f7370 : 0x9a5b63, room.center.x + x, 1.9, room.center.z + 2.4);
-    s.cyl(0.28, 0.28, 0.08, 8, PAL.wood, room.center.x + x, 2.75, room.center.z + 2.4);
+  for (const [x, z, color] of [[-6.6, 1.2, 0x4f7370], [6.6, 1.2, 0x9a5b63], [-6.6, 4.1, 0xb98255]]) {
+    s.cyl(0.09, 0.09, 2.3, 8, PAL.woodDark, room.center.x + x, 1.15, room.center.z + z);
+    s.cone(0.72, 1.5, 6, color, room.center.x + x, 1.9, room.center.z + z);
+    s.cyl(0.28, 0.28, 0.08, 8, PAL.wood, room.center.x + x, 2.75, room.center.z + z);
   }
   wallLantern(s, room.center.x, 3.45, room.center.z - 6.6);
   for (const x of [-6.2, 6.2]) {
@@ -4750,7 +4900,8 @@ function shopkeeper(room, spec) {
   const look = { shirt: shirts[spec.kind], vest: PAL.woodDark, hat: 0xb49366, band: PAL.woodDark, pants: 0x494844 };
   const model = addRollPivot(makeCharacter(look));
   showGun(model, null); model.arm.rotation.x = 1.1;
-  const keeperZ = spec.kind === 'stable' ? room.center.z - 0.75 : room.center.z - 4.2;
+  const keeperOffset = { guns: -3.75, doctor: -4.45, sheriff: -3.65, maps: -4.05, clothes: -4.15, saloon: -5.25, stable: -0.75 };
+  const keeperZ = room.center.z + keeperOffset[spec.kind];
   const npc = { id: `${spec.id}-keeper`, name: names[spec.kind], label: names[spec.kind], kind: spec.kind,
     x: room.center.x, z: keeperZ, yaw: 0, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
   model.root.position.set(npc.x, 0, npc.z); room.root.add(model.root);
@@ -4784,9 +4935,12 @@ function updateInteriorNpcs(room, player, dt) {
     if (npc.seated) {
       npc.model.legs[0].rotation.x = -1.25;
       npc.model.legs[1].rotation.x = -1.25;
-      npc.model.body.position.y -= 0.2;
+      npc.model.body.position.y = -0.2;
       npc.model.arm.rotation.x = 0.62;
-    } else npc.model.arm.rotation.x = 1.1;
+    } else {
+      npc.model.body.position.y = 0;
+      npc.model.arm.rotation.x = 1.1;
+    }
   }
 }
 
@@ -4803,38 +4957,82 @@ const { createRng } = __m.rng;
 const { GROUPS } = __m.physics;
 const { buildTown } = __m.town_buildings;
 const { buildInteriors, updateInteriorNpcs } = __m.interiors;
-const { RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverWidth } = __m.terrain;
+const { campTrailPoints, distanceToTrail, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverWidth } = __m.terrain;
 function ground(group, half, seed) {
   const geo = new THREE.PlaneGeometry(half * 2 + 30, half * 2 + 30, 80, 80).rotateX(-Math.PI / 2).toNonIndexed();
   const pos = geo.attributes.position, colors = new Float32Array(pos.count * 3);
-  const base = new THREE.Color(PAL.sand), shade = new THREE.Color(PAL.sandDark), c = new THREE.Color();
+  const base = new THREE.Color(PAL.sand), shade = new THREE.Color(PAL.sandDark);
+  const light = new THREE.Color(PAL.sandLight), c = new THREE.Color();
   for (let i = 0; i < pos.count; i += 3) {
     const x = pos.getX(i), z = pos.getZ(i);
-    const n = Math.sin(x * 0.09 + seed) * Math.cos(z * 0.07) * 0.15 + 0.18;
-    c.copy(base).lerp(shade, n);
+    const broad = Math.sin(x * 0.035 + seed) * Math.cos(z * 0.027 - seed * 0.3);
+    const grain = Math.sin(x * 0.19 + z * 0.13 + seed * 0.07) * 0.12;
+    const n = broad * 0.34 + grain;
+    c.copy(base).lerp(n < 0 ? light : shade, Math.min(0.5, Math.abs(n)));
     for (let j = 0; j < 3; j++) { colors[(i + j) * 3] = c.r; colors[(i + j) * 3 + 1] = c.g; colors[(i + j) * 3 + 2] = c.b; }
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   group.add(meshOf(geo, MAT.solid, false));
 }
 
-function road(shape, ax, az, bx, bz, width) {
-  const dx = bx - ax, dz = bz - az, length = Math.hypot(dx, dz);
-  shape.box(width, 0.025, length, 0xc79c68, (ax + bx) / 2, 0.005, (az + bz) / 2, 0, Math.atan2(dx, dz));
+function offsetPath(points, offset) {
+  return points.map((point, index) => {
+    const before = points[Math.max(0, index - 1)], after = points[Math.min(points.length - 1, index + 1)];
+    const dx = after.x - before.x, dz = after.z - before.z, length = Math.hypot(dx, dz) || 1;
+    return { x: point.x - dz / length * offset, z: point.z + dx / length * offset };
+  });
+}
+
+function pathMesh(points, width, colors, y = 0.018) {
+  const positions = [], normals = [], vertexColors = [];
+  const shades = colors.map((color) => new THREE.Color(color));
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1], dx = b.x - a.x, dz = b.z - a.z;
+    const length = Math.hypot(dx, dz) || 1, nx = -dz / length, nz = dx / length;
+    const wa = (typeof width === 'function' ? width(i / (points.length - 1)) : width) / 2;
+    const wb = (typeof width === 'function' ? width((i + 1) / (points.length - 1)) : width) / 2;
+    const vertices = [
+      a.x + nx * wa, y, a.z + nz * wa, b.x - nx * wb, y, b.z - nz * wb, b.x + nx * wb, y, b.z + nz * wb,
+      a.x + nx * wa, y, a.z + nz * wa, a.x - nx * wa, y, a.z - nz * wa, b.x - nx * wb, y, b.z - nz * wb,
+    ];
+    positions.push(...vertices);
+    const color = shades[i % shades.length];
+    for (let j = 0; j < 6; j++) {
+      normals.push(0, 1, 0);
+      vertexColors.push(color.r, color.g, color.b);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+  geometry.computeBoundingSphere();
+  return meshOf(geometry, MAT.solid, false);
+}
+
+function addRoad(group, points, width, withRuts = true) {
+  const edgeWidth = typeof width === 'function' ? (t) => width(t) + 0.9 : width + 0.9;
+  group.add(pathMesh(points, edgeWidth, [0x9f6843, 0xaa7248, 0x95613f], 0.012));
+  group.add(pathMesh(points, width, [0xb57a4a, 0xc08752, 0xaa7044, 0xbd8554]));
+  if (!withRuts) return;
+  const baseWidth = typeof width === 'function' ? width(0.5) : width;
+  const track = Math.min(1.5, baseWidth * 0.22);
+  group.add(pathMesh(offsetPath(points, track), 0.18, [0x95613f, 0xa36c46], 0.026));
+  group.add(pathMesh(offsetPath(points, -track), 0.18, [0x95613f, 0xa36c46], 0.026));
 }
 
 function paths(group, world) {
-  const s = new Shape();
-  s.cyl(33, 33, 0.02, 32, 0xc9a275, 0, 0.005, 0);
-  road(s, 0, -34, 0, 40, 10);
-  road(s, -34, 0, 34, 0, 7);
-  for (const c of world.camps ?? []) {
-    const length = Math.hypot(c.x, c.z);
-    if (length <= 60) continue;
-    const x = c.x / length, z = c.z / length;
-    road(s, x * 31, z * 31, c.x - x * 25, c.z - z * 25, 5);
+  const mainStreet = [
+    { x: -2.5, z: -45 }, { x: 0.8, z: -34 }, { x: -1.1, z: -23 }, { x: 0.7, z: -11 },
+    { x: -0.6, z: 1 }, { x: 0.8, z: 13 }, { x: 1.2, z: 22 }, { x: 0, z: 30 }, { x: -1.8, z: 43 },
+  ];
+  addRoad(group, mainStreet, (t) => 8.6 + Math.sin(t * Math.PI * 3) * 1.2);
+  addRoad(group, [{ x: -35, z: -8 }, { x: -24, z: -6 }, { x: -12, z: -7 }, { x: 0, z: -5 }, { x: 13, z: -6 }, { x: 24, z: -9 }, { x: 36, z: -7 }], 4.7);
+  addRoad(group, [{ x: -34, z: 15 }, { x: -23, z: 13 }, { x: -12, z: 15 }, { x: 0, z: 14 }, { x: 13, z: 16 }, { x: 25, z: 13 }, { x: 35, z: 16 }], 4.2);
+  for (const [index, camp] of (world.camps ?? []).entries()) {
+    const points = campTrailPoints(camp, index);
+    if (points.length) addRoad(group, points, (t) => 4.6 + Math.sin(t * Math.PI * 4 + index) * 0.45);
   }
-  group.add(meshOf(s, MAT.solid, false));
 }
 
 function cactusPatch(shape, rng, x, z) {
@@ -4884,11 +5082,8 @@ function desert(game, group, world, rng) {
   const half = world.half ?? 210, camps = world.camps ?? [], s = new Shape();
   const clear = (x, z, margin = 0) => Math.hypot(x, z) > 40 + margin
     && camps.every((c) => Math.hypot(x - c.x, z - c.z) > 34 + margin);
-  const besideRoad = (x, z, clearance = 4) => camps.every((c) => {
-    const length = c.x * c.x + c.z * c.z;
-    const t = Math.max(0, Math.min(1, (x * c.x + z * c.z) / length));
-    return Math.hypot(x - c.x * t, z - c.z * t) > clearance;
-  });
+  const trails = camps.map((camp, index) => campTrailPoints(camp, index));
+  const besideRoad = (x, z, clearance = 4) => trails.every((trail) => distanceToTrail(x, z, trail) > clearance);
   const dry = (x, z, margin = 0) => x < RIVER_MIN_X || x > RIVER_MAX_X
     || Math.abs(z - riverCenter(x)) > riverWidth(x) / 2 + margin;
 
@@ -5742,7 +5937,7 @@ return { TownActions };
 __m.map = (() => {
 // The life map shows travelled land. Bought maps add roads; jobs add search areas.
 const { MAP_CELL, isDiscovered } = __m.life;
-const { RIVER_MAX_X, RIVER_MIN_X, riverCenter } = __m.terrain;
+const { campTrailPoints, RIVER_MAX_X, RIVER_MIN_X, riverCenter } = __m.terrain;
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
   grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', river: '#587784', riverBank: '#99734d',
@@ -5814,13 +6009,10 @@ class MapView {
 
     // Roads are drawn only where travelled until the player buys a map.
     ctx.strokeStyle = C.road; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
-    for (const road of world.roads) {
-      const dx = road.to.x - road.from.x, dz = road.to.z - road.from.z;
-      const steps = Math.ceil(Math.hypot(dx, dz) / 6);
-      for (let i = 0; i < steps; i++) {
-        const t = i / steps, next = (i + 1) / steps;
-        const x = road.from.x + dx * t, z = road.from.z + dz * t;
-        const nx = road.from.x + dx * next, nz = road.from.z + dz * next;
+    for (const [index, camp] of world.camps.entries()) {
+      const points = campTrailPoints(camp, index);
+      for (let i = 0; i < points.length - 1; i++) {
+        const { x, z } = points[i], { x: nx, z: nz } = points[i + 1];
         if (!life.hasMap && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
         ctx.moveTo(X(x), Y(z)); ctx.lineTo(X(nx), Y(nz));
       }
@@ -5853,8 +6045,9 @@ class MapView {
     }
 
     const town = world.town;
-    ctx.fillStyle = 'rgba(239,220,187,0.35)'; ctx.beginPath();
-    ctx.arc(X(town.x), Y(town.z), town.radius * k, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(239,220,187,0.28)'; ctx.beginPath();
+    ctx.moveTo(X(-25), Y(-28)); ctx.lineTo(X(24), Y(-25)); ctx.lineTo(X(30), Y(21));
+    ctx.lineTo(X(13), Y(28)); ctx.lineTo(X(-28), Y(23)); ctx.closePath(); ctx.fill();
     ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
     ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
     ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();

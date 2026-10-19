@@ -174,6 +174,77 @@ function makeBuilding(game, group, spec) {
   return { ...spec, x: spec.side * 8.55, z: spec.z, outsideX: spec.side * 7.1, outsideZ: spec.z };
 }
 
+function rearDoor(s, z, double = false) {
+  const xs = double ? [-0.58, 0.58] : [0];
+  for (const x of xs) {
+    s.box(double ? 1.02 : 1.3, 2.55, 0.16, PAL.woodDark, x, 1.28, z);
+    for (const y of [0.48, 1.22, 1.98]) s.box(double ? 0.82 : 1.08, 0.08, 0.19, PAL.woodLight, x, y, z + 0.1);
+    s.cyl(0.07, 0.07, 0.08, 6, PAL.brass, x + (double ? (x < 0 ? 0.3 : -0.3) : 0.42), 1.25, z + 0.16, Math.PI / 2);
+  }
+}
+
+function rearBuilding(game, group, spec) {
+  const s = new Shape(), front = spec.depth / 2 + 0.02;
+  s.box(spec.width, spec.height, spec.depth, spec.color, 0, spec.height / 2, 0);
+  for (let y = 0.4; y < spec.height; y += 0.5) s.box(spec.width - 0.25, 0.035, 0.08,
+    Math.round(y * 10) % 2 ? PAL.woodDark : spec.trim, 0, y, front + 0.03);
+  for (const x of [-spec.width / 2 + 0.12, spec.width / 2 - 0.12]) s.box(0.24, spec.height, 0.2, spec.trim, x, spec.height / 2, front + 0.1);
+
+  if (spec.type === 'hotel') {
+    rearDoor(s, front + 0.1, true);
+    for (const y of [2.2, 4.9]) for (const x of [-3.1, 3.1]) window(s, x, y, front + 0.12, 0x4f6a6e);
+    s.box(spec.width + 0.4, 0.2, 1.65, PAL.plank, 0, 3.45, front + 0.55);
+    for (let x = -4.4; x <= 4.4; x += 0.8) s.box(0.09, 0.9, 0.09, PAL.woodDark, x, 3.9, front + 1.25);
+    s.box(spec.width + 0.4, 0.12, 0.12, PAL.woodLight, 0, 4.32, front + 1.25);
+    s.box(spec.width + 0.5, 1.05, 0.3, 0x725039, 0, spec.height + 0.42, front);
+    for (const x of [-4.5, 4.5]) s.box(0.3, 1.55, 0.3, spec.trim, x, spec.height + 0.3, front);
+  } else if (spec.type === 'chapel') {
+    rearDoor(s, front + 0.1, true);
+    for (const x of [-2.05, 2.05]) window(s, x, 2.35, front + 0.12, 0x638287);
+    gableRoof(s, spec.width, spec.depth, spec.height - 0.05, 1.75, spec.roof);
+    s.box(1.75, 2.1, 1.75, spec.trim, 0, spec.height + 1.25, -0.7);
+    s.cone(1.4, 1.8, 4, spec.roof, 0, spec.height + 3.15, -0.7, 0, Math.PI / 4);
+    s.cyl(0.38, 0.46, 0.5, 8, PAL.brass, 0, spec.height + 1.35, front + 0.25);
+  } else if (spec.type === 'forge') {
+    gableRoof(s, spec.width, spec.depth, spec.height - 0.05, 1.4, spec.roof);
+    s.box(4.1, 3.0, 0.18, 0x2d2723, 1.45, 1.5, front + 0.12);
+    s.box(1.45, 2.6, 0.16, PAL.woodDark, -2.75, 1.3, front + 0.12);
+    s.box(1.65, 2.7, 1.65, PAL.rockDark, -2.6, spec.height + 0.4, -1.2);
+    s.box(1.9, 0.22, 1.9, PAL.iron, -2.6, spec.height + 1.72, -1.2);
+    s.box(spec.width + 0.4, 0.16, 2.1, PAL.plank, 0, 0.1, front + 0.8);
+  } else {
+    rearDoor(s, front + 0.1, spec.type === 'freight');
+    const windowX = spec.type === 'freight' ? [-3.3, 3.3] : [-1.9, 1.9];
+    for (const x of windowX) window(s, x, 2, front + 0.12, 0x526a6b);
+    gableRoof(s, spec.width, spec.depth, spec.height - 0.05, spec.type === 'freight' ? 1.45 : 1.15, spec.roof);
+    if (spec.type === 'cabin') {
+      s.box(spec.width + 0.35, 0.14, 1.5, PAL.plank, 0, 0.09, front + 0.58);
+      for (const x of [-spec.width / 2 + 0.28, spec.width / 2 - 0.28]) s.cyl(0.1, 0.13, 2.7, 7, PAL.woodLight, x, 1.35, front + 1.22);
+    }
+  }
+  if (spec.type !== 'hotel' && spec.type !== 'forge') {
+    const chimneyX = spec.type === 'chapel' ? 2.3 : -spec.width * 0.3;
+    s.box(0.75, 1.55, 0.75, PAL.rockDark, chimneyX, spec.height + 0.6, -spec.depth * 0.22);
+    s.box(0.9, 0.16, 0.9, PAL.iron, chimneyX, spec.height + 1.4, -spec.depth * 0.22);
+  }
+  const object = new THREE.Group();
+  object.position.set(spec.x, 0, spec.z); object.rotation.y = spec.ry;
+  object.add(meshOf(s)); group.add(object);
+  game.physics.fixedBox(spec.x, spec.height / 2, spec.z, spec.width / 2, spec.height / 2, spec.depth / 2, spec.ry, GROUPS.world);
+}
+
+function backstreetBuildings(game, group) {
+  const buildings = [
+    { type: 'forge', x: -25, z: -19, ry: Math.PI / 2, width: 8.2, depth: 7, height: 3.8, color: 0x73513a, trim: 0x9d7148, roof: 0x443832 },
+    { type: 'cabin', x: -26, z: 1, ry: Math.PI / 2 + 0.04, width: 6.6, depth: 6.2, height: 3.7, color: 0x806342, trim: 0xae8250, roof: 0x51402f },
+    { type: 'freight', x: -25, z: 20, ry: Math.PI / 2 - 0.03, width: 9.4, depth: 7.6, height: 4.2, color: 0x6b533d, trim: 0x9d7951, roof: 0x453b35 },
+    { type: 'hotel', x: 25, z: -18, ry: -Math.PI / 2 - 0.03, width: 10, depth: 7.4, height: 6.4, color: 0x926243, trim: 0xc08b58, roof: 0x594034 },
+    { type: 'chapel', x: 27, z: 2, ry: -Math.PI / 2 + 0.04, width: 6.8, depth: 8.2, height: 4.7, color: 0xb8a477, trim: 0xd5c294, roof: 0x5b4a3b },
+    { type: 'cabin', x: 25, z: 20, ry: -Math.PI / 2, width: 6.5, depth: 6, height: 3.6, color: 0x725841, trim: 0xa57a4c, roof: 0x48372c },
+  ];
+  for (const building of buildings) rearBuilding(game, group, building);
+}
+
 function river(game, group) {
   const strip = (extraWidth, y, colors) => {
     const positions = [], normals = [], vertexColors = [], steps = 42;
@@ -254,45 +325,65 @@ function river(game, group) {
 
 function streetDetails(game, group) {
   const s = new Shape();
-  // Water tower, telegraph poles, shade trees, and desert plants give a readable skyline.
-  for (const x of [-3.5, 3.5]) for (const z of [-24, -12, 0, 12, 21]) {
-    s.box(0.14, 3.6, 0.14, PAL.woodDark, x, 1.8, z);
-    s.box(1, 0.12, 0.12, PAL.woodLight, x, 3.35, z);
-    for (const u of [-0.35, 0.35]) s.cyl(0.08, 0.08, 0.16, 6, PAL.iron, x + u, 3.5, z);
+  // One telegraph line leads through town and keeps the center of the street open.
+  const poleX = -5.8, poleZ = [-28, -14, 0, 14, 25];
+  for (const z of poleZ) {
+    s.box(0.16, 4.1, 0.16, PAL.woodDark, poleX, 2.05, z);
+    s.box(1.25, 0.13, 0.13, PAL.woodLight, poleX, 3.72, z);
+    for (const u of [-0.45, 0.45]) s.cyl(0.08, 0.08, 0.18, 6, PAL.iron, poleX + u, 3.88, z);
   }
-  s.cyl(2.2, 2.05, 3.1, 12, PAL.wood, 20, 7.2, 18);
-  for (const x of [18.2, 21.8]) for (const z of [16.2, 19.8]) s.box(0.26, 7, 0.26, PAL.woodDark, x, 3.5, z);
-  s.cone(2.4, 1.2, 12, PAL.iron, 20, 9.35, 18);
-  for (const x of [-22, -18, 18, 22]) {
+  for (let i = 0; i < poleZ.length - 1; i++) {
+    const z = (poleZ[i] + poleZ[i + 1]) / 2, length = poleZ[i + 1] - poleZ[i];
+    for (const x of [poleX - 0.45, poleX + 0.45]) s.cyl(0.025, 0.025, length, 5, PAL.iron, x, 3.84, z, Math.PI / 2);
+  }
+  // The water tower and storage sit in the back lot by the livery.
+  s.cyl(2.2, 2.05, 3.1, 12, PAL.wood, -32, 7.2, 18);
+  for (const x of [-33.8, -30.2]) for (const z of [16.2, 19.8]) s.box(0.26, 7, 0.26, PAL.woodDark, x, 3.5, z);
+  s.cone(2.4, 1.2, 12, PAL.iron, -32, 9.35, 18);
+  for (const x of [-35, -30, 31, 35]) {
     const cactus = cactusShape(1.8 + Math.abs(x % 3), x + 40);
     for (const part of cactus.parts) s.parts.push(part);
     const count = cactus.parts.length;
-    for (let i = s.parts.length - count; i < s.parts.length; i++) s.parts[i].translate(x, 0, x < 0 ? 24 : -25);
+    for (let i = s.parts.length - count; i < s.parts.length; i++) s.parts[i].translate(x, 0, x < 0 ? -29 : 27);
   }
-  // Hitching rails, a water trough, hay, and sacks break up the street edges.
-  for (const x of [-7, 7]) for (const z of [-18, -6, 6, 18]) {
+  // Hitching rails stay at the porch edge and leave each door clear.
+  for (const x of [-7, 7]) for (const z of [-20.2, -8.2, 3.8, 15.8]) {
     s.cyl(0.11, 0.15, 1.25, 7, PAL.woodDark, x, 0.62, z - 1.6);
     s.cyl(0.11, 0.15, 1.25, 7, PAL.woodDark, x, 0.62, z + 1.6);
     s.cyl(0.1, 0.1, 3.4, 7, PAL.woodLight, x, 0.93, z, Math.PI / 2);
   }
-  s.box(2.6, 0.7, 1.1, PAL.woodDark, 5.8, 0.38, 13.4);
-  s.box(2.15, 0.52, 0.75, PAL.water, 5.8, 0.55, 13.4);
-  for (const x of [18.3, 19.4]) {
-    s.cyl(0.56, 0.56, 1.05, 10, 0xc19a4e, x, 0.58, 11.5, 0, 0, Math.PI / 2);
-    s.cyl(0.58, 0.58, 0.05, 10, 0x856530, x - 0.52, 0.58, 11.5, 0, 0, Math.PI / 2);
+  s.box(2.8, 0.72, 1.15, PAL.woodDark, -7.1, 0.38, 12.3);
+  s.box(2.3, 0.5, 0.78, PAL.water, -7.1, 0.56, 12.3);
+  for (const x of [-20.4, -19.2]) {
+    s.cyl(0.58, 0.58, 1.1, 10, 0xc19a4e, x, 0.6, 15.2, 0, 0, Math.PI / 2);
+    s.cyl(0.6, 0.6, 0.05, 10, 0x856530, x - 0.54, 0.6, 15.2, 0, 0, Math.PI / 2);
   }
-  for (const [x, z, ry] of [[-19, -12, 0.2], [-20, -13, -0.35], [18.5, -18, 0.5]]) {
+  for (const [x, z, ry] of [[-20.5, -23, 0.2], [-21.4, -22.1, -0.35], [20.5, 23, 0.5]]) {
     s.add(new THREE.SphereGeometry(0.55, 7, 5), PAL.canvasDark, x, 0.48, z, 0, ry, 0, 0.8, 1.15, 0.65);
     s.cyl(0.12, 0.04, 0.25, 5, PAL.woodDark, x, 1.08, z);
   }
+  // Small fenced yards join the front and back rows.
+  for (const side of [-1, 1]) {
+    const x = side * 19;
+    for (const z of [-25, -12, 1, 14, 25]) s.box(0.16, 1.15, 0.16, PAL.woodDark, x, 0.58, z);
+    for (const z of [-18.5, -5.5, 7.5, 19.5]) {
+      s.box(0.1, 0.12, 11.5, PAL.woodLight, x, 0.45, z, 0.03 * side, 0, 0);
+      s.box(0.1, 0.12, 11.5, PAL.woodLight, x, 0.95, z, -0.025 * side, 0, 0);
+    }
+  }
   group.add(meshOf(s));
-  const wagon = meshOf(wagonShape()); wagon.position.set(22, 0, -10); wagon.rotation.y = -0.35; group.add(wagon);
-  const crate = meshOf(crateShape(0.9)); crate.position.set(-7.4, 0.45, -20); group.add(crate);
-  const barrel = meshOf(barrelShape()); barrel.position.set(7.4, 0.58, 8); group.add(barrel);
+  const wagon = meshOf(wagonShape()); wagon.position.set(20.5, 0, -27); wagon.rotation.y = -0.52; group.add(wagon);
+  for (const [x, z, size] of [[-20.5, -15, 1], [-21.6, -15.4, 0.75], [20.2, -13.5, 0.9]]) {
+    const crate = meshOf(crateShape(size)); crate.position.set(x, size / 2, z); crate.rotation.y = x * 0.07; group.add(crate);
+  }
+  for (const [x, z] of [[-20.5, -17], [20.5, 15], [21.3, 15.5]]) {
+    const barrel = meshOf(barrelShape()); barrel.position.set(x, 0.58, z); group.add(barrel);
+  }
 }
 
 export function buildTown(game, group) {
   const sites = STORES.map((spec) => makeBuilding(game, group, spec));
+  backstreetBuildings(game, group);
   river(game, group);
   streetDetails(game, group);
   return sites;
