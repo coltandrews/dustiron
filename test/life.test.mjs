@@ -2,7 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WORLD_HALF, createLife, normalizeLife, migrateLife, discover, isDiscovered, work } from '../src/life.js';
 import { buy } from '../src/items.js';
-import { inRiver } from '../src/terrain.js';
+import { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, inRiver, riverCenter, riverTangent, riverWidth } from '../src/terrain.js';
+
+test('the river crosses the full land and has three valid bridges', () => {
+  assert.ok(RIVER_MIN_X < -WORLD_HALF);
+  assert.ok(RIVER_MAX_X > WORLD_HALF);
+  assert.equal(BRIDGES.length, 3);
+  assert.ok(Math.abs(riverTangent(0)) < 0.01);
+  for (const bridge of BRIDGES) {
+    const center = riverCenter(bridge.x);
+    assert.ok(bridge.north < center - riverWidth(bridge.x) / 2);
+    assert.ok(bridge.south > center + riverWidth(bridge.x) / 2);
+  }
+});
 
 test('one seed makes a stable world; another seed makes a different one', () => {
   const first = createLife(1234);

@@ -1,4 +1,4 @@
-// The open land around town: ground, roads, trails and grouped desert scenery.
+// The open land around town: ground, town roads and grouped desert scenery.
 // Scenery is placed in seeded clusters with open ground between them, so the
 // desert reads as natural rather than as an even scatter.
 import * as THREE from 'three';
@@ -35,8 +35,8 @@ function smooth(points, samples = 4) {
   return curve.getPoints((points.length - 1) * samples).map((p) => ({ x: p.x, z: p.z }));
 }
 
-/** Main street, porch walks and camp trails as soft decals. */
-export function roads(group, world, doors) {
+/** Main street and short porch walks as soft decals. */
+export function roads(group, doors) {
   const street = resample(smooth(MAIN_STREET), 1.1);
   const taper = (t) => Math.min(1, 0.45 + t * 4, 0.45 + (1 - t) * 4);
   group.add(road(street, (t) => (6.4 + Math.sin(t * 17) * 0.5) * taper(t), { fade: 10, seed: 3 }));
@@ -45,10 +45,6 @@ export function roads(group, world, doors) {
     const side = Math.sign(door.x), endX = side * 6.7;
     const points = resample(smooth([{ x: side * 1.6, z: door.z + side * 0.6 }, { x: side * 4, z: door.z - side * 0.25 }, { x: endX, z: door.z }], 6), 0.6);
     group.add(road(points, 1.7, { ruts: false, fade: 1.4, seed: door.z, base: 0xb47a4b, wash: 0xc08a57 }));
-  }
-  for (const [index, camp] of (world.camps ?? []).entries()) {
-    const points = resample(campTrailPoints(camp, index), 1.6);
-    if (points.length > 1) group.add(road(points, (t) => 3.6 + Math.sin(t * Math.PI * 4 + index) * 0.4, { fade: 12, seed: 40 + index }));
   }
 }
 

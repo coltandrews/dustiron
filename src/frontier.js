@@ -47,7 +47,7 @@ export function buildFrontier(game, world) {
     game.physics.fixedBox(0, 2, side * (half + 0.5), half + 1, 2, 0.5, 0, GROUPS.world);
   }
   const sites = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
-  roads(outdoor, world, sites);
+  roads(outdoor, sites);
   desert(game, outdoor, world, rng);
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,

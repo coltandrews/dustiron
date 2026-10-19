@@ -1,10 +1,10 @@
-// The life map shows travelled land. Bought maps add roads; jobs add search areas.
+// The life map shows travelled land. Major waterways stay visible as reference.
 import { MAP_CELL, isDiscovered } from './life.js';
-import { campTrailPoints, RIVER_MAX_X, RIVER_MIN_X, riverCenter } from './terrain.js';
+import { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent } from './terrain.js';
 
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
-  grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', river: '#587784', riverBank: '#99734d',
+  grid: 'rgba(28,19,15,0.08)', river: '#587784', riverBank: '#99734d',
   bounty: '#b4532e', cleared: '#5f713e', you: '#2f5d8a',
 };
 const TOWN_PLACES = ['Guns & Ammo', 'Doctor Finch', 'Sheriff', 'Maps & Trails', 'Clothier', 'The Last Drop', 'Livery Stable'];
@@ -56,32 +56,26 @@ export class MapView {
     }
     ctx.stroke();
 
-    // The surveyed river uses the same curve as the world.
+    // The river uses the same curve as the world and continues beyond both map edges.
     const drawRiver = (color, width) => {
       ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
-      let drawing = false;
       for (let x = RIVER_MIN_X; x <= RIVER_MAX_X; x += 3) {
-        const z = riverCenter(x), visible = life.gear.map || isDiscovered(life, x, z);
-        if (!visible) { drawing = false; continue; }
-        if (!drawing) { ctx.moveTo(X(x), Y(z)); drawing = true; } else ctx.lineTo(X(x), Y(z));
+        const z = riverCenter(x);
+        if (x === RIVER_MIN_X) ctx.moveTo(X(x), Y(z)); else ctx.lineTo(X(x), Y(z));
       }
       ctx.stroke();
     };
     drawRiver(C.riverBank, 5);
     drawRiver(C.river, 3);
-    ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
-
-    // Roads are drawn only where travelled until the player buys a map.
-    ctx.strokeStyle = C.road; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
-    for (const [index, camp] of world.camps.entries()) {
-      const points = campTrailPoints(camp, index);
-      for (let i = 0; i < points.length - 1; i++) {
-        const { x, z } = points[i], { x: nx, z: nz } = points[i + 1];
-        if (!life.gear.map && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
-        ctx.moveTo(X(x), Y(z)); ctx.lineTo(X(nx), Y(nz));
-      }
+    // Short crossbars mark the three bridge crossings.
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath();
+    for (const bridge of BRIDGES) {
+      const angle = riverTangent(bridge.x), nx = -Math.sin(angle), nz = Math.cos(angle), reach = 7;
+      ctx.moveTo(X(bridge.x - nx * reach), Y(riverCenter(bridge.x) - nz * reach));
+      ctx.lineTo(X(bridge.x + nx * reach), Y(riverCenter(bridge.x) + nz * reach));
     }
-    ctx.stroke(); ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
 
     // Active jobs show a broad search area, never the exact place. A bought lead narrows it.
     let active = 0, proof = 0;

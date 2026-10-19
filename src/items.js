@@ -38,7 +38,7 @@ export const CATALOGUE = {
   coffee: { name: 'Coffee', price: 2, kind: 'supply', max: 3, text: 'For two minutes your roll recovers faster.' },
   whiskey: { name: 'Whiskey', price: 3, kind: 'supply', max: 3, text: 'Fills some Dead Eye at once, but your aim wavers for a minute.' },
   coat: { name: 'Trail coat', price: 20, kind: 'gear', text: 'Thick canvas. Takes a tenth off every hit.' },
-  map: { name: 'Area map', price: 30, kind: 'gear', text: 'Shows roads, the creek and the big landmarks. Not camps.' },
+  map: { name: 'Area map', price: 30, kind: 'gear', text: 'Shows the river and the big landmarks. Not camps.' },
   rent: { name: 'Rent Old Dusty', price: 30, kind: 'horse', horse: 'rental', text: 'A steady old horse for this trip. Returns to the stable when you come home.' },
   horse: { name: 'Buy the bay mare', price: 180, kind: 'horse', horse: 'owned', text: 'Faster, stronger and calmer under fire. Yours for this life.' },
   feed: { name: 'Horse feed', price: 2, kind: 'supply', max: 3, text: 'Restores your horse when it is worn out.' },

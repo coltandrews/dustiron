@@ -1664,13 +1664,16 @@ return { BLACKJACK_BET, BETS, emptyBlackjack, handValue, canDoubleBlackjack, can
 
 // ---- src/terrain.js ----
 __m.terrain = (() => {
-// Shared river shape for the world and the paper map.
-const RIVER_MIN_X = -82;
-const RIVER_MAX_X = 82;
+// Shared river shape for the world and the paper map. The channel starts and
+// ends beyond the playable land, so it always reads as part of a larger river.
+const RIVER_MIN_X = -225;
+const RIVER_MAX_X = 225;
 
 function riverCenter(x) {
-  const bend = 1 - Math.exp(-(x * x) / 900);
-  return 30 + bend * (12 * Math.sin(x / 50) + 4 * Math.sin(x / 18));
+  return 30
+    + 12 * Math.sin(x / 72) ** 3
+    + 5 * Math.sin(x / 31) ** 3
+    + 2.5 * Math.sin(x / 15) ** 3;
 }
 
 function riverWidth(x) {
@@ -1692,8 +1695,15 @@ function inRiver(x, z, margin = 1.5) {
   return x >= RIVER_MIN_X - margin && x <= RIVER_MAX_X + margin && Math.abs(z - riverCenter(x)) < riverWidth(x) / 2 + margin;
 }
 
-/** The two ends of the town bridge, on the town side and the far side. */
-const BRIDGE = { x: 0, north: riverCenter(0) - 8.5, south: riverCenter(0) + 8.5 };
+function bridgeAt(x) {
+  const reach = riverWidth(x) / 2 + 3.75;
+  return { x, north: riverCenter(x) - reach, south: riverCenter(x) + reach };
+}
+
+/** Three crossings join the north and south sides of the frontier. */
+const BRIDGES = [bridgeAt(-125), bridgeAt(0), bridgeAt(125)];
+/** The center crossing carries Main Street and remains the town bridge. */
+const BRIDGE = BRIDGES[1];
 
 function curve(start, end, bend, segments) {
   const dx = end.x - start.x, dz = end.z - start.z, distance = Math.hypot(dx, dz) || 1;
@@ -1713,15 +1723,16 @@ const crosses = (points) => points.some((p) => inRiver(p.x, p.z, 0.5));
 
 /**
  * A stable curved trail from the town edge to one camp. Trails never ford the
- * river: a camp across the water is reached over the town bridge.
+ * river: a camp across the water is reached over its nearest bridge.
  */
 function campTrailPoints(camp, index = 0, segments = 18) {
   const distance = Math.hypot(camp.x, camp.z);
   if (distance < 1) return [];
   const dx = camp.x / distance, dz = camp.z / distance;
   const end = { x: camp.x - dx * 25, z: camp.z - dz * 25 };
-  const farSide = camp.z > riverCenter(Math.max(RIVER_MIN_X, Math.min(RIVER_MAX_X, camp.x))) && Math.abs(camp.x) < RIVER_MAX_X + 30;
-  const start = farSide ? { x: BRIDGE.x, z: BRIDGE.south + 4 } : { x: dx * 44, z: dz * 44 };
+  const farSide = camp.z > riverCenter(camp.x);
+  const crossing = BRIDGES.reduce((best, bridge) => Math.abs(camp.x - bridge.x) < Math.abs(camp.x - best.x) ? bridge : best);
+  const start = farSide ? { x: crossing.x, z: crossing.south + 4 } : { x: dx * 44, z: dz * 44 };
   const span = Math.hypot(end.x - start.x, end.z - start.z);
   const bend = trailBend(camp, index) * Math.min(26, span * 0.18);
   for (const scale of [1, 0.5, 0, -0.5, -1]) {
@@ -1742,7 +1753,7 @@ function distanceToTrail(x, z, points) {
   return nearest;
 }
 
-return { RIVER_MIN_X, RIVER_MAX_X, riverCenter, riverWidth, riverTangent, inRiver, BRIDGE, campTrailPoints, distanceToTrail };
+return { RIVER_MIN_X, RIVER_MAX_X, riverCenter, riverWidth, riverTangent, inRiver, BRIDGES, BRIDGE, campTrailPoints, distanceToTrail };
 })();
 
 // ---- src/world-gen.js ----
@@ -1777,12 +1788,22 @@ function spread(rng, taken, minGap, half, test, tries = 200) {
 /** Camps keep the original layout rules; a fourth, deadly site sits farther out. */
 function makeCamps(seed, half) {
   const rng = createRng(seed), angle = rng.range(0, Math.PI * 2), names = rng.int(0, CAMP_NAMES.length - 1);
-  const camps = Array.from({ length: 3 }, (_, i) => {
-    const a = angle + i * Math.PI * 2 / 3 + rng.range(-0.15, 0.15), distance = rng.range(90 + i * 15, 120 + i * 20);
-    return { id: `camp-${i + 1}`, name: CAMP_NAMES[(names + i) % CAMP_NAMES.length],
-      x: Math.round(Math.cos(a) * distance), z: Math.round(Math.sin(a) * distance), difficulty: i,
-      targetId: `target-${i + 1}`, targetName: TARGET_NAMES[(names + i * 2) % TARGET_NAMES.length], reward: 90 + i * 40 };
-  });
+  const camps = [];
+  for (let i = 0; i < 3; i++) {
+    let spot = null;
+    for (let attempt = 0; attempt < 40 && !spot; attempt++) {
+      const a = angle + i * Math.PI * 2 / 3 + rng.range(-0.2, 0.2);
+      const distance = rng.range(90 + i * 15, 120 + i * 20);
+      const candidate = { x: Math.round(Math.cos(a) * distance), z: Math.round(Math.sin(a) * distance) };
+      if (inRiver(candidate.x, candidate.z, 10)) continue;
+      if (camps.some((camp) => Math.hypot(camp.x - candidate.x, camp.z - candidate.z) < 65)) continue;
+      spot = candidate;
+    }
+    spot ??= spread(rng, camps.map((camp) => ({ ...camp, r: 65 })), 65, half, { min: 90 + i * 15, max: 120 + i * 20 });
+    if (!spot) continue;
+    camps.push({ id: `camp-${i + 1}`, name: CAMP_NAMES[(names + i) % CAMP_NAMES.length], ...spot, difficulty: i,
+      targetId: `target-${i + 1}`, targetName: TARGET_NAMES[(names + i * 2) % TARGET_NAMES.length], reward: 90 + i * 40 });
+  }
   const extra = createRng(seed ^ 0x6465616c);
   const spot = spread(extra, camps.map((c) => ({ ...c, r: 80 })), 80, half, { min: 160, max: half - 30 });
   if (spot) {
@@ -2222,7 +2243,7 @@ const CATALOGUE = {
   coffee: { name: 'Coffee', price: 2, kind: 'supply', max: 3, text: 'For two minutes your roll recovers faster.' },
   whiskey: { name: 'Whiskey', price: 3, kind: 'supply', max: 3, text: 'Fills some Dead Eye at once, but your aim wavers for a minute.' },
   coat: { name: 'Trail coat', price: 20, kind: 'gear', text: 'Thick canvas. Takes a tenth off every hit.' },
-  map: { name: 'Area map', price: 30, kind: 'gear', text: 'Shows roads, the creek and the big landmarks. Not camps.' },
+  map: { name: 'Area map', price: 30, kind: 'gear', text: 'Shows the river and the big landmarks. Not camps.' },
   rent: { name: 'Rent Old Dusty', price: 30, kind: 'horse', horse: 'rental', text: 'A steady old horse for this trip. Returns to the stable when you come home.' },
   horse: { name: 'Buy the bay mare', price: 180, kind: 'horse', horse: 'owned', text: 'Faster, stronger and calmer under fire. Yours for this life.' },
   feed: { name: 'Horse feed', price: 2, kind: 'supply', max: 3, text: 'Restores your horse when it is worn out.' },
@@ -7218,7 +7239,7 @@ const { PAL, Shape, meshOf } = __m.models;
 const { GROUPS } = __m.physics;
 const { createRng } = __m.rng;
 const { blot, blotMesh, strip } = __m.decals;
-const { BRIDGE, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent, riverWidth } = __m.terrain;
+const { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent, riverWidth } = __m.terrain;
 function riverLine(offset = 0, step = 1.5) {
   const points = [];
   for (let x = RIVER_MIN_X - 4; x <= RIVER_MAX_X + 4; x += step) points.push({ x, z: riverCenter(x) + offset });
@@ -7265,7 +7286,7 @@ function buildRiver(game, group) {
   // Bank scenery in uneven groups with open sand between them.
   const s = new Shape(), shade = [];
   for (let x = RIVER_MIN_X + 3; x < RIVER_MAX_X - 3; x += rng.range(3, 9)) {
-    if (Math.abs(x) < 9) continue;
+    if (BRIDGES.some((bridge) => Math.abs(x - bridge.x) < 10)) continue;
     const side = rng.chance(0.5) ? 1 : -1, z0 = riverCenter(x), edge = riverWidth(x) / 2;
     const kind = rng.next();
     if (kind < 0.35) {
@@ -7281,34 +7302,35 @@ function buildRiver(game, group) {
       shade.push(blot(x + 0.8, z - 0.6, 2.4, 1.9, 0x6f5838, 0.35));
     } else shade.push(blot(x, z0 + side * (edge + 2), rng.range(2, 4), rng.range(1, 2), 0xd7b37f, 0.5));
   }
-  // Rock piles close each end of the creek.
-  for (const side of [-1, 1]) {
-    const x = side < 0 ? RIVER_MIN_X : RIVER_MAX_X, z = riverCenter(x);
-    s.rock(5.2, PAL.cliff, x + side * 1.5, 2.5, z, 0.95, 0.24, 310 + side, 0.4);
-    s.rock(3.2, PAL.rockLight, x - side * 1.4, 1.6, z - 2.6, 0.8, 0.22, 410 + side);
-    s.rock(2.4, PAL.rock, x - side * 0.6, 1.2, z + 3.3, 0.8, 0.22, 510 + side);
-    game.physics.fixedCylinder(x + side * 0.5, 2.6, z, 2.6, 5, GROUPS.world);
-  }
   group.add(meshOf(s, undefined, true));
   group.add(blotMesh(shade));
 
-  // Water blocks walking everywhere except the bridge.
-  const steps = 40;
-  for (let i = 0; i < steps; i++) {
-    const x0 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * i / steps;
-    const x1 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * (i + 1) / steps;
-    const x = (x0 + x1) / 2;
-    if (Math.abs(x) < 4.2) continue;
-    const z = (riverCenter(x0) + riverCenter(x1)) / 2, length = Math.hypot(x1 - x0, riverCenter(x1) - riverCenter(x0)) + 0.4;
-    game.physics.fixedBox(x, 1, z, length / 2, 1, riverWidth(x) / 2 - 0.4, Math.atan2(riverCenter(x1) - riverCenter(x0), x1 - x0) * -1, GROUPS.world);
+  // Water blocks walking. Exact gaps leave room for the three bridge decks.
+  const openings = BRIDGES.map((bridge) => ({ min: bridge.x - 3.25, max: bridge.x + 3.25 }));
+  const sections = [];
+  let start = RIVER_MIN_X;
+  for (const opening of openings) {
+    sections.push([start, opening.min]);
+    start = opening.max;
   }
-  // Close the strips of water just outside the bridge rails.
-  for (const side of [-1, 1]) game.physics.fixedBox(side * 3.75, 1, riverCenter(side * 3.75), 0.55, 1, riverWidth(0) / 2 - 0.4, 0, GROUPS.world);
-  buildBridge(game, group);
+  sections.push([start, RIVER_MAX_X]);
+  for (const [sectionStart, sectionEnd] of sections) {
+    const steps = Math.max(1, Math.ceil((sectionEnd - sectionStart) / 4.5));
+    for (let i = 0; i < steps; i++) {
+      const x0 = sectionStart + (sectionEnd - sectionStart) * i / steps;
+      const x1 = sectionStart + (sectionEnd - sectionStart) * (i + 1) / steps;
+      const x = (x0 + x1) / 2;
+      const z = (riverCenter(x0) + riverCenter(x1)) / 2;
+      const angle = Math.atan2(riverCenter(x1) - riverCenter(x0), x1 - x0);
+      const length = Math.hypot(x1 - x0, riverCenter(x1) - riverCenter(x0)) + 0.15;
+      game.physics.fixedBox(x, 1, z, length / 2, 1, riverWidth(x) / 2 - 0.4, -angle, GROUPS.world);
+    }
+  }
+  for (const bridge of BRIDGES) buildBridge(game, group, bridge);
 }
 
-function buildBridge(game, group) {
-  const s = new Shape(), half = (BRIDGE.south - BRIDGE.north) / 2;
+function buildBridge(game, group, spec) {
+  const s = new Shape(), half = (spec.south - spec.north) / 2;
   // The deck sits just above the water so walking feet stay on the boards.
   for (let z = -half + 0.3, i = 0; z <= half - 0.25; z += 0.62, i++) {
     s.box(6.4, 0.12, 0.56, i % 7 === 3 ? PAL.woodLight : i % 2 ? PAL.plank : 0x936238, 0, 0.07, z, 0, (i % 3 - 1) * 0.012, 0);
@@ -7339,12 +7361,17 @@ function buildBridge(game, group) {
     }
   }
   const bridge = meshOf(s);
-  const centerZ = (BRIDGE.north + BRIDGE.south) / 2;
-  bridge.position.set(BRIDGE.x, 0, centerZ);
-  bridge.rotation.y = -riverTangent(0);
+  const centerZ = (spec.north + spec.south) / 2;
+  const angle = -riverTangent(spec.x);
+  bridge.position.set(spec.x, 0, centerZ);
+  bridge.rotation.y = angle;
   group.add(bridge);
   // Rails keep the player on the deck.
-  for (const x of [-3.05, 3.05]) game.physics.fixedBox(BRIDGE.x + x, 1, centerZ, 0.12, 1, half + 0.3, -riverTangent(0), GROUPS.world);
+  for (const localX of [-3.05, 3.05]) {
+    const x = spec.x + localX * Math.cos(angle);
+    const z = centerZ - localX * Math.sin(angle);
+    game.physics.fixedBox(x, 1, z, 0.12, 1, half + 0.3, angle, GROUPS.world);
+  }
 }
 
 return { buildRiver };
@@ -8175,7 +8202,7 @@ return { ROOM_X, buildInteriors, updateInteriorNpcs };
 
 // ---- src/land.js ----
 __m.land = (() => {
-// The open land around town: ground, roads, trails and grouped desert scenery.
+// The open land around town: ground, town roads and grouped desert scenery.
 // Scenery is placed in seeded clusters with open ground between them, so the
 // desert reads as natural rather than as an even scatter.
 
@@ -8211,8 +8238,8 @@ function smooth(points, samples = 4) {
   return curve.getPoints((points.length - 1) * samples).map((p) => ({ x: p.x, z: p.z }));
 }
 
-/** Main street, porch walks and camp trails as soft decals. */
-function roads(group, world, doors) {
+/** Main street and short porch walks as soft decals. */
+function roads(group, doors) {
   const street = resample(smooth(MAIN_STREET), 1.1);
   const taper = (t) => Math.min(1, 0.45 + t * 4, 0.45 + (1 - t) * 4);
   group.add(road(street, (t) => (6.4 + Math.sin(t * 17) * 0.5) * taper(t), { fade: 10, seed: 3 }));
@@ -8221,10 +8248,6 @@ function roads(group, world, doors) {
     const side = Math.sign(door.x), endX = side * 6.7;
     const points = resample(smooth([{ x: side * 1.6, z: door.z + side * 0.6 }, { x: side * 4, z: door.z - side * 0.25 }, { x: endX, z: door.z }], 6), 0.6);
     group.add(road(points, 1.7, { ruts: false, fade: 1.4, seed: door.z, base: 0xb47a4b, wash: 0xc08a57 }));
-  }
-  for (const [index, camp] of (world.camps ?? []).entries()) {
-    const points = resample(campTrailPoints(camp, index), 1.6);
-    if (points.length > 1) group.add(road(points, (t) => 3.6 + Math.sin(t * Math.PI * 4 + index) * 0.4, { fade: 12, seed: 40 + index }));
   }
 }
 
@@ -8469,7 +8492,7 @@ function buildFrontier(game, world) {
     game.physics.fixedBox(0, 2, side * (half + 0.5), half + 1, 2, 0.5, 0, GROUPS.world);
   }
   const sites = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
-  roads(outdoor, world, sites);
+  roads(outdoor, sites);
   desert(game, outdoor, world, rng);
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
@@ -9344,12 +9367,12 @@ return { npcOf, TownActions };
 
 // ---- src/map.js ----
 __m.map = (() => {
-// The life map shows travelled land. Bought maps add roads; jobs add search areas.
+// The life map shows travelled land. Major waterways stay visible as reference.
 const { MAP_CELL, isDiscovered } = __m.life;
-const { campTrailPoints, RIVER_MAX_X, RIVER_MIN_X, riverCenter } = __m.terrain;
+const { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent } = __m.terrain;
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
-  grid: 'rgba(28,19,15,0.08)', road: '#8c5a34', river: '#587784', riverBank: '#99734d',
+  grid: 'rgba(28,19,15,0.08)', river: '#587784', riverBank: '#99734d',
   bounty: '#b4532e', cleared: '#5f713e', you: '#2f5d8a',
 };
 const TOWN_PLACES = ['Guns & Ammo', 'Doctor Finch', 'Sheriff', 'Maps & Trails', 'Clothier', 'The Last Drop', 'Livery Stable'];
@@ -9401,32 +9424,26 @@ class MapView {
     }
     ctx.stroke();
 
-    // The surveyed river uses the same curve as the world.
+    // The river uses the same curve as the world and continues beyond both map edges.
     const drawRiver = (color, width) => {
       ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
-      let drawing = false;
       for (let x = RIVER_MIN_X; x <= RIVER_MAX_X; x += 3) {
-        const z = riverCenter(x), visible = life.gear.map || isDiscovered(life, x, z);
-        if (!visible) { drawing = false; continue; }
-        if (!drawing) { ctx.moveTo(X(x), Y(z)); drawing = true; } else ctx.lineTo(X(x), Y(z));
+        const z = riverCenter(x);
+        if (x === RIVER_MIN_X) ctx.moveTo(X(x), Y(z)); else ctx.lineTo(X(x), Y(z));
       }
       ctx.stroke();
     };
     drawRiver(C.riverBank, 5);
     drawRiver(C.river, 3);
-    ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
-
-    // Roads are drawn only where travelled until the player buys a map.
-    ctx.strokeStyle = C.road; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
-    for (const [index, camp] of world.camps.entries()) {
-      const points = campTrailPoints(camp, index);
-      for (let i = 0; i < points.length - 1; i++) {
-        const { x, z } = points[i], { x: nx, z: nz } = points[i + 1];
-        if (!life.gear.map && (!isDiscovered(life, x, z) || !isDiscovered(life, nx, nz))) continue;
-        ctx.moveTo(X(x), Y(z)); ctx.lineTo(X(nx), Y(nz));
-      }
+    // Short crossbars mark the three bridge crossings.
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath();
+    for (const bridge of BRIDGES) {
+      const angle = riverTangent(bridge.x), nx = -Math.sin(angle), nz = Math.cos(angle), reach = 7;
+      ctx.moveTo(X(bridge.x - nx * reach), Y(riverCenter(bridge.x) - nz * reach));
+      ctx.lineTo(X(bridge.x + nx * reach), Y(riverCenter(bridge.x) + nz * reach));
     }
-    ctx.stroke(); ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
 
     // Active jobs show a broad search area, never the exact place. A bought lead narrows it.
     let active = 0, proof = 0;

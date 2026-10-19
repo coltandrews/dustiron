@@ -1,10 +1,13 @@
-// Shared river shape for the world and the paper map.
-export const RIVER_MIN_X = -82;
-export const RIVER_MAX_X = 82;
+// Shared river shape for the world and the paper map. The channel starts and
+// ends beyond the playable land, so it always reads as part of a larger river.
+export const RIVER_MIN_X = -225;
+export const RIVER_MAX_X = 225;
 
 export function riverCenter(x) {
-  const bend = 1 - Math.exp(-(x * x) / 900);
-  return 30 + bend * (12 * Math.sin(x / 50) + 4 * Math.sin(x / 18));
+  return 30
+    + 12 * Math.sin(x / 72) ** 3
+    + 5 * Math.sin(x / 31) ** 3
+    + 2.5 * Math.sin(x / 15) ** 3;
 }
 
 export function riverWidth(x) {
@@ -26,8 +29,15 @@ export function inRiver(x, z, margin = 1.5) {
   return x >= RIVER_MIN_X - margin && x <= RIVER_MAX_X + margin && Math.abs(z - riverCenter(x)) < riverWidth(x) / 2 + margin;
 }
 
-/** The two ends of the town bridge, on the town side and the far side. */
-export const BRIDGE = { x: 0, north: riverCenter(0) - 8.5, south: riverCenter(0) + 8.5 };
+function bridgeAt(x) {
+  const reach = riverWidth(x) / 2 + 3.75;
+  return { x, north: riverCenter(x) - reach, south: riverCenter(x) + reach };
+}
+
+/** Three crossings join the north and south sides of the frontier. */
+export const BRIDGES = [bridgeAt(-125), bridgeAt(0), bridgeAt(125)];
+/** The center crossing carries Main Street and remains the town bridge. */
+export const BRIDGE = BRIDGES[1];
 
 function curve(start, end, bend, segments) {
   const dx = end.x - start.x, dz = end.z - start.z, distance = Math.hypot(dx, dz) || 1;
@@ -47,15 +57,16 @@ const crosses = (points) => points.some((p) => inRiver(p.x, p.z, 0.5));
 
 /**
  * A stable curved trail from the town edge to one camp. Trails never ford the
- * river: a camp across the water is reached over the town bridge.
+ * river: a camp across the water is reached over its nearest bridge.
  */
 export function campTrailPoints(camp, index = 0, segments = 18) {
   const distance = Math.hypot(camp.x, camp.z);
   if (distance < 1) return [];
   const dx = camp.x / distance, dz = camp.z / distance;
   const end = { x: camp.x - dx * 25, z: camp.z - dz * 25 };
-  const farSide = camp.z > riverCenter(Math.max(RIVER_MIN_X, Math.min(RIVER_MAX_X, camp.x))) && Math.abs(camp.x) < RIVER_MAX_X + 30;
-  const start = farSide ? { x: BRIDGE.x, z: BRIDGE.south + 4 } : { x: dx * 44, z: dz * 44 };
+  const farSide = camp.z > riverCenter(camp.x);
+  const crossing = BRIDGES.reduce((best, bridge) => Math.abs(camp.x - bridge.x) < Math.abs(camp.x - best.x) ? bridge : best);
+  const start = farSide ? { x: crossing.x, z: crossing.south + 4 } : { x: dx * 44, z: dz * 44 };
   const span = Math.hypot(end.x - start.x, end.z - start.z);
   const bend = trailBend(camp, index) * Math.min(26, span * 0.18);
   for (const scale of [1, 0.5, 0, -0.5, -1]) {

@@ -4,7 +4,7 @@ import { PAL, Shape, meshOf } from './models.js';
 import { GROUPS } from './physics.js';
 import { createRng } from './rng.js';
 import { blot, blotMesh, strip } from './decals.js';
-import { BRIDGE, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent, riverWidth } from './terrain.js';
+import { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent, riverWidth } from './terrain.js';
 
 function riverLine(offset = 0, step = 1.5) {
   const points = [];
@@ -52,7 +52,7 @@ export function buildRiver(game, group) {
   // Bank scenery in uneven groups with open sand between them.
   const s = new Shape(), shade = [];
   for (let x = RIVER_MIN_X + 3; x < RIVER_MAX_X - 3; x += rng.range(3, 9)) {
-    if (Math.abs(x) < 9) continue;
+    if (BRIDGES.some((bridge) => Math.abs(x - bridge.x) < 10)) continue;
     const side = rng.chance(0.5) ? 1 : -1, z0 = riverCenter(x), edge = riverWidth(x) / 2;
     const kind = rng.next();
     if (kind < 0.35) {
@@ -68,34 +68,35 @@ export function buildRiver(game, group) {
       shade.push(blot(x + 0.8, z - 0.6, 2.4, 1.9, 0x6f5838, 0.35));
     } else shade.push(blot(x, z0 + side * (edge + 2), rng.range(2, 4), rng.range(1, 2), 0xd7b37f, 0.5));
   }
-  // Rock piles close each end of the creek.
-  for (const side of [-1, 1]) {
-    const x = side < 0 ? RIVER_MIN_X : RIVER_MAX_X, z = riverCenter(x);
-    s.rock(5.2, PAL.cliff, x + side * 1.5, 2.5, z, 0.95, 0.24, 310 + side, 0.4);
-    s.rock(3.2, PAL.rockLight, x - side * 1.4, 1.6, z - 2.6, 0.8, 0.22, 410 + side);
-    s.rock(2.4, PAL.rock, x - side * 0.6, 1.2, z + 3.3, 0.8, 0.22, 510 + side);
-    game.physics.fixedCylinder(x + side * 0.5, 2.6, z, 2.6, 5, GROUPS.world);
-  }
   group.add(meshOf(s, undefined, true));
   group.add(blotMesh(shade));
 
-  // Water blocks walking everywhere except the bridge.
-  const steps = 40;
-  for (let i = 0; i < steps; i++) {
-    const x0 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * i / steps;
-    const x1 = RIVER_MIN_X + (RIVER_MAX_X - RIVER_MIN_X) * (i + 1) / steps;
-    const x = (x0 + x1) / 2;
-    if (Math.abs(x) < 4.2) continue;
-    const z = (riverCenter(x0) + riverCenter(x1)) / 2, length = Math.hypot(x1 - x0, riverCenter(x1) - riverCenter(x0)) + 0.4;
-    game.physics.fixedBox(x, 1, z, length / 2, 1, riverWidth(x) / 2 - 0.4, Math.atan2(riverCenter(x1) - riverCenter(x0), x1 - x0) * -1, GROUPS.world);
+  // Water blocks walking. Exact gaps leave room for the three bridge decks.
+  const openings = BRIDGES.map((bridge) => ({ min: bridge.x - 3.25, max: bridge.x + 3.25 }));
+  const sections = [];
+  let start = RIVER_MIN_X;
+  for (const opening of openings) {
+    sections.push([start, opening.min]);
+    start = opening.max;
   }
-  // Close the strips of water just outside the bridge rails.
-  for (const side of [-1, 1]) game.physics.fixedBox(side * 3.75, 1, riverCenter(side * 3.75), 0.55, 1, riverWidth(0) / 2 - 0.4, 0, GROUPS.world);
-  buildBridge(game, group);
+  sections.push([start, RIVER_MAX_X]);
+  for (const [sectionStart, sectionEnd] of sections) {
+    const steps = Math.max(1, Math.ceil((sectionEnd - sectionStart) / 4.5));
+    for (let i = 0; i < steps; i++) {
+      const x0 = sectionStart + (sectionEnd - sectionStart) * i / steps;
+      const x1 = sectionStart + (sectionEnd - sectionStart) * (i + 1) / steps;
+      const x = (x0 + x1) / 2;
+      const z = (riverCenter(x0) + riverCenter(x1)) / 2;
+      const angle = Math.atan2(riverCenter(x1) - riverCenter(x0), x1 - x0);
+      const length = Math.hypot(x1 - x0, riverCenter(x1) - riverCenter(x0)) + 0.15;
+      game.physics.fixedBox(x, 1, z, length / 2, 1, riverWidth(x) / 2 - 0.4, -angle, GROUPS.world);
+    }
+  }
+  for (const bridge of BRIDGES) buildBridge(game, group, bridge);
 }
 
-function buildBridge(game, group) {
-  const s = new Shape(), half = (BRIDGE.south - BRIDGE.north) / 2;
+function buildBridge(game, group, spec) {
+  const s = new Shape(), half = (spec.south - spec.north) / 2;
   // The deck sits just above the water so walking feet stay on the boards.
   for (let z = -half + 0.3, i = 0; z <= half - 0.25; z += 0.62, i++) {
     s.box(6.4, 0.12, 0.56, i % 7 === 3 ? PAL.woodLight : i % 2 ? PAL.plank : 0x936238, 0, 0.07, z, 0, (i % 3 - 1) * 0.012, 0);
@@ -126,10 +127,15 @@ function buildBridge(game, group) {
     }
   }
   const bridge = meshOf(s);
-  const centerZ = (BRIDGE.north + BRIDGE.south) / 2;
-  bridge.position.set(BRIDGE.x, 0, centerZ);
-  bridge.rotation.y = -riverTangent(0);
+  const centerZ = (spec.north + spec.south) / 2;
+  const angle = -riverTangent(spec.x);
+  bridge.position.set(spec.x, 0, centerZ);
+  bridge.rotation.y = angle;
   group.add(bridge);
   // Rails keep the player on the deck.
-  for (const x of [-3.05, 3.05]) game.physics.fixedBox(BRIDGE.x + x, 1, centerZ, 0.12, 1, half + 0.3, -riverTangent(0), GROUPS.world);
+  for (const localX of [-3.05, 3.05]) {
+    const x = spec.x + localX * Math.cos(angle);
+    const z = centerZ - localX * Math.sin(angle);
+    game.physics.fixedBox(x, 1, z, 0.12, 1, half + 0.3, angle, GROUPS.world);
+  }
 }

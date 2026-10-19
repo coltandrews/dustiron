@@ -29,12 +29,22 @@ function spread(rng, taken, minGap, half, test, tries = 200) {
 /** Camps keep the original layout rules; a fourth, deadly site sits farther out. */
 export function makeCamps(seed, half) {
   const rng = createRng(seed), angle = rng.range(0, Math.PI * 2), names = rng.int(0, CAMP_NAMES.length - 1);
-  const camps = Array.from({ length: 3 }, (_, i) => {
-    const a = angle + i * Math.PI * 2 / 3 + rng.range(-0.15, 0.15), distance = rng.range(90 + i * 15, 120 + i * 20);
-    return { id: `camp-${i + 1}`, name: CAMP_NAMES[(names + i) % CAMP_NAMES.length],
-      x: Math.round(Math.cos(a) * distance), z: Math.round(Math.sin(a) * distance), difficulty: i,
-      targetId: `target-${i + 1}`, targetName: TARGET_NAMES[(names + i * 2) % TARGET_NAMES.length], reward: 90 + i * 40 };
-  });
+  const camps = [];
+  for (let i = 0; i < 3; i++) {
+    let spot = null;
+    for (let attempt = 0; attempt < 40 && !spot; attempt++) {
+      const a = angle + i * Math.PI * 2 / 3 + rng.range(-0.2, 0.2);
+      const distance = rng.range(90 + i * 15, 120 + i * 20);
+      const candidate = { x: Math.round(Math.cos(a) * distance), z: Math.round(Math.sin(a) * distance) };
+      if (inRiver(candidate.x, candidate.z, 10)) continue;
+      if (camps.some((camp) => Math.hypot(camp.x - candidate.x, camp.z - candidate.z) < 65)) continue;
+      spot = candidate;
+    }
+    spot ??= spread(rng, camps.map((camp) => ({ ...camp, r: 65 })), 65, half, { min: 90 + i * 15, max: 120 + i * 20 });
+    if (!spot) continue;
+    camps.push({ id: `camp-${i + 1}`, name: CAMP_NAMES[(names + i) % CAMP_NAMES.length], ...spot, difficulty: i,
+      targetId: `target-${i + 1}`, targetName: TARGET_NAMES[(names + i * 2) % TARGET_NAMES.length], reward: 90 + i * 40 });
+  }
   const extra = createRng(seed ^ 0x6465616c);
   const spot = spread(extra, camps.map((c) => ({ ...c, r: 80 })), 80, half, { min: 160, max: half - 30 });
   if (spot) {
