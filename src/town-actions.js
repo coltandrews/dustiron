@@ -135,11 +135,13 @@ export class TownActions {
     });
   }
 
-  draw(message = '') {
+  draw(feedback = null) {
     const g = this.game, life = g.run, point = this.current, defs = g.questDefs;
+    const message = typeof feedback === 'string' ? feedback : feedback?.text ?? '';
+    const spokenFeedback = typeof feedback === 'object' && feedback?.spoken;
     if (point.kind === 'blackjack') return this.drawBlackjack(message);
     const npc = npcOf(point), shop = SHOP_OF[npc];
-    let text = '', actions = [];
+    let text = '', speech = '', detail = '', actions = [];
     const browsing = Boolean(this.view?.shop && shop);
     if (browsing) {
       const result = message.replace(/\.$/, '');
@@ -154,7 +156,11 @@ export class TownActions {
       actions = defs.filter((d) => d.type === 'bounty' && life.quests[d.id].status === 'offered').map((d) => ({ id: `offer:${d.id}`, label: `Read: ${d.title.replace('Wanted: ', '')}` }));
       actions.push({ id: 'back', label: 'Step back from the board' });
     } else {
-      text = npc ? greeting(life, defs, npc) : point.label ?? '';
+      if (npc) {
+        const conversation = greeting(life, defs, npc);
+        speech = spokenFeedback ? message : conversation.speech;
+        detail = spokenFeedback ? '' : message || conversation.detail;
+      } else text = point.label ?? '';
       if (npc && !life.met[npc]) life.met[npc] = true;
       for (const def of defs) {
         const s = life.quests[def.id].status;
@@ -186,13 +192,14 @@ export class TownActions {
       if (npc === 'juan' && life.quests.medicine?.carrying && life.quests.medicine.status === 'complete') actions.push({ id: 'sell-medicine', label: 'Sell him the medicine chest · $40' });
       if (shop) actions.push({ id: 'browse', label: BROWSE_LABEL[shop] });
     }
-    if (message && !browsing) text = `${message}\n\n${text}`;
+    if (message && !browsing && !npc) text = `${message}\n\n${text}`;
     g.ui.showInteraction({
       title: point.name ?? point.label ?? NPCS[npc] ?? '',
       text,
+      speech,
+      detail,
       actions,
       mode: browsing ? 'shop' : 'talk',
-      npcSpeech: Boolean(npc) && !browsing && !this.view?.offer && !this.view?.posters,
     }, (id) => this.act(id));
   }
 
@@ -218,7 +225,7 @@ export class TownActions {
     if (!this.current || g.state !== 'interaction') return;
     g.capturePlayer();
     const npc = npcOf(this.current), shop = SHOP_OF[npc];
-    let result = null;
+    let result = null, resultIsSpeech = false;
     if (id === 'back') { this.view = null; this.draw(); return; }
     if (id === 'browse' && shop) { this.view = { shop: true }; this.draw(); return; }
     if (id === 'posters') { this.view = { posters: true }; this.draw(); return; }
@@ -233,10 +240,12 @@ export class TownActions {
       if (result.ok && CATALOGUE[item].kind === 'horse') g.spawnHorse();
     } else if (id === 'work' && npc === 'sheriff') result = work(life);
     else if (id.startsWith('lead:') && npc === 'martha') {
+      resultIsSpeech = true;
       const def = quest(defs, id.slice(5)), s = life.quests[def.id];
       if (life.bounty < LEAD_PRICE) result = { ok: false, message: `You need $${LEAD_PRICE}.` };
       else { life.bounty -= LEAD_PRICE; s.lead = true; result = { ok: true, message: `${def.title.replace('Wanted: ', '')}? Look closer in — I marked it on your map.` }; }
     } else if (id === 'rumor' && npc === 'mae') {
+      resultIsSpeech = true;
       const next = rumorOrder(life).find((place) => !life.rumors.includes(place.id));
       if (!next || life.bounty < RUMOR_PRICE) result = { ok: false, message: 'Nothing new tonight.' };
       else {
@@ -245,12 +254,13 @@ export class TownActions {
         result = { ok: true, message: rumorLine(next) };
       }
     } else if (id.startsWith('eli:')) {
+      resultIsSpeech = true;
       const choice = id.slice(4);
       if (choice === 'bandage') { life.items.bandage--; }
       g.questEvent({ type: 'talk', npc: 'eli', choice });
       if (choice === 'bandage') { life.known[this.current.site.id] = 'helped'; g.worldPoints.removeNpc('eli'); this.close(); g.save(); return; }
       result = { ok: true, message: 'Take this letter to Clara. Please.' };
-    } else if (id === 'amos:parcel') { g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Tell Nora thanks.' }; }
+    } else if (id === 'amos:parcel') { resultIsSpeech = true; g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Tell Nora thanks.' }; }
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');
@@ -264,7 +274,8 @@ export class TownActions {
       if (id.startsWith('buy:') || id.startsWith('turnin:')) g.audio.play('coin', { bus: 'ui', vol: 0.7 });
       if (id.startsWith('turnin:')) g.ui.questNote(result.message);
     }
-    this.draw(result.message);
+    const alreadyShown = result.ok && (id.startsWith('accept:') || id.startsWith('turnin:'));
+    this.draw(alreadyShown ? null : { text: result.message, spoken: resultIsSpeech });
   }
 }
 

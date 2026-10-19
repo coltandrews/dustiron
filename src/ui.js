@@ -173,7 +173,7 @@ export class UI {
     this.el.hurtDir.classList.add('show');
   }
 
-  showInteraction({ title, text, actions = [], mode = 'talk', blackjack = null, npcSpeech = false }, onAction) {
+  showInteraction({ title, text, speech = '', detail = '', actions = [], mode = 'talk', blackjack = null }, onAction) {
     const screen = this.el.screens.interaction;
     if (this.dealerTimer) { clearTimeout(this.dealerTimer); this.dealerTimer = null; }
     screen.classList.remove('dealer-resolving');
@@ -183,7 +183,7 @@ export class UI {
     const shopModes = ['shop'];
     screen.classList.toggle('shop-dialogue', shopModes.includes(mode));
     this.el.interactionTitle.textContent = title;
-    this.renderInteractionText(text, mode, blackjack, npcSpeech);
+    this.renderInteractionText(text, mode, blackjack, speech, detail);
     const box = this.el.interactionActions;
     const focusedId = document.activeElement?.dataset.action;
     let preferredFocus = null;
@@ -253,16 +253,23 @@ export class UI {
     }, this.blackjackAnimationMs);
   }
 
-  renderInteractionText(text, mode, blackjack = null, npcSpeech = false) {
+  renderInteractionText(text, mode, blackjack = null, speech = '', detail = '') {
     const box = this.el.interactionText;
     box.replaceChildren();
     if (mode !== 'blackjack') {
-      if (npcSpeech) {
+      if (speech) {
         const quote = document.createElement('q');
         quote.className = 'npc-speech';
-        quote.textContent = text;
+        quote.textContent = speech;
         box.appendChild(quote);
-      } else box.textContent = text;
+      }
+      const plainText = detail || text;
+      if (plainText) {
+        const copy = document.createElement('p');
+        copy.className = speech ? 'conversation-detail' : 'interaction-copy';
+        copy.textContent = plainText;
+        box.appendChild(copy);
+      }
       return;
     }
     this.renderBlackjackTable(box, blackjack?.state, blackjack?.balance, text);

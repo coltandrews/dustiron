@@ -202,6 +202,11 @@ kbd {
 #screen-interaction[data-mode="talk"] .npc-speech {
   display: block; font-style: italic; quotes: "“" "”" "‘" "’";
 }
+#screen-interaction[data-mode="talk"] .conversation-detail {
+  margin: 13px 0 0; padding-left: 12px; border-left: 2px solid rgba(213, 165, 94, 0.72);
+  color: #d7c4a4; font-size: 0.86em; font-style: normal; line-height: 1.35; white-space: pre-line;
+}
+#interaction-text .interaction-copy { margin: 0; white-space: pre-line; }
 #screen-interaction[data-mode="talk"] .dialog-menu {
   pointer-events: auto; position: absolute; right: max(28px, var(--edge-r)); bottom: max(34px, var(--edge-b));
   width: min(390px, 38vw); max-height: 62vh; overflow-y: auto; padding: 12px 0;

@@ -44,18 +44,35 @@ const LATER = {
   juan: 'Prices are the same as last time.',
 };
 
-/** Opening line for an NPC, with a short note for each job they are part of. */
+/** Opening speech and the small amount of job information needed beside it. */
 export function greeting(life, defs, npc) {
   const met = life.met?.[npc];
-  let text = met ? LATER[npc] ?? 'Howdy.' : FIRST[npc] ?? 'Howdy.';
+  const speech = [met ? LATER[npc] ?? 'Howdy.' : FIRST[npc] ?? 'Howdy.'];
+  const details = [];
   for (const def of defs) {
     const state = life.quests[def.id];
     if (def.turnIn !== npc && def.giver !== npc) continue;
-    if (state.status === 'active' && def.turnIn === npc) text += `\n\n${def.title}: ${objective(life, def)}`;
-    if (state.status === 'complete' && def.turnIn === npc) text += `\n\n${def.title}: you finished it. ${def.type === 'bounty' && state.alive ? 'Alive, too. ' : ''}Here is your pay.`;
-    if (state.status === 'failed' && def.giver === npc && !state.told) { text += `\n\n${def.title}: ${failLine(def, state)}`; state.told = true; }
+    if (state.status === 'active' && def.turnIn === npc) details.push(conversationObjective(life, def));
+    if (state.status === 'complete' && def.turnIn === npc) speech.push(completionLine(def, state));
+    if (state.status === 'failed' && def.giver === npc && !state.told) { speech.push(failLine(def, state)); state.told = true; }
   }
-  return text;
+  return { speech: speech.join(' '), detail: details.join('\n') };
+}
+
+function conversationObjective(life, def) {
+  if (def.type === 'clear') return `Clear every outlaw from ${def.title.replace(/^Clear /, '')}.`;
+  return objective(life, def);
+}
+
+function completionLine(def, state) {
+  const target = def.title.replace('Wanted: ', '');
+  if (def.type === 'bounty') return `${target}. ${state.alive ? 'Alive, too. Nice work. ' : 'That will do. '}Here is your pay.`;
+  if (def.type === 'clear') return `You cleared ${def.title.replace(/^Clear /, '')}. Here is your pay.`;
+  if (def.type === 'medicine') return 'You found the medicine. Here is your pay.';
+  if (def.type === 'survey') return 'You got the bearing? Good. Here is your pay.';
+  if (def.type === 'traveler') return 'You found Eli. Here is your pay.';
+  if (def.type === 'delivery') return 'Amos got the parcel. Here is your pay.';
+  return 'You finished it. Here is your pay.';
 }
 
 function failLine(def, state) {
@@ -71,7 +88,7 @@ export function offerText(life, def) {
     ? `$${def.reward.money} dead, $${def.aliveReward} alive` : `$${def.reward.money}`;
   const items = Object.entries(def.reward.items ?? {}).map(([k, n]) => ` and ${n} ${k}${n > 1 ? 's' : ''}`).join('');
   const want = def.type === 'bounty' ? `\nWanted: ${def.want === 'either' ? 'dead or alive' : def.want}. Threat: ${def.threat}.` : '';
-  return `${def.summary}${want}\nPay: ${reward}${items}.${def.fail ? `\nTake care: ${def.fail}` : ''}\nTurn it in to ${NPCS[def.turnIn]}.`;
+  return `${def.summary}${want}\nPay: ${reward}${items}.${def.fail ? `\nTake care: ${def.fail}` : ''}`;
 }
 
 /** Where a camp or place lies, said the way a townsperson would. */
