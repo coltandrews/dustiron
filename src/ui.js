@@ -38,7 +38,7 @@ export class UI {
       hpFill: $('hp-fill'), hpGhost: $('hp-ghost'), hpText: $('hp-text'), deFill: $('de-fill'), deBar: $('de-bar'),
       campName: $('camp-name'), bounty: $('bounty'),
       weaponName: $('weapon-name'), ammo: $('ammo'), reserve: $('reserve-ammo'), bandages: $('bandages'), slots: $('slots'), reloadHint: $('reload-hint'),
-      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'),
+      vignette: $('vignette'), hurtDir: $('hurt-dir'), toast: $('toast'), hint: $('hint'), interactionHint: $('interaction-hint'), npcTalkHint: $('npc-talk-hint'),
       screens: { journal: $('screen-journal'), title: $('screen-title'), pause: $('screen-pause'), map: $('screen-map'), interaction: $('screen-interaction'), dead: $('screen-dead'), loading: $('screen-loading'), error: $('screen-error') },
       continueBtn: $('btn-continue'), continueInfo: $('continue-info'),
       interactionTitle: $('interaction-title'), interactionText: $('interaction-text'), interactionActions: $('interaction-actions'),
@@ -56,6 +56,7 @@ export class UI {
     this.toastT = 0;
     this.hintT = 12;
     this.promptPoint = new THREE.Vector3();
+    this.talkPrompt = { candidate: '', candidateT: 0, shown: '', holdT: 0 };
     this.el.screens.interaction.addEventListener('keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') { event.stopPropagation(); return; }
       if (/^Digit[1-9]$/.test(event.code)) {
@@ -449,12 +450,12 @@ export class UI {
     e.bandages.textContent = p.bandaging ? `Wrapping a bandage… ${Math.round(p.bandageT / 1.6 * 100)}%` : `${b} bandage${b === 1 ? '' : 's'} · H`;
     const tracker = game.trackerHtml?.() ?? '';
     if (e.tracker && tracker !== this.trackerHtml) { this.trackerHtml = tracker; e.tracker.innerHTML = tracker; }
-    e.interactionHint.textContent = game.interactionHint || '';
     const doorEntry = game.interactionHint === 'Press [E] to Enter';
     const npcTalk = game.interactionHint.startsWith('E · Talk to ');
     const dismount = game.horse?.mounted && game.interactionHint === 'Hold [E] to get off';
+    const interactionText = npcTalk ? '' : (game.interactionHint || '');
+    e.interactionHint.textContent = interactionText;
     e.interactionHint.classList.toggle('door-entry', doorEntry);
-    e.interactionHint.classList.toggle('npc-talk', npcTalk);
     e.interactionHint.classList.toggle('dismount-hint', dismount);
     e.interactionHint.style.setProperty('--hold-progress', `${(game.horse?.dismountProgress(game.realTime) ?? 0) * 100}%`);
     e.interactionHint.style.opacity = dismount ? game.horse.dismountHintOpacity(game.realTime) : '';
@@ -469,7 +470,8 @@ export class UI {
       e.interactionHint.style.left = '';
       e.interactionHint.style.top = '';
     }
-    e.interactionHint.hidden = !game.interactionHint || game.state !== 'playing';
+    e.interactionHint.hidden = !interactionText || game.state !== 'playing';
+    this.updateTalkPrompt(npcTalk ? game.interactionHint : '', dt, game.state === 'playing');
 
     // Weapon, ammo, slots.
     const gun = p.gun;
@@ -512,5 +514,38 @@ export class UI {
 
     if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) e.toast.classList.remove('show'); }
     if (this.hintT > 0) { this.hintT -= dt; e.hint.classList.toggle('show', this.hintT > 0); }
+  }
+
+  updateTalkPrompt(text, dt, active) {
+    const state = this.talkPrompt;
+    const step = Math.min(dt, 0.05);
+    if (!active) {
+      state.candidate = state.shown = '';
+      state.candidateT = state.holdT = 0;
+    } else if (text) {
+      state.holdT = 0.24;
+      if (text === state.shown) {
+        state.candidate = '';
+        state.candidateT = 0;
+      } else {
+        if (text !== state.candidate) {
+          state.candidate = text;
+          state.candidateT = 0;
+        }
+        state.candidateT += step;
+        if (state.candidateT >= 0.12) {
+          state.shown = text;
+          state.candidate = '';
+          state.candidateT = 0;
+        }
+      }
+    } else {
+      state.candidate = '';
+      state.candidateT = 0;
+      state.holdT = Math.max(0, state.holdT - step);
+      if (state.holdT === 0) state.shown = '';
+    }
+    if (this.el.npcTalkHint.textContent !== state.shown) this.el.npcTalkHint.textContent = state.shown;
+    this.el.npcTalkHint.hidden = !state.shown;
   }
 }
