@@ -27,6 +27,10 @@ export function animateCharacter(m, s) {
   const swing = Math.sin(m.phase) * 0.75 * moving;
   m.legs[0].rotation.x = swing;
   m.legs[1].rotation.x = -swing;
+  if (m.knees) {
+    m.knees[0].rotation.x = Math.max(0, swing) * 1.1 + 0.05 * moving;
+    m.knees[1].rotation.x = Math.max(0, -swing) * 1.1 + 0.05 * moving;
+  }
   m.body.position.y = -PIVOT_Y + Math.abs(Math.sin(m.phase)) * 0.06 * moving;
   m.body.rotation.z = Math.sin(m.phase) * 0.03 * moving;
 
@@ -45,6 +49,18 @@ export function animateCharacter(m, s) {
     m.pivot.position.y = PIVOT_Y;
   }
   m.material.emissiveIntensity = s.flash > 0 ? 0.9 : 0;
+}
+
+/** Hip height of a seated character. Chair seats are built 0.09 m below it. */
+export const SEAT_HIP = 0.5;
+
+/** Bends hips and knees so the thighs rest on a seat and the boots reach the floor. */
+export function poseSeated(m) {
+  const tall = m.tall ?? 1;
+  m.legs[0].rotation.x = m.legs[1].rotation.x = -1.45;
+  if (m.knees) m.knees[0].rotation.x = m.knees[1].rotation.x = 1.6;
+  m.body.position.y = SEAT_HIP - PIVOT_Y - 0.82 * tall;
+  m.body.rotation.z = 0;
 }
 
 export function showGun(m, kind) {

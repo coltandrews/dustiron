@@ -145,7 +145,8 @@ export function normalizeLife(value) {
   if (typeof value.hasMap !== 'boolean' || typeof value.coat !== 'boolean' || !object(value.contracts) || !object(value.camps) || !object(value.discovered)) return null;
   if (value.interior !== undefined && value.interior !== null
     && (!object(value.interior) || !INTERIOR_IDS.has(value.interior.id) || !position(value.interior.outside)
-      || Math.hypot(value.interior.outside.x, value.interior.outside.z) > 36)) return null;
+      || Math.hypot(value.interior.outside.x, value.interior.outside.z) > 36
+      || (value.interior.local !== undefined && !(object(value.interior.local) && Math.abs(value.interior.local.x) < 10 && Math.abs(value.interior.local.z) < 8)))) return null;
   if (value.blackjack !== undefined && !validBlackjack(value.blackjack)) return null;
   const life = createLife(value.seed);
   for (const camp of life.world.camps) {

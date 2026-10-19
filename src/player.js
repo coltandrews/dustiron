@@ -3,7 +3,7 @@
 import { T } from './tuning.js';
 import { GROUPS, RAPIER } from './physics.js';
 import { makeCharacter, LOOKS, muzzleLocal } from './models.js';
-import { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse } from './character.js';
+import { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCorpse, poseSeated } from './character.js';
 import { WEAPONS, Gun } from './weapons.js';
 import { randSpread } from './rng.js';
 
@@ -294,11 +294,7 @@ export class Player {
       speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: !this.game.inTown(), flash: this.flash,
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
-    if (this.game.frontier?.seated) {
-      m.legs[0].rotation.x = -1.25;
-      m.legs[1].rotation.x = -1.25;
-      m.body.position.y -= 0.2;
-    }
+    if (this.game.frontier?.seated && !this.rolling) poseSeated(m);
     showGun(m, this.game.inTown() ? null : this.gun.def.key);
     if (this.game.inTown()) m.arm.rotation.x = 1.1;
   }

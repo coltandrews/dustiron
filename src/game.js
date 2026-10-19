@@ -190,6 +190,12 @@ export class Game {
     run.hp = p.hp; run.weapon = p.gunIndex; run.deadEye = this.deadEye.meter;
     run.player = {};
     for (const key of ['x', 'z', 'yaw', 'sinceHit', 'rollT', 'rollCooldown', 'rollX', 'rollZ']) run.player[key] = p[key];
+    // Rooms sit outside the land, so a life inside a shop saves the street door plus a room offset.
+    const room = this.frontier?.inside ? this.frontier.cameraFocus() : null;
+    if (room && run.interior) {
+      run.interior.local = { x: p.x - room.x, z: p.z - room.z };
+      run.player.x = run.interior.outside.x; run.player.z = run.interior.outside.z;
+    }
     for (const gun of p.guns) {
       run.guns[gun.def.key] = {};
       for (const key of ['ammo', 'reserve', 'cooldown', 'bloom', 'reloading', 'reloadT', 'reloadTotal']) run.guns[gun.def.key][key] = gun[key];

@@ -282,7 +282,8 @@ export function buildFrontier(game, world) {
     }
     const outside = saved?.outside ?? { x: site.outsideX, z: site.outsideZ };
     game.run.interior = { id: site.id, outside };
-    movePlayer(game, saved ? game.run.player.x : room.center.x, saved ? game.run.player.z : room.center.z + 5.2, Math.PI);
+    const local = saved?.local;
+    movePlayer(game, room.center.x + (local?.x ?? 0), room.center.z + (local?.z ?? 5.2), Math.PI);
     game.rig.targetDistance = 23; game.rig.snap(room.center.x, room.center.z);
     doorCooldown = 0.8; game.saveT = 0;
     return true;

@@ -142,17 +142,25 @@ export function makeCharacter(look) {
 
   const mk = (shape) => { const m = meshOf(shape, material); return m; };
 
-  // Legs pivot at the hip.
-  const legs = [];
+  // Legs pivot at the hip; each shin hangs from a knee so sitting and walking bend naturally.
+  const legs = [], knees = [];
   for (const side of [-1, 1]) {
     const pivot = new THREE.Group();
     pivot.position.set(side * 0.12, 0.82 * tall, 0);
-    const s = new Shape();
-    s.box(0.17, 0.72 * tall, 0.2, look.pants, 0, -0.36 * tall, 0);
-    s.box(0.19, 0.14, 0.28, PAL.boots, 0, -0.75 * tall, 0.03);
-    pivot.add(mk(s));
+    const thigh = new Shape();
+    thigh.box(0.17, 0.42 * tall, 0.2, look.pants, 0, -0.2 * tall, 0);
+    pivot.add(mk(thigh));
+    const knee = new THREE.Group();
+    knee.position.y = -0.4 * tall;
+    const shin = new Shape();
+    shin.box(0.16, 0.32 * tall, 0.19, look.pants, 0, -0.16 * tall, 0);
+    shin.box(0.19, 0.14, 0.28, PAL.boots, 0, -0.42 * tall + 0.07, 0.03);
+    shin.box(0.2, 0.035, 0.31, PAL.black, 0, -0.42 * tall + 0.018, 0.035);
+    knee.add(mk(shin));
+    pivot.add(knee);
     body.add(pivot);
     legs.push(pivot);
+    knees.push(knee);
   }
 
   const torso = new Shape();
@@ -173,7 +181,9 @@ export function makeCharacter(look) {
   torso.box(0.27, 0.05, 0.05, PAL.skinDark, 0, 1.63 * tall, 0.12);
   if (look.bandana) torso.box(0.28, 0.12, 0.28, look.bandana, 0, 1.52 * tall, 0.005);
   torso.cyl(0.34, 0.34, 0.04, 10, look.hat, 0, 1.75 * tall, 0);
+  for (const side of [-1, 1]) torso.box(0.09, 0.035, 0.42, look.hat, side * 0.31, 1.79 * tall, 0, 0, 0, side * 0.55);
   torso.cyl(0.15, 0.18, 0.2, 8, look.hat, 0, 1.86 * tall, 0);
+  torso.box(0.05, 0.04, 0.22, PAL.black, 0, 1.965 * tall, 0);
   torso.cyl(0.185, 0.185, 0.045, 8, look.band, 0, 1.78 * tall, 0);
   body.add(mk(torso));
 
@@ -194,7 +204,7 @@ export function makeCharacter(look) {
   }
   body.add(arm);
 
-  return { root, body, legs, arm, guns, material, tall };
+  return { root, body, legs, knees, arm, guns, material, tall };
 }
 
 /** Muzzle position in character-local space (x right, z forward). */
