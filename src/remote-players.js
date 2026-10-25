@@ -5,9 +5,9 @@
 import * as THREE from 'three';
 import { T } from './tuning.js';
 import { GROUPS } from './physics.js';
-import { LOOKS, Shape, makeCharacter, meshOf, muzzleLocal } from './models.js';
+import { LOOKS, makeCharacter, muzzleLocal } from './models.js';
 import { addRollPivot, animateCharacter, angleDelta, makeCorpse, poseSeated, showGun } from './character.js';
-import { horse as horseShape } from './interior-social.js';
+import { animateHorse, horseRig } from './horse-rig.js';
 import { PF, GUN_CODES, ROOMS } from './protocol.js';
 import { puff } from './vices.js';
 
@@ -106,12 +106,12 @@ export class RemotePlayers {
       const visible = rider.alive && !rider.stale && rider.room === myRoom;
       if (!rider.alive) { if (rider.tag) rider.tag.hidden = true; continue; }
       m.root.visible = visible;
-      if (rider.horse) rider.horse.visible = visible && !!(rider.flags & PF.MOUNT);
+      if (rider.horse) rider.horse.root.visible = visible && !!(rider.flags & PF.MOUNT);
       if (rider.tag) rider.tag.hidden = !visible;
       if (!visible) continue;
       const x = rider.px + (rider.x - rider.px) * alpha, z = rider.pz + (rider.z - rider.pz) * alpha;
       const mounted = !!(rider.flags & PF.MOUNT);
-      m.root.position.set(x, mounted ? 1.18 : 0, z);
+      m.root.position.set(x, mounted ? 1.18 + (rider.horse?.body.position.y ?? 0) : 0, z);
       m.root.rotation.y = rider.yaw;
       const armed = !!(rider.flags & PF.ARMED);
       animateCharacter(m, { speed: mounted ? 0 : rider.speed, dt, aiming: armed, flash: 0, roll: rider.flags & PF.ROLL ? Math.max(0, rider.rollF) : -1 });
@@ -119,10 +119,11 @@ export class RemotePlayers {
       if (mounted) {
         m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
         if (m.knees) m.knees[0].rotation.x = m.knees[1].rotation.x = 1.35;
-        if (!rider.horse) { const s = new Shape(); horseShape(s, 0x704631, 0x2a211c, true); rider.horse = meshOf(s); g.levelGroup.add(rider.horse); }
-        rider.horse.visible = true;
-        rider.horse.position.set(x, 0, z);
-        rider.horse.rotation.y = rider.yaw;
+        if (!rider.horse) { rider.horse = horseRig(0x704631, 0x2a211c, true); g.levelGroup.add(rider.horse.root); }
+        animateHorse(rider.horse, rider.speed, dt);
+        rider.horse.root.visible = true;
+        rider.horse.root.position.set(x, 0, z);
+        rider.horse.root.rotation.y = rider.yaw;
       } else if (m.legs[0].rotation.z !== 0) { m.legs[0].rotation.z = 0; m.legs[1].rotation.z = 0; }
       if (rider.flags & PF.BANDAGE) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
       showGun(m, armed ? rider.gun : null);
@@ -164,7 +165,7 @@ export class RemotePlayers {
     rider.alive = false;
     if (rider.body) { this.game.physics.removeBody(rider.body); rider.body = null; }
     if (rider.tag) rider.tag.hidden = true;
-    if (rider.horse) rider.horse.visible = false;
+    if (rider.horse) rider.horse.root.visible = false;
     rider.model.root.visible = true;
     makeCorpse(this.game, rider.model, rider.x, rider.z, rider.yaw, dx, dz, 3.5);
     this.game.audio.at('bodyFall', rider.x, rider.z, { vol: 0.8, delay: 0.4 });
@@ -180,9 +181,8 @@ export class RemotePlayers {
       let h = this.standing.get(id);
       if (!h || h.owned !== owned) {
         if (h) g.levelGroup.remove(h.mesh);
-        const s = new Shape();
-        horseShape(s, owned ? 0x704631 : 0x8a7a68, owned ? 0x2a211c : 0xd8d0c0, true);
-        h = { mesh: meshOf(s), owned, x, z, yaw };
+        const rig = horseRig(owned ? 0x704631 : 0x8a7a68, owned ? 0x2a211c : 0xd8d0c0, true);
+        h = { rig, mesh: rig.root, owned, x, z, yaw };
         h.mesh.position.set(x, 0, z);
         g.levelGroup.add(h.mesh);
         this.standing.set(id, h);
@@ -197,8 +197,11 @@ export class RemotePlayers {
     for (const h of this.standing.values()) {
       h.mesh.visible = !inside;
       const p = h.mesh.position;
+      let moved = 0;
       if (Math.hypot(h.x - p.x, h.z - p.z) > 6) p.set(h.x, 0, h.z);
-      else { p.x += (h.x - p.x) * k; p.z += (h.z - p.z) * k; }
+      else { const dx = (h.x - p.x) * k, dz = (h.z - p.z) * k; p.x += dx; p.z += dz; moved = Math.hypot(dx, dz); }
+      // A whistled horse trots over to its rider.
+      if (!inside) animateHorse(h.rig, dt > 0 ? moved / dt : 0, dt);
       h.mesh.rotation.y += angleDelta(h.mesh.rotation.y, h.yaw) * k;
     }
   }
@@ -212,7 +215,7 @@ export class RemotePlayers {
     const g = this.game;
     if (rider.body) g.physics.removeBody(rider.body);
     g.levelGroup?.remove(rider.model.root);
-    if (rider.horse) g.levelGroup?.remove(rider.horse);
+    if (rider.horse) g.levelGroup?.remove(rider.horse.root);
     rider.tag?.remove();
     this.riders.delete(rider.id);
   }

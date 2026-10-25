@@ -2,8 +2,7 @@
 // with Shift while riding. Horses carry stamina, spook under heavy fire and
 // never enter buildings. Riding uses the player's own collider.
 import { T } from './tuning.js';
-import { Shape, meshOf } from './models.js';
-import { horse as horseShape } from './interior-social.js';
+import { animateHorse, horseRig } from './horse-rig.js';
 import { angleDelta } from './character.js';
 
 export const STABLE_SPOT = { x: -5.4, z: 21 };
@@ -25,10 +24,9 @@ export class Horse {
     this.sprinting = false;
     this.dismountHoldStart = null;
     this.dismountHintUntil = 0;
-    this.bob = 0;
-    const s = new Shape();
-    horseShape(s, this.breed.coat, this.breed.mane, true);
-    this.mesh = meshOf(s);
+    this.walkSpeed = 0;
+    this.rig = horseRig(this.breed.coat, this.breed.mane, true);
+    this.mesh = this.rig.root;
     game.levelGroup.add(this.mesh);
   }
 
@@ -140,9 +138,10 @@ export class Horse {
       this.data.stamina = Math.min(this.breed.stamina, this.data.stamina + H.staminaRegen * dt);
       if (this.called) {
         const dx = p.x - this.x, dz = p.z - this.z, d = Math.hypot(dx, dz);
-        if (d < 2.5) this.called = false;
+        if (d < 2.5) { this.called = false; this.walkSpeed = 0; }
         else {
           const speed = Math.min(9, d * 2);
+          this.walkSpeed = speed;
           this.x += dx / d * speed * dt; this.z += dz / d * speed * dt;
           this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 6);
         }
@@ -152,15 +151,15 @@ export class Horse {
   }
 
   render(dt) {
-    const g = this.game, p = g.player, moving = this.mounted ? p.speedNow > 1 : this.called;
-    this.bob += dt * (moving ? 11 : 2);
+    const g = this.game, p = g.player;
+    animateHorse(this.rig, this.mounted ? p.speedNow : this.called ? this.walkSpeed : 0, dt);
     this.mesh.visible = !g.frontier.inside;
-    this.mesh.position.set(this.mounted ? p.model.root.position.x : this.x, moving ? Math.abs(Math.sin(this.bob)) * 0.08 : 0, this.mounted ? p.model.root.position.z : this.z);
+    this.mesh.position.set(this.mounted ? p.model.root.position.x : this.x, 0, this.mounted ? p.model.root.position.z : this.z);
     this.mesh.rotation.y = this.mounted ? p.model.root.rotation.y : this.yaw;
     const m = p.model;
     if (this.mounted && p.alive) {
       // Sit the rider in the saddle with legs either side.
-      m.root.position.y = 1.18 + this.mesh.position.y;
+      m.root.position.y = 1.18 + this.rig.body.position.y;
       m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
       if (m.knees) m.knees[0].rotation.x = m.knees[1].rotation.x = 1.35;
     } else if (m.legs[0].rotation.z !== 0) { m.legs[0].rotation.z = 0; m.legs[1].rotation.z = 0; }
@@ -168,6 +167,6 @@ export class Horse {
 
   dispose() {
     this.game.levelGroup?.remove(this.mesh);
-    this.mesh.geometry.dispose();
+    this.rig.body.children[0].geometry.dispose();
   }
 }

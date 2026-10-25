@@ -845,6 +845,9 @@ const T = {
 
   horse: { rentalSpeed: 1.7, ownedSpeed: 2.05, sprint: 1.35, staminaDrain: 0.12, staminaRegen: 0.06, whistleRange: 70, fearHit: 12, dismountHold: 0.65, dismountHint: 5, dismountHintFade: 0.6 },
 
+  // Horse leg animation (src/horse-rig.js): ground speeds in m/s where the gaits change.
+  horseGait: { still: 0.3, trot: 3.8, gallop: 8 },
+
   deadEye: { timeScale: 0.3, maxRealTime: 4, fillHit: 0.08, fillKill: 0.2, minToStart: 0.1, damageMult: 1.5 },
 
   hitStop: { kill: 0.05, crit: 0.03, explosion: 0.06 },
@@ -3094,7 +3097,7 @@ function saloon(kit) {
 }
 
 /** A low-poly horse facing +z with feet on the floor. */
-function horse(s, coat = 0x704631, mane = 0x2a211c, tack = true) {
+function horse(s, coat = 0x704631, mane = 0x2a211c, tack = true, legs = true) {
   const dark = new THREE.Color(coat).multiplyScalar(0.62).getHex(), sphere = () => new THREE.SphereGeometry(1, 9, 6);
   s.add(sphere(), coat, 0, 1.28, 0, 0, 0, 0, 0.4, 0.44, 0.92);
   s.add(sphere(), coat, 0, 1.32, 0.6, 0, 0, 0, 0.37, 0.43, 0.4);
@@ -3109,7 +3112,7 @@ function horse(s, coat = 0x704631, mane = 0x2a211c, tack = true) {
   s.box(0.07, 0.14, 0.86, mane, 0, 1.98, 0.84, -0.78);
   s.box(0.08, 0.06, 0.18, mane, 0, 2.2, 1.24, 0.3);
   s.cyl(0.1, 0.05, 0.95, 6, mane, 0, 1.0, -1.15, -0.32);
-  for (const [x, z, hind] of [[-0.22, 0.62, false], [0.22, 0.62, false], [-0.22, -0.66, true], [0.22, -0.66, true]]) {
+  if (legs) for (const [x, z, hind] of [[-0.22, 0.62, false], [0.22, 0.62, false], [-0.22, -0.66, true], [0.22, -0.66, true]]) {
     s.cyl(0.1, 0.075, 0.55, 6, coat, x, 0.82, z + (hind ? -0.04 : 0), hind ? -0.12 : 0.04);
     s.cyl(0.055, 0.06, 0.48, 5, dark, x, 0.32, z + (hind ? 0.02 : 0));
     s.box(0.13, 0.1, 0.16, PAL.black, x, 0.05, z + 0.02 + (hind ? 0.02 : 0));
@@ -3212,14 +3215,126 @@ const SOCIAL_ROOMS = {
 return { horse, SOCIAL_ROOMS };
 })();
 
+// ---- src/horse-rig.js ----
+__m.horse_rig = (() => {
+// An animated horse: the body is one mesh, each leg is a thigh and a shin that
+// bend at the knee. animateHorse() picks a gait from the ground speed (walk,
+// trot or gallop), sets each leg's place in the stride, and bobs and rocks the
+// body to match. Used by the player's horse, other riders' horses and the
+// riders and wagon teams on the roads.
+
+const { MAT, PAL, Shape } = __m.models;
+const { horse: horseShape } = __m.interior_social;
+const { T } = __m.tuning;
+const HIP_Y = 1.1, KNEE = 0.54;
+/** [x, z, hind] for left fore, right fore, left hind, right hind. */
+const LEGS = [[-0.22, 0.62, false], [0.22, 0.62, false], [-0.22, -0.68, true], [0.22, -0.68, true]];
+/**
+ * Where in the stride each foot lands (fraction of a cycle), how long it stays
+ * down (duty), how far it swings (radians), how much the knee folds and how
+ * long one stride is in metres.
+ *   walk: four beats, LH LF RH RF       trot: diagonal pairs together
+ *   gallop: RH LH RF LF, one leading leg after the other
+ */
+const GAITS = {
+  walk: { feet: [0.25, 0.75, 0, 0.5], duty: 0.62, swing: 0.32, knee: 0.75, stride: 1.7, bob: 0.025, pitch: 0.015 },
+  trot: { feet: [0, 0.5, 0.5, 0], duty: 0.46, swing: 0.48, knee: 1.1, stride: 2.6, bob: 0.06, pitch: 0.02 },
+  gallop: { feet: [0.6, 0.5, 0.1, 0], duty: 0.36, swing: 0.72, knee: 1.35, stride: 4.6, bob: 0.1, pitch: 0.07 },
+};
+
+const legGeometry = new Map();
+function legParts(coat) {
+  let parts = legGeometry.get(coat);
+  if (parts) return parts;
+  const dark = new THREE.Color(coat).multiplyScalar(0.62).getHex();
+  const thigh = new Shape(), shin = new Shape();
+  thigh.cyl(0.1, 0.075, 0.56, 6, coat, 0, -KNEE / 2, 0);
+  shin.cyl(0.055, 0.06, 0.48, 5, dark, 0, -0.24, 0);
+  shin.box(0.13, 0.1, 0.16, PAL.black, 0, -0.51, 0.02);
+  parts = { thigh: thigh.build(), shin: shin.build() };
+  legGeometry.set(coat, parts);
+  return parts;
+}
+
+const mesh = (geometry) => { const m = new THREE.Mesh(geometry, MAT.solid); m.castShadow = true; m.receiveShadow = true; return m; };
+
+/** Builds a horse facing +z. `root` goes in the scene; `body.position.y` is the saddle's rise and fall. */
+function horseRig(coat = 0x704631, mane = 0x2a211c, tack = true) {
+  const root = new THREE.Group(), body = new THREE.Group();
+  const s = new Shape();
+  horseShape(s, coat, mane, tack, false);
+  body.add(mesh(s.build()));
+  root.add(body);
+  const parts = legParts(coat), legs = [];
+  for (const [x, z, hind] of LEGS) {
+    const hip = new THREE.Group(), knee = new THREE.Group();
+    hip.position.set(x, HIP_Y, z);
+    knee.position.y = -KNEE;
+    hip.add(mesh(parts.thigh)); knee.add(mesh(parts.shin)); hip.add(knee);
+    body.add(hip);
+    legs.push({ hip, knee, hind });
+  }
+  return { root, body, legs, cycle: 0, gait: 0, speed: 0 };
+}
+
+const smooth = (t) => t * t * (3 - 2 * t);
+
+/** One leg's swing angle and knee bend at stride phase `p` (0..1, landing at 0). */
+function legPose(g, p, hind, out) {
+  if (p < g.duty) {
+    // Planted: the body passes over the hoof, so the leg sweeps from reaching (-) to pushing (+).
+    out.hip = -g.swing + (2 * g.swing * p) / g.duty;
+    out.knee = 0;
+  } else {
+    // In the air: the knee folds and the leg reaches forward for the next step.
+    const q = (p - g.duty) / (1 - g.duty);
+    out.hip = g.swing - 2 * g.swing * smooth(q);
+    out.knee = Math.sin(q * Math.PI) * g.knee * (hind ? 0.85 : 1);
+  }
+  return out;
+}
+
+const _pose = { hip: 0, knee: 0 };
+
+/**
+ * Moves the legs and body for a horse travelling at `speed` m/s. Call once a frame.
+ * Positive x rotation swings a hoof backward, so a leg reaching forward is negative;
+ * fore knees fold the shin back, hocks fold it forward.
+ */
+function animateHorse(rig, speed, dt) {
+  const A = T.horseGait;
+  rig.speed += (speed - rig.speed) * Math.min(1, dt * 6);
+  const v = rig.speed, moving = v > A.still;
+  const g = v < A.trot ? GAITS.walk : v < A.gallop ? GAITS.trot : GAITS.gallop;
+  if (moving) rig.cycle = (rig.cycle + (dt * v) / g.stride) % 1;
+  const ease = Math.min(1, dt * 18);
+  for (let i = 0; i < 4; i++) {
+    const leg = rig.legs[i];
+    let hip = 0, knee = 0;
+    if (moving) {
+      legPose(g, (rig.cycle - g.feet[i] + 1) % 1, leg.hind, _pose);
+      hip = _pose.hip; knee = leg.hind ? -_pose.knee * 0.6 : _pose.knee;
+    }
+    leg.hip.rotation.x += (hip - leg.hip.rotation.x) * ease;
+    leg.knee.rotation.x += (knee - leg.knee.rotation.x) * ease;
+  }
+  // Two bounces a stride at the walk and trot, one big rock at the gallop.
+  const beat = g === GAITS.gallop ? rig.cycle : rig.cycle * 2;
+  const amount = moving ? Math.min(1, v / A.trot) : 0;
+  rig.body.position.y = Math.abs(Math.sin(beat * Math.PI * 2)) * g.bob * amount;
+  rig.body.rotation.x = Math.sin(rig.cycle * Math.PI * 2) * g.pitch * amount;
+}
+
+return { horseRig, animateHorse };
+})();
+
 // ---- src/horse.js ----
 __m.horse = (() => {
 // A rented or owned horse: mount with F, hold E to dismount, whistle with V, sprint
 // with Shift while riding. Horses carry stamina, spook under heavy fire and
 // never enter buildings. Riding uses the player's own collider.
 const { T } = __m.tuning;
-const { Shape, meshOf } = __m.models;
-const { horse: horseShape } = __m.interior_social;
+const { animateHorse, horseRig } = __m.horse_rig;
 const { angleDelta } = __m.character;
 const STABLE_SPOT = { x: -5.4, z: 21 };
 const BREEDS = {
@@ -3240,10 +3355,9 @@ class Horse {
     this.sprinting = false;
     this.dismountHoldStart = null;
     this.dismountHintUntil = 0;
-    this.bob = 0;
-    const s = new Shape();
-    horseShape(s, this.breed.coat, this.breed.mane, true);
-    this.mesh = meshOf(s);
+    this.walkSpeed = 0;
+    this.rig = horseRig(this.breed.coat, this.breed.mane, true);
+    this.mesh = this.rig.root;
     game.levelGroup.add(this.mesh);
   }
 
@@ -3355,9 +3469,10 @@ class Horse {
       this.data.stamina = Math.min(this.breed.stamina, this.data.stamina + H.staminaRegen * dt);
       if (this.called) {
         const dx = p.x - this.x, dz = p.z - this.z, d = Math.hypot(dx, dz);
-        if (d < 2.5) this.called = false;
+        if (d < 2.5) { this.called = false; this.walkSpeed = 0; }
         else {
           const speed = Math.min(9, d * 2);
+          this.walkSpeed = speed;
           this.x += dx / d * speed * dt; this.z += dz / d * speed * dt;
           this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 6);
         }
@@ -3367,15 +3482,15 @@ class Horse {
   }
 
   render(dt) {
-    const g = this.game, p = g.player, moving = this.mounted ? p.speedNow > 1 : this.called;
-    this.bob += dt * (moving ? 11 : 2);
+    const g = this.game, p = g.player;
+    animateHorse(this.rig, this.mounted ? p.speedNow : this.called ? this.walkSpeed : 0, dt);
     this.mesh.visible = !g.frontier.inside;
-    this.mesh.position.set(this.mounted ? p.model.root.position.x : this.x, moving ? Math.abs(Math.sin(this.bob)) * 0.08 : 0, this.mounted ? p.model.root.position.z : this.z);
+    this.mesh.position.set(this.mounted ? p.model.root.position.x : this.x, 0, this.mounted ? p.model.root.position.z : this.z);
     this.mesh.rotation.y = this.mounted ? p.model.root.rotation.y : this.yaw;
     const m = p.model;
     if (this.mounted && p.alive) {
       // Sit the rider in the saddle with legs either side.
-      m.root.position.y = 1.18 + this.mesh.position.y;
+      m.root.position.y = 1.18 + this.rig.body.position.y;
       m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
       if (m.knees) m.knees[0].rotation.x = m.knees[1].rotation.x = 1.35;
     } else if (m.legs[0].rotation.z !== 0) { m.legs[0].rotation.z = 0; m.legs[1].rotation.z = 0; }
@@ -3383,7 +3498,7 @@ class Horse {
 
   dispose() {
     this.game.levelGroup?.remove(this.mesh);
-    this.mesh.geometry.dispose();
+    this.rig.body.children[0].geometry.dispose();
   }
 }
 
@@ -10604,9 +10719,9 @@ __m.ambient = (() => {
 // Every position is a pure function of the world clock, so all players online
 // see the same wagon at the same bend without any of it being networked.
 
-const { PAL, Shape, meshOf, wagonShape } = __m.models;
+const { PAL, meshOf, wagonShape } = __m.models;
 const { RAPIER, GROUPS } = __m.physics;
-const { horse: horseShape } = __m.interior_social;
+const { animateHorse, horseRig } = __m.horse_rig;
 const { townsperson } = __m.townsfolk;
 const { animateCharacter, poseSeated } = __m.character;
 const { MAIN_STREET, smooth } = __m.land;
@@ -10678,7 +10793,6 @@ function buildAmbient(game, group) {
   const root = new THREE.Group(); group.add(root);
   const stage = new Path(stageRoute()), out = { x: 0, z: 0, yaw: 0 }, ahead = { x: 0, z: 0, yaw: 0 };
   const walkers = [], riders = [], wagons = [];
-  const horseMesh = (coat, tack) => { const s = new Shape(); horseShape(s, coat, 0x2a211c, tack); return meshOf(s); };
 
   walkRoutes().forEach((pts, i) => {
     const count = i < 2 ? 2 : 1;
@@ -10689,14 +10803,18 @@ function buildAmbient(game, group) {
     }
   });
   for (let i = 0; i < A.riders; i++) {
-    const model = townsperson(LOOKS[(i + 3) % LOOKS.length]), horse = horseMesh(COATS[i % COATS.length], true);
-    root.add(model.root, horse);
+    const model = townsperson(LOOKS[(i + 3) % LOOKS.length]), horse = horseRig(COATS[i % COATS.length], 0x2a211c, true);
+    root.add(model.root, horse.root);
     riders.push({ model, horse, speed: A.riderSpeed * (0.9 + (i % 3) * 0.1), offset: (stage.length * 2 / A.riders) * i, side: 1.4 + (i % 2) * 0.6, anim: { speed: 0, dt: 0, aiming: false, flash: 0 } });
   }
   for (let i = 0; i < A.wagons; i++) {
     const rig = new THREE.Group(), body = meshOf(wagonShape());
     rig.add(body);
-    for (const x of [-0.75, 0.75]) { const h = horseMesh(COATS[(i + (x > 0 ? 1 : 2)) % COATS.length], false); h.position.set(x, 0, 3.7); h.scale.setScalar(0.95); rig.add(h); }
+    const team = [-0.75, 0.75].map((x) => {
+      const h = horseRig(COATS[(i + (x > 0 ? 1 : 2)) % COATS.length], 0x2a211c, false);
+      h.root.position.set(x, 0, 3.7); h.root.scale.setScalar(0.95); h.cycle = x > 0 ? 0.5 : 0; rig.add(h.root);
+      return h;
+    });
     const driver = townsperson(LOOKS[(i * 2 + 1) % LOOKS.length]);
     driver.root.position.set(0, 0.55, 1.7); poseSeated(driver); driver.arm.rotation.x = 1.0;
     rig.add(driver.root); root.add(rig);
@@ -10704,7 +10822,7 @@ function buildAmbient(game, group) {
     const bodyRb = game.physics.world.createRigidBody(bd);
     game.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.1, 1.1, 3.2).setTranslation(0, 1.1, 1.2)
       .setCollisionGroups(GROUPS.world).setSolverGroups(GROUPS.world), bodyRb);
-    wagons.push({ rig, rb: bodyRb, driver, wheel: 0, offset: stage.length * (0.3 + i * 0.85), speed: A.wagonSpeed });
+    wagons.push({ rig, team, rb: bodyRb, driver, wheel: 0, offset: stage.length * (0.3 + i * 0.85), speed: A.wagonSpeed });
   }
 
   let clock = null, prev = null;
@@ -10740,11 +10858,11 @@ function buildAmbient(game, group) {
       for (const r of riders) {
         stage.at(t * r.speed + r.offset, out, r.side);
         const hide = far(out.x, out.z);
-        r.model.root.visible = r.horse.visible = !hide;
+        r.model.root.visible = r.horse.root.visible = !hide;
         if (hide) continue;
-        const bob = Math.abs(Math.sin(t * r.speed * 1.6 + r.offset)) * 0.08;
-        r.horse.position.set(out.x, bob, out.z); r.horse.rotation.y = out.yaw;
-        r.model.root.position.set(out.x, 1.18 + bob, out.z); r.model.root.rotation.y = out.yaw;
+        animateHorse(r.horse, r.speed, dt);
+        r.horse.root.position.set(out.x, 0, out.z); r.horse.root.rotation.y = out.yaw;
+        r.model.root.position.set(out.x, 1.18 + r.horse.body.position.y, out.z); r.model.root.rotation.y = out.yaw;
         r.anim.speed = 0; r.anim.dt = dt; animateCharacter(r.model, r.anim);
         const m = r.model;
         m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
@@ -10758,6 +10876,7 @@ function buildAmbient(game, group) {
         const hide = far(out.x, out.z);
         w.rig.visible = !hide;
         if (hide) continue;
+        for (const h of w.team) animateHorse(h, w.speed, dt);
         w.rig.position.set(out.x, Math.abs(Math.sin(t * 5 + w.offset)) * 0.03, out.z);
         w.rig.rotation.y = Math.atan2(ahead.x - out.x, ahead.z - out.z) || out.yaw;
       }
@@ -12087,9 +12206,9 @@ __m.remote_players = (() => {
 
 const { T } = __m.tuning;
 const { GROUPS } = __m.physics;
-const { LOOKS, Shape, makeCharacter, meshOf, muzzleLocal } = __m.models;
+const { LOOKS, makeCharacter, muzzleLocal } = __m.models;
 const { addRollPivot, animateCharacter, angleDelta, makeCorpse, poseSeated, showGun } = __m.character;
-const { horse: horseShape } = __m.interior_social;
+const { animateHorse, horseRig } = __m.horse_rig;
 const { PF, GUN_CODES, ROOMS } = __m.protocol;
 const { puff } = __m.vices;
 const SHIRTS = [0x3e6189, 0x7c3a2e, 0x5d6b3a, 0x8a6a42, 0x5a4a62, 0x2f5a58, 0x9e6971, 0x6a5a3a];
@@ -12187,12 +12306,12 @@ class RemotePlayers {
       const visible = rider.alive && !rider.stale && rider.room === myRoom;
       if (!rider.alive) { if (rider.tag) rider.tag.hidden = true; continue; }
       m.root.visible = visible;
-      if (rider.horse) rider.horse.visible = visible && !!(rider.flags & PF.MOUNT);
+      if (rider.horse) rider.horse.root.visible = visible && !!(rider.flags & PF.MOUNT);
       if (rider.tag) rider.tag.hidden = !visible;
       if (!visible) continue;
       const x = rider.px + (rider.x - rider.px) * alpha, z = rider.pz + (rider.z - rider.pz) * alpha;
       const mounted = !!(rider.flags & PF.MOUNT);
-      m.root.position.set(x, mounted ? 1.18 : 0, z);
+      m.root.position.set(x, mounted ? 1.18 + (rider.horse?.body.position.y ?? 0) : 0, z);
       m.root.rotation.y = rider.yaw;
       const armed = !!(rider.flags & PF.ARMED);
       animateCharacter(m, { speed: mounted ? 0 : rider.speed, dt, aiming: armed, flash: 0, roll: rider.flags & PF.ROLL ? Math.max(0, rider.rollF) : -1 });
@@ -12200,10 +12319,11 @@ class RemotePlayers {
       if (mounted) {
         m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
         if (m.knees) m.knees[0].rotation.x = m.knees[1].rotation.x = 1.35;
-        if (!rider.horse) { const s = new Shape(); horseShape(s, 0x704631, 0x2a211c, true); rider.horse = meshOf(s); g.levelGroup.add(rider.horse); }
-        rider.horse.visible = true;
-        rider.horse.position.set(x, 0, z);
-        rider.horse.rotation.y = rider.yaw;
+        if (!rider.horse) { rider.horse = horseRig(0x704631, 0x2a211c, true); g.levelGroup.add(rider.horse.root); }
+        animateHorse(rider.horse, rider.speed, dt);
+        rider.horse.root.visible = true;
+        rider.horse.root.position.set(x, 0, z);
+        rider.horse.root.rotation.y = rider.yaw;
       } else if (m.legs[0].rotation.z !== 0) { m.legs[0].rotation.z = 0; m.legs[1].rotation.z = 0; }
       if (rider.flags & PF.BANDAGE) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
       showGun(m, armed ? rider.gun : null);
@@ -12245,7 +12365,7 @@ class RemotePlayers {
     rider.alive = false;
     if (rider.body) { this.game.physics.removeBody(rider.body); rider.body = null; }
     if (rider.tag) rider.tag.hidden = true;
-    if (rider.horse) rider.horse.visible = false;
+    if (rider.horse) rider.horse.root.visible = false;
     rider.model.root.visible = true;
     makeCorpse(this.game, rider.model, rider.x, rider.z, rider.yaw, dx, dz, 3.5);
     this.game.audio.at('bodyFall', rider.x, rider.z, { vol: 0.8, delay: 0.4 });
@@ -12261,9 +12381,8 @@ class RemotePlayers {
       let h = this.standing.get(id);
       if (!h || h.owned !== owned) {
         if (h) g.levelGroup.remove(h.mesh);
-        const s = new Shape();
-        horseShape(s, owned ? 0x704631 : 0x8a7a68, owned ? 0x2a211c : 0xd8d0c0, true);
-        h = { mesh: meshOf(s), owned, x, z, yaw };
+        const rig = horseRig(owned ? 0x704631 : 0x8a7a68, owned ? 0x2a211c : 0xd8d0c0, true);
+        h = { rig, mesh: rig.root, owned, x, z, yaw };
         h.mesh.position.set(x, 0, z);
         g.levelGroup.add(h.mesh);
         this.standing.set(id, h);
@@ -12278,8 +12397,11 @@ class RemotePlayers {
     for (const h of this.standing.values()) {
       h.mesh.visible = !inside;
       const p = h.mesh.position;
+      let moved = 0;
       if (Math.hypot(h.x - p.x, h.z - p.z) > 6) p.set(h.x, 0, h.z);
-      else { p.x += (h.x - p.x) * k; p.z += (h.z - p.z) * k; }
+      else { const dx = (h.x - p.x) * k, dz = (h.z - p.z) * k; p.x += dx; p.z += dz; moved = Math.hypot(dx, dz); }
+      // A whistled horse trots over to its rider.
+      if (!inside) animateHorse(h.rig, dt > 0 ? moved / dt : 0, dt);
       h.mesh.rotation.y += angleDelta(h.mesh.rotation.y, h.yaw) * k;
     }
   }
@@ -12293,7 +12415,7 @@ class RemotePlayers {
     const g = this.game;
     if (rider.body) g.physics.removeBody(rider.body);
     g.levelGroup?.remove(rider.model.root);
-    if (rider.horse) g.levelGroup?.remove(rider.horse);
+    if (rider.horse) g.levelGroup?.remove(rider.horse.root);
     rider.tag?.remove();
     this.riders.delete(rider.id);
   }

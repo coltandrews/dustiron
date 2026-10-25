@@ -43,6 +43,9 @@ export const T = {
 
   horse: { rentalSpeed: 1.7, ownedSpeed: 2.05, sprint: 1.35, staminaDrain: 0.12, staminaRegen: 0.06, whistleRange: 70, fearHit: 12, dismountHold: 0.65, dismountHint: 5, dismountHintFade: 0.6 },
 
+  // Horse leg animation (src/horse-rig.js): ground speeds in m/s where the gaits change.
+  horseGait: { still: 0.3, trot: 3.8, gallop: 8 },
+
   deadEye: { timeScale: 0.3, maxRealTime: 4, fillHit: 0.08, fillKill: 0.2, minToStart: 0.1, damageMult: 1.5 },
 
   hitStop: { kill: 0.05, crit: 0.03, explosion: 0.06 },

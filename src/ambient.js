@@ -3,9 +3,9 @@
 // Every position is a pure function of the world clock, so all players online
 // see the same wagon at the same bend without any of it being networked.
 import * as THREE from 'three';
-import { PAL, Shape, meshOf, wagonShape } from './models.js';
+import { PAL, meshOf, wagonShape } from './models.js';
 import { RAPIER, GROUPS } from './physics.js';
-import { horse as horseShape } from './interior-social.js';
+import { animateHorse, horseRig } from './horse-rig.js';
 import { townsperson } from './townsfolk.js';
 import { animateCharacter, poseSeated } from './character.js';
 import { MAIN_STREET, smooth } from './land.js';
@@ -78,7 +78,6 @@ export function buildAmbient(game, group) {
   const root = new THREE.Group(); group.add(root);
   const stage = new Path(stageRoute()), out = { x: 0, z: 0, yaw: 0 }, ahead = { x: 0, z: 0, yaw: 0 };
   const walkers = [], riders = [], wagons = [];
-  const horseMesh = (coat, tack) => { const s = new Shape(); horseShape(s, coat, 0x2a211c, tack); return meshOf(s); };
 
   walkRoutes().forEach((pts, i) => {
     const count = i < 2 ? 2 : 1;
@@ -89,14 +88,18 @@ export function buildAmbient(game, group) {
     }
   });
   for (let i = 0; i < A.riders; i++) {
-    const model = townsperson(LOOKS[(i + 3) % LOOKS.length]), horse = horseMesh(COATS[i % COATS.length], true);
-    root.add(model.root, horse);
+    const model = townsperson(LOOKS[(i + 3) % LOOKS.length]), horse = horseRig(COATS[i % COATS.length], 0x2a211c, true);
+    root.add(model.root, horse.root);
     riders.push({ model, horse, speed: A.riderSpeed * (0.9 + (i % 3) * 0.1), offset: (stage.length * 2 / A.riders) * i, side: 1.4 + (i % 2) * 0.6, anim: { speed: 0, dt: 0, aiming: false, flash: 0 } });
   }
   for (let i = 0; i < A.wagons; i++) {
     const rig = new THREE.Group(), body = meshOf(wagonShape());
     rig.add(body);
-    for (const x of [-0.75, 0.75]) { const h = horseMesh(COATS[(i + (x > 0 ? 1 : 2)) % COATS.length], false); h.position.set(x, 0, 3.7); h.scale.setScalar(0.95); rig.add(h); }
+    const team = [-0.75, 0.75].map((x) => {
+      const h = horseRig(COATS[(i + (x > 0 ? 1 : 2)) % COATS.length], 0x2a211c, false);
+      h.root.position.set(x, 0, 3.7); h.root.scale.setScalar(0.95); h.cycle = x > 0 ? 0.5 : 0; rig.add(h.root);
+      return h;
+    });
     const driver = townsperson(LOOKS[(i * 2 + 1) % LOOKS.length]);
     driver.root.position.set(0, 0.55, 1.7); poseSeated(driver); driver.arm.rotation.x = 1.0;
     rig.add(driver.root); root.add(rig);
@@ -104,7 +107,7 @@ export function buildAmbient(game, group) {
     const bodyRb = game.physics.world.createRigidBody(bd);
     game.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(1.1, 1.1, 3.2).setTranslation(0, 1.1, 1.2)
       .setCollisionGroups(GROUPS.world).setSolverGroups(GROUPS.world), bodyRb);
-    wagons.push({ rig, rb: bodyRb, driver, wheel: 0, offset: stage.length * (0.3 + i * 0.85), speed: A.wagonSpeed });
+    wagons.push({ rig, team, rb: bodyRb, driver, wheel: 0, offset: stage.length * (0.3 + i * 0.85), speed: A.wagonSpeed });
   }
 
   let clock = null, prev = null;
@@ -140,11 +143,11 @@ export function buildAmbient(game, group) {
       for (const r of riders) {
         stage.at(t * r.speed + r.offset, out, r.side);
         const hide = far(out.x, out.z);
-        r.model.root.visible = r.horse.visible = !hide;
+        r.model.root.visible = r.horse.root.visible = !hide;
         if (hide) continue;
-        const bob = Math.abs(Math.sin(t * r.speed * 1.6 + r.offset)) * 0.08;
-        r.horse.position.set(out.x, bob, out.z); r.horse.rotation.y = out.yaw;
-        r.model.root.position.set(out.x, 1.18 + bob, out.z); r.model.root.rotation.y = out.yaw;
+        animateHorse(r.horse, r.speed, dt);
+        r.horse.root.position.set(out.x, 0, out.z); r.horse.root.rotation.y = out.yaw;
+        r.model.root.position.set(out.x, 1.18 + r.horse.body.position.y, out.z); r.model.root.rotation.y = out.yaw;
         r.anim.speed = 0; r.anim.dt = dt; animateCharacter(r.model, r.anim);
         const m = r.model;
         m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
@@ -158,6 +161,7 @@ export function buildAmbient(game, group) {
         const hide = far(out.x, out.z);
         w.rig.visible = !hide;
         if (hide) continue;
+        for (const h of w.team) animateHorse(h, w.speed, dt);
         w.rig.position.set(out.x, Math.abs(Math.sin(t * 5 + w.offset)) * 0.03, out.z);
         w.rig.rotation.y = Math.atan2(ahead.x - out.x, ahead.z - out.z) || out.yaw;
       }

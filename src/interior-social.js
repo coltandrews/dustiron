@@ -128,7 +128,7 @@ function saloon(kit) {
 }
 
 /** A low-poly horse facing +z with feet on the floor. */
-export function horse(s, coat = 0x704631, mane = 0x2a211c, tack = true) {
+export function horse(s, coat = 0x704631, mane = 0x2a211c, tack = true, legs = true) {
   const dark = new THREE.Color(coat).multiplyScalar(0.62).getHex(), sphere = () => new THREE.SphereGeometry(1, 9, 6);
   s.add(sphere(), coat, 0, 1.28, 0, 0, 0, 0, 0.4, 0.44, 0.92);
   s.add(sphere(), coat, 0, 1.32, 0.6, 0, 0, 0, 0.37, 0.43, 0.4);
@@ -143,7 +143,7 @@ export function horse(s, coat = 0x704631, mane = 0x2a211c, tack = true) {
   s.box(0.07, 0.14, 0.86, mane, 0, 1.98, 0.84, -0.78);
   s.box(0.08, 0.06, 0.18, mane, 0, 2.2, 1.24, 0.3);
   s.cyl(0.1, 0.05, 0.95, 6, mane, 0, 1.0, -1.15, -0.32);
-  for (const [x, z, hind] of [[-0.22, 0.62, false], [0.22, 0.62, false], [-0.22, -0.66, true], [0.22, -0.66, true]]) {
+  if (legs) for (const [x, z, hind] of [[-0.22, 0.62, false], [0.22, 0.62, false], [-0.22, -0.66, true], [0.22, -0.66, true]]) {
     s.cyl(0.1, 0.075, 0.55, 6, coat, x, 0.82, z + (hind ? -0.04 : 0), hind ? -0.12 : 0.04);
     s.cyl(0.055, 0.06, 0.48, 5, dark, x, 0.32, z + (hind ? 0.02 : 0));
     s.box(0.13, 0.1, 0.16, PAL.black, x, 0.05, z + 0.02 + (hind ? 0.02 : 0));
