@@ -663,9 +663,9 @@ export class Game {
       this.interactionHint = this.horse?.mounted
         ? (this.horse.showDismountHint(this.realTime) ? 'Hold [E] to get off' : '')
         : (this.townActions.hint() || this.lootHint());
-      this.frontier.render(alpha);
-      drunkScreen(this.ui.el.app, this.run, this.realTime);
       const simDt = this.net || this.state === 'playing' || this.state === 'dying' ? dt : 0;
+      this.frontier.render(alpha, simDt);
+      drunkScreen(this.ui.el.app, this.run, this.realTime);
       p.render(alpha, simDt);
       this.horse?.render(dt);
       this.netWorld?.render(alpha, simDt);

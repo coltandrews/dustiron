@@ -10,6 +10,7 @@ import { buildInteriors, updateInteriorNpcs } from './interiors.js';
 import { ground, roads } from './land.js';
 import { wilds } from './wilds.js';
 import { buildPineHollow } from './town-pine.js';
+import { buildAmbient } from './ambient.js';
 
 function civilians(group, rng) {
   const specs = [
@@ -49,7 +50,7 @@ export function buildFrontier(game, world) {
     game.physics.fixedBox(0, 2, side * (half + 0.5), half + 1, 2, 0.5, 0, GROUPS.world);
   }
   const mercy = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng);
-  const pine = buildPineHollow(game, outdoor);
+  const pine = buildPineHollow(game, outdoor), ambient = buildAmbient(game, outdoor);
   const sites = [...mercy, ...pine.sites], rooms = buildInteriors(game, interiorRoot, sites);
   roads(outdoor, mercy);
   wilds(game, outdoor, world, rng);
@@ -89,7 +90,7 @@ export function buildFrontier(game, world) {
   };
 
   return {
-    sites, npcs, rooms, pine,
+    sites, npcs, rooms, pine, ambient,
     get inside() { return !!active; },
     get seated() { return seated; },
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
@@ -119,6 +120,7 @@ export function buildFrontier(game, world) {
     },
     tick(dt) {
       doorCooldown = Math.max(0, doorCooldown - dt);
+      ambient?.tick(dt);
       if (active) {
         updateInteriorNpcs(active, game.player, dt);
         if (!seated && doorCooldown <= 0 && game.player.z > active.center.z + 6.9) leave();
@@ -140,8 +142,9 @@ export function buildFrontier(game, world) {
         npc.animation.speed = speed; npc.animation.dt = dt; animateCharacter(npc.model, npc.animation); npc.model.arm.rotation.x = 1.1;
       }
     },
-    render(alpha) {
+    render(alpha, dt = 1 / 60) {
       if (active) return;
+      ambient?.render(alpha, dt);
       for (const npc of npcs) {
         npc.model.root.position.set(npc.px + (npc.x - npc.px) * alpha, 0, npc.pz + (npc.z - npc.pz) * alpha);
         npc.model.root.rotation.y = npc.prevYaw + angleDelta(npc.prevYaw, npc.yaw) * alpha;

@@ -4,7 +4,7 @@ export const RIVER_MIN_X = -440;
 export const RIVER_MAX_X = 440;
 
 /** The second town sits in the pine country to the northwest. */
-export const PINE_HOLLOW = { id: 'pine', name: 'Pine Hollow', x: -262, z: -250, radius: 30 };
+export const PINE_HOLLOW = { id: 'pine', name: 'Pine Hollow', x: -262, z: -250, radius: 42 };
 export const MERCY = { id: 'mercy', name: 'Mercy Crossing', x: 0, z: 0, radius: 32 };
 
 /**
@@ -111,9 +111,20 @@ export function distanceToTrail(x, z, points) {
   return nearest;
 }
 
-/** The stage road from Mercy Crossing's north end up to Pine Hollow. */
-export function pineRoadPoints(segments = 40) {
-  const start = { x: -3.5, z: -62 };
-  const end = { x: PINE_HOLLOW.x, z: PINE_HOLLOW.z + 46 };
-  return curve(start, end, 60, segments);
+/**
+ * The stage road from Mercy Crossing's north end to Pine Hollow's south gate.
+ * It leaves Mercy heading north and arrives heading north, so it lines up
+ * with both main streets, then runs straight into Pine Hollow.
+ */
+export function pineRoadPoints(segments = 48) {
+  const T = PINE_HOLLOW;
+  const p0 = { x: -3.5, z: -62 }, p1 = { x: -6, z: -150 }, p2 = { x: T.x, z: -60 }, p3 = { x: T.x, z: T.z + 82 };
+  const points = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments, u = 1 - t;
+    const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    points.push({ x: a * p0.x + b * p1.x + c * p2.x + d * p3.x, z: a * p0.z + b * p1.z + c * p2.z + d * p3.z });
+  }
+  for (let z = T.z + 76; z >= T.z + 46; z -= 6) points.push({ x: T.x, z });
+  return points;
 }

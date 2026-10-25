@@ -75,4 +75,6 @@ export const T = {
   },
 
   run: { saveInterval: 2, deathSlowmo: 0.25, killSlowmoTime: 0.7 },
+  // Townsfolk, riders and freight wagons on the roads (src/ambient.js).
+  ambient: { walkSpeed: 1.25, riderSpeed: 5.5, wagonSpeed: 3.2, riders: 5, wagons: 3, drawRange: 110 },
 };
