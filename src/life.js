@@ -11,7 +11,7 @@ export const WORLD_HALF = 420;
 export const MAP_CELL = 16;
 export const LIFE_VERSION = 3;
 const STAT_KEYS = ['camp', 'bounty', 'kills', 'shots', 'hits', 'time', 'damageTaken'];
-const INTERIOR_IDS = new Set(['guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable']);
+const INTERIOR_IDS = new Set(['guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable', 'pine-saloon', 'pine-trade', 'pine-deputy', 'pine-doctor']);
 const ITEM_KEYS = ['bandage', 'meal', 'coffee', 'whiskey', 'oil', 'feed', 'beer', 'cigarette', 'cigar', ...Object.keys(PELTS)];
 const GEAR_KEYS = ['belt', 'coat', 'map'];
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
@@ -193,7 +193,7 @@ export function normalizeLife(input) {
   if (value.marker !== null && value.marker !== undefined && !position(value.marker)) return null;
   if (value.interior !== undefined && value.interior !== null
     && (!object(value.interior) || !INTERIOR_IDS.has(value.interior.id) || !position(value.interior.outside)
-      || Math.hypot(value.interior.outside.x, value.interior.outside.z) > 36
+      || !makeTowns().some((t) => Math.hypot(value.interior.outside.x - t.x, value.interior.outside.z - t.z) <= 36)
       || (value.interior.local !== undefined && !(object(value.interior.local) && Math.abs(value.interior.local.x) < 10 && Math.abs(value.interior.local.z) < 8)))) return null;
   if (value.blackjack !== undefined && !validBlackjack(value.blackjack)) return null;
   const worldSeed = value.worldSeed ?? value.seed;

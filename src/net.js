@@ -132,6 +132,8 @@ export class Net {
         t: 'st', x: q2(p.x), z: q2(p.z), yaw: q3(p.yaw), vx: q2(p.vx), vz: q2(p.vz), sp: q2(p.speedNow),
         f: flags, g: Math.max(0, GUN_CODES.indexOf(p.gun.def.key)), r: Math.max(0, ROOMS.indexOf(room)),
         rf: p.rolling ? q2(p.rollT / T.dodge.duration) : -1,
+        // A horse left standing is shown to everyone nearby.
+        h: g.horse && !g.horse.mounted && !g.horse.away ? [q2(g.horse.x), q2(g.horse.z), q3(g.horse.yaw), g.horse.data.owned ? 1 : 0] : 0,
       });
     }
     this.saveT -= dt;

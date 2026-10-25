@@ -47,7 +47,7 @@ Open http://localhost:8080 in two browser windows (one private window works), ty
 - Press **G** near another rider to call them out. A duel can be to first blood (nobody dies) or to the death, with an optional wager held by the server. In town, G also offers a game of **poker dice** for a stake.
 - **T** opens chat. The rider list and ping are under the money.
 - Camps cleared by anyone come back after twelve minutes. Everyone near a kill gets quest credit.
-- Hunting animals live in each rider's own browser; their bites still go through the server.
+- Animals are shared too: the server runs the herds, so everyone sees the same deer and the same wolves, and a carcass can be skinned once. Horses left standing show for everyone nearby.
 
 **Deploy to Fly.io (sleeps when nobody plays, about $3–5 a month):**
 
@@ -99,13 +99,14 @@ The machine stops when nobody is connected and starts again on the next visit (a
 - The land is 840 m across. Mercy Crossing sits by the river in the desert; Pine Hollow is a logging town in the forest to the northwest, up the stage road.
 - Eleven outlaw camps and four roadside ambushes. Camps farther out are harder. Pine Hollow's deputy posts bounties for the forest camps.
 - **The Iron Gang:** Deputy Hale's quest line runs from the burned sawmill to Kell's lieutenant and Iron Jack Kell himself, a boss in an iron-plated coat who gets faster and angrier at half health. Gang captains are tougher than any leader.
+- **Pine Hollow** has its own saloon (the Timber Wolf, with blackjack), trading post, deputy's office and doctor, each with a room inside.
 - **Hunting:** rabbits and pronghorn in the desert; deer, elk, boar and wolf packs in the pines. Shoot, then press E to skin. Hank Morrow and Otto the trapper buy skins. Otto's quest line ends with Old Scar, the great bear.
 - **Saloons:** beer and whiskey make you sway, walk crooked and blur the world, but fill Dead Eye. Cigarettes and cigars (B) restore Dead Eye and steady your aim for a while. Blackjack at the Last Drop.
 - **Day and night:** a day lasts twenty minutes. Nights are dark (carry on by lantern light) and outlaws see less far. Rain rolls through, mostly over the forest.
 
 ## Current scope
 
-Pine Hollow's keepers trade from their porches; it has no rooms yet. Horses are not synchronized online beyond the rider's pose.
+Horses belong to their rider: others see them standing or ridden but cannot mount them. A browser tab in the background stops sending its rider's position (browsers pause hidden pages), so that rider stands still for everyone else until the tab comes back.
 
 ## Checks
 
@@ -149,7 +150,8 @@ src/
   map.js          world map (M): explored land, roads, landmarks, and jobs
   wilds.js        desert and forest scenery, merged per chunk
   town-pine.js    Pine Hollow
-  wildlife.js     animals, hunting and skinning
+  wildlife.js     animal simulation (browser offline, server online)
+  hunting.js      animal models, skinning, online puppets
   vices.js        drink and tobacco effects
   sky.js          day, night and rain
   net.js          browser side of the server connection

@@ -30,6 +30,7 @@ export class NetWorld {
     on('toast', (m) => game.ui.toast(m.text, m.s ?? 3));
     on('quest', this.onQuest);
     on('roster', () => { this.remote.sync(net.roster); game.netUI?.renderRoster(); });
+    on('pelt', (m) => game.wildlife?.onPelt(m));
   }
 
   /** Finds every outlaw and prop by id and turns them into server puppets. */
@@ -88,6 +89,7 @@ export class NetWorld {
     if (g.player?.alive && Number.isFinite(m.hp)) g.player.hp = m.hp;
     if (Number.isFinite(m.time)) g.worldClock = m.time;
     this.remote.apply(m.p, this.clock);
+    this.remote.horses(m.hz ?? []);
     for (const row of m.e) {
       const [id, x, z, yaw, state, aim, aimYaw, flags, speed, hp] = row;
       const e = this.enemies.get(id);
@@ -113,6 +115,7 @@ export class NetWorld {
       p.body.setTranslation({ x, y, z }, true);
       p.body.setRotation({ x: qx, y: qy, z: qz, w: qw }, true);
     }
+    g.wildlife?.apply(m.w, m.c);
     this.events(m.ev ?? []);
   }
 

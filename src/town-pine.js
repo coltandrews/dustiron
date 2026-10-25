@@ -1,6 +1,6 @@
 // Pine Hollow: a logging town in the northwest forest. Its storefronts reuse
-// the Mercy Crossing builders in timber colors; the people who run them stand
-// out front, so the town has no rooms to load. Local frame: the street runs
+// the Mercy Crossing builders in timber colors, and each has a room inside
+// (built by interiors.js) with its own keeper. Local frame: the street runs
 // along z through the town center, fronts face the street.
 import * as THREE from 'three';
 import { PAL, Shape, meshOf } from './models.js';
@@ -12,10 +12,10 @@ import { road, resample } from './decals.js';
 import { PINE_HOLLOW } from './terrain.js';
 
 const FRONTS = [
-  { id: 'pine-saloon', kind: 'saloon', side: 1, z: -8, color: 0x4f6b4a, width: 9.6, depth: 7.4, height: 6.8, npc: 'ruby' },
-  { id: 'pine-trade', kind: 'guns', side: -1, z: -8, color: 0x6a4a32, width: 8.4, depth: 7.2, height: 3.8, npc: 'hank' },
-  { id: 'pine-deputy', kind: 'sheriff', side: -1, z: 6, color: 0x5d5446, width: 8, depth: 7, height: 4, npc: 'hale' },
-  { id: 'pine-doctor', kind: 'doctor', side: 1, z: 6, color: 0xcfc6a8, width: 7.6, depth: 6.8, height: 4.2, npc: 'lacey' },
+  { id: 'pine-saloon', label: 'The Timber Wolf', kind: 'saloon', side: 1, z: -8, color: 0x4f6b4a, width: 9.6, depth: 7.4, height: 6.8, npc: 'ruby' },
+  { id: 'pine-trade', label: 'Morrow Trading Post', kind: 'guns', side: -1, z: -8, color: 0x6a4a32, width: 8.4, depth: 7.2, height: 3.8, npc: 'hank' },
+  { id: 'pine-deputy', label: "Deputy's Office", kind: 'sheriff', side: -1, z: 6, color: 0x5d5446, width: 8, depth: 7, height: 4, npc: 'hale' },
+  { id: 'pine-doctor', label: 'Doc Lacey', kind: 'doctor', side: 1, z: 6, color: 0xcfc6a8, width: 7.6, depth: 6.8, height: 4.2, npc: 'lacey' },
 ];
 
 export const PINE_NPCS = {
@@ -55,22 +55,19 @@ function placeFront(game, group, spec) {
   object.position.set(x, 0, z); object.rotation.y = ry;
   object.add(meshOf(s)); group.add(object);
   game.physics.fixedBox(x, spec.height / 2, z, spec.width / 2, spec.height / 2, spec.depth / 2, ry, GROUPS.world);
-  // The keeper stands at the foot of the porch steps, facing the street.
-  return { x: T.x + spec.side * 7.4, z, yaw: spec.side > 0 ? -Math.PI / 2 : Math.PI / 2 };
+  // Like Mercy Crossing: the door point sits on the porch, the street spot just below it.
+  const info = PINE_NPCS[spec.npc];
+  return { ...spec, keeper: { npc: spec.npc, name: info.name, look: info.look }, x: T.x + spec.side * 8.55, z, outsideX: T.x + spec.side * 7.1, outsideZ: z };
 }
 
-/** Builds Pine Hollow into `group`. Returns the keepers as interaction points. */
+/** Builds Pine Hollow into `group`. Returns its door sites (for rooms) and a loafer on the street. */
 export function buildPineHollow(game, group) {
   const T = PINE_HOLLOW, npcs = [];
-  for (const spec of FRONTS) {
-    const spot = placeFront(game, group, spec), info = PINE_NPCS[spec.npc];
-    const model = townsperson(info.look);
-    model.arm.rotation.x = 1.1;
-    model.root.position.set(spot.x, 0, spot.z); model.root.rotation.y = spot.yaw;
-    group.add(model.root);
-    npcs.push({ id: `pine-${spec.npc}`, npc: spec.npc, name: info.name, kind: 'npc', x: spot.x, z: spot.z, yaw: spot.yaw, home: spot.yaw,
-      model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } });
-  }
+  const sites = FRONTS.map((spec) => placeFront(game, group, spec));
+  // A logger whittling by the water tower gives the street some life.
+  const model = townsperson({ shirt: 0x8a3a2a, vest: 0x3a3a30, hat: 0x5a4a3a, band: PAL.woodDark, pants: 0x3a4250 });
+  model.root.position.set(T.x - 19.5, 0, T.z + 4); model.root.rotation.y = Math.PI / 2; group.add(model.root);
+  npcs.push({ id: 'pine-logger', kind: 'idle', x: T.x - 19.5, z: T.z + 4, yaw: Math.PI / 2, home: Math.PI / 2, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } });
   // Cabins and a water tower behind the storefronts.
   const extras = new Shape();
   const cabins = [[-24, -24, 0.2], [24, -22, -0.15], [-25, 22, 0.1], [23, 24, -0.2], [-6, -34, 0], [8, 33, Math.PI]];
@@ -97,7 +94,7 @@ export function buildPineHollow(game, group) {
   for (let z = -46; z <= 44; z += 2) points.push({ x: T.x + Math.sin(z * 0.05) * 0.8, z: T.z + z });
   group.add(road(resample(points, 1.1), 6, { fade: 8, seed: 21, base: 0x8a6a48, wash: 0x9c7c58 }));
   return {
-    npcs,
+    npcs, sites,
     tick(dt, player) {
       for (const npc of npcs) {
         const near = player && Math.hypot(player.x - npc.x, player.z - npc.z) < 3;

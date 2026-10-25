@@ -26,7 +26,7 @@ import { MapView } from './map.js';
 import { NetWorld } from './net-world.js';
 import { townAt } from './towns.js';
 import { drunkScreen } from './vices.js';
-import { Wildlife } from './wildlife.js';
+import { Hunting } from './hunting.js';
 import { BossBar } from './ui-boss.js';
 import { Sky } from './sky.js';
 
@@ -152,7 +152,7 @@ export class Game {
     for (const shot of run.projectiles ?? []) this.projectiles.spawn(shot.x, shot.z, shot.dx, shot.dz, shot.speed, shot.dmg, shot.left);
     this.corpses = [];
     this.rebuildNav();
-    this.wildlife = new Wildlife(this);
+    this.wildlife = new Hunting(this);
     if (this.net) this.netWorld = new NetWorld(this, this.net);
 
     this.deadEye.meter = run.deadEye ?? 0;
@@ -669,7 +669,7 @@ export class Game {
       p.render(alpha, simDt);
       this.horse?.render(dt);
       this.netWorld?.render(alpha, simDt);
-      if (this.wildlife) for (const a of [...this.wildlife.animals, ...this.wildlife.carcasses]) a.model.root.visible = !this.frontier.inside;
+      this.wildlife?.setVisible(!this.frontier.inside);
       if (!this.frontier.inside) this.wildlife?.render(alpha, simDt);
       if (this.frontier.inside) {
         for (const e of this.enemies) { e.model.root.visible = false; e.hideAimLine(); }

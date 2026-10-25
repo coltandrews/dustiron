@@ -48,9 +48,10 @@ export function buildFrontier(game, world) {
     game.physics.fixedBox(side * (half + 0.5), 2, 0, 0.5, 2, half + 1, 0, GROUPS.world);
     game.physics.fixedBox(0, 2, side * (half + 0.5), half + 1, 2, 0.5, 0, GROUPS.world);
   }
-  const sites = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
-  roads(outdoor, sites);
+  const mercy = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng);
   const pine = buildPineHollow(game, outdoor);
+  const sites = [...mercy, ...pine.sites], rooms = buildInteriors(game, interiorRoot, sites);
+  roads(outdoor, mercy);
   wilds(game, outdoor, world, rng);
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
@@ -73,15 +74,16 @@ export function buildFrontier(game, world) {
     game.rig.targetDistance = 23; game.rig.snap(room.center.x, room.center.z);
     game.render?.setInterior?.(room.center);
     doorCooldown = 0.8; game.saveT = 0;
-    game.audio?.play(site.id === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1 });
+    game.audio?.play(site.kind === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1 });
     return true;
   };
   const leave = () => {
     if (!active) return;
+    const side = active.site.side;
     const outside = game.run.interior?.outside ?? { x: active.site.outsideX, z: active.site.outsideZ };
-    game.audio?.play(active.site.id === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1, pitch: 0.95 });
+    game.audio?.play(active.site.kind === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1, pitch: 0.95 });
     active.root.visible = false; active = null; seated = null; focusOverride = null; outdoor.visible = true;
-    game.run.interior = null; movePlayer(game, outside.x, outside.z, outside.x < 0 ? Math.PI / 2 : -Math.PI / 2);
+    game.run.interior = null; movePlayer(game, outside.x, outside.z, side < 0 ? Math.PI / 2 : -Math.PI / 2);
     game.rig.targetDistance = 28; game.rig.snap(outside.x, outside.z); doorCooldown = 1; game.saveT = 0;
     game.render?.setInterior?.(null);
   };
@@ -91,7 +93,7 @@ export function buildFrontier(game, world) {
     get inside() { return !!active; },
     get seated() { return seated; },
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
-    interactions() { return active ? active.points : [...doors, ...npcs, ...pine.npcs]; },
+    interactions() { return active ? active.points : [...doors, ...npcs]; },
     cameraFocus() { return active?.center ?? null; },
     viewFocus() { return focusOverride ?? active?.center ?? null; },
     setCameraFocus(point) { focusOverride = point; },

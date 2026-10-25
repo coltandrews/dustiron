@@ -12,7 +12,8 @@ import { buildEncounter, campList, disposeEncounter, rebuildCampNav } from '../s
 import { questDefs } from '../src/life.js';
 import { inSafeZone } from '../src/towns.js';
 import { PROP_DEFS } from '../src/props.js';
-import { q2, q3 } from '../src/protocol.js';
+import { q2, q3, PF } from '../src/protocol.js';
+import { Wildlife, SPECIES_KEYS, ANIMAL_STATES } from '../src/wildlife.js';
 import { ServerProjectiles } from './projectiles.js';
 
 /** Minutes a cleared camp stays empty before new outlaws move in. */
@@ -79,6 +80,7 @@ export class Sim {
     this.town = buildFrontier(this, world);
     this.projectiles = new ServerProjectiles(this);
     this.encounters = campList(world).map((camp, index) => this.buildCamp(camp, index));
+    this.wildlife = new Wildlife(this.wildlifeHost());
     this.rebuildNav();
   }
 
@@ -102,7 +104,48 @@ export class Sim {
   questEvent(event) { this.hooks.questEvent(event, this.ctxPlayer ?? this.player); }
   wantsAlive(enemy) { return this.hooks.wantsAlive(enemy); }
 
+  /** The shared herds see every rider; bites and kills go through the hub. */
+  wildlifeHost() {
+    const sim = this, world = this.run.world;
+    let bearAfter = 0;
+    return {
+      physics: this.physics, enemyController: this.enemyController, world,
+      riders: () => [...sim.players.values()].map((s) => ({
+        id: s.id, state: s, x: s.x, z: s.z, alive: s.alive, room: s.room, safe: inSafeZone(world, s.x, s.z, s.room),
+        sneaking: s.sneaking, moveFraction: s.moveFraction ?? 0, mounted: !!(s.flags & PF.MOUNT), invulnerable: s.iframe,
+      })),
+      bearAllowed: () => sim.time >= bearAfter,
+      bite: (r, dmg, dx, dz) => sim.hooks.playerDamage(r.state, dmg, dx, dz, { kind: 'animal' }),
+      killed: (a) => {
+        if (!a.def.legend) return;
+        bearAfter = sim.time + 20 * 60;
+        for (const id of sim.wildlife.creditFor(a)) {
+          const s = sim.players.get(id);
+          if (!s) continue;
+          sim.hooks.questEvent({ type: 'hunt', animal: 'bear' }, s);
+          sim.hooks.toast('Old Scar falls. The forest goes quiet.', 5, s);
+        }
+      },
+    };
+  }
+
+  /** Animals near a point: [id, kind, x, z, yaw, speed, state, hp]. */
+  animalRows(x, z, range) {
+    const rows = [];
+    for (const a of this.wildlife.animals) {
+      if (Math.hypot(a.x - x, a.z - z) > range) continue;
+      rows.push([a.id, SPECIES_KEYS.indexOf(a.kind), q2(a.x), q2(a.z), q3(a.yaw), q2(a.speed), Math.max(0, ANIMAL_STATES.indexOf(a.state)), q2(Math.max(0, a.hp / a.def.hp))]);
+    }
+    return rows;
+  }
+
+  carcassRows(x, z, range) {
+    return this.wildlife.carcasses.filter((c) => Math.hypot(c.x - x, c.z - z) < range)
+      .map((c) => [c.id, SPECIES_KEYS.indexOf(c.kind), q2(c.x), q2(c.z), q3(c.yaw), c.dir]);
+  }
+
   noise(x, z, range) {
+    this.wildlife?.hear(x, z, Math.max(range, 45));
     for (const e of this.enemies) if (e.alive && !e.surrendered && Math.hypot(e.x - x, e.z - z) < range) e.hear(x, z, true);
   }
 
@@ -252,6 +295,7 @@ export class Sim {
 
   tick(dt) {
     this.time += dt;
+    this.wildlife.tick(dt);
     this.navT -= dt;
     if (this.navDirty || this.navT <= 0) this.rebuildNav();
     for (const p of this.players.values()) {

@@ -102,9 +102,12 @@ const looks = {
 };
 
 function shopkeeper(room, spec, at) {
-  const model = townsperson(looks[spec.kind]);
+  // Pine Hollow's rooms reuse the Mercy layouts with their own keepers.
+  const keeper = spec.keeper;
+  const model = townsperson(keeper?.look ?? looks[spec.kind]);
   model.arm.rotation.x = 1.1;
-  const npc = { id: `${spec.id}-keeper`, name: names[spec.kind], label: names[spec.kind], kind: spec.kind,
+  const name = keeper?.name ?? names[spec.kind];
+  const npc = { id: `${spec.id}-keeper`, name, label: name, kind: spec.kind, npc: keeper?.npc,
     x: room.center.x + at.x, z: room.center.z + at.z, yaw: 0, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
   model.root.position.set(npc.x, 0, npc.z); room.root.add(model.root);
   room.points.push(npc);

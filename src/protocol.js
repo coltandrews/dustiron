@@ -13,7 +13,7 @@ export const PLAYER_VIEW = 200;
 export const EVENT_VIEW = 120;
 
 export const GUN_CODES = Object.keys(WEAPONS);
-export const ROOMS = ['', 'guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable'];
+export const ROOMS = ['', 'guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable', 'pine-saloon', 'pine-trade', 'pine-deputy', 'pine-doctor'];
 export const ENEMY_STATES = ['idle', 'alert', 'toCover', 'hold', 'peek', 'aim', 'burst', 'open', 'flank', 'search', 'charge', 'surrender', 'captive'];
 
 /** Player pose flags. */

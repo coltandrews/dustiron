@@ -30,6 +30,7 @@ export class RemotePlayers {
     this.game = game;
     this.net = net;
     this.riders = new Map();
+    this.standing = new Map();
     this.tags = null;
     if (globalThis.document?.getElementById) {
       this.tags = document.getElementById('rider-tags');
@@ -97,6 +98,7 @@ export class RemotePlayers {
   }
 
   render(alpha, dt) {
+    this.renderHorses(dt);
     const g = this.game, myRoom = g.frontier?.inside ? g.run.interior?.id ?? '' : '';
     const camera = g.rig.camera, w = globalThis.innerWidth ?? 0, h = globalThis.innerHeight ?? 0;
     for (const rider of this.riders.values()) {
@@ -170,6 +172,37 @@ export class RemotePlayers {
     this.riders.delete(id);
   }
 
+  /** Horses other riders left standing: [ownerId, x, z, yaw, owned]. */
+  horses(rows) {
+    const g = this.game, seen = new Set();
+    for (const [id, x, z, yaw, owned] of rows) {
+      seen.add(id);
+      let h = this.standing.get(id);
+      if (!h || h.owned !== owned) {
+        if (h) g.levelGroup.remove(h.mesh);
+        const s = new Shape();
+        horseShape(s, owned ? 0x704631 : 0x8a7a68, owned ? 0x2a211c : 0xd8d0c0, true);
+        h = { mesh: meshOf(s), owned, x, z, yaw };
+        h.mesh.position.set(x, 0, z);
+        g.levelGroup.add(h.mesh);
+        this.standing.set(id, h);
+      }
+      h.x = x; h.z = z; h.yaw = yaw;
+    }
+    for (const [id, h] of this.standing) if (!seen.has(id)) { g.levelGroup?.remove(h.mesh); this.standing.delete(id); }
+  }
+
+  renderHorses(dt) {
+    const inside = !!this.game.frontier?.inside, k = Math.min(1, dt * 8);
+    for (const h of this.standing.values()) {
+      h.mesh.visible = !inside;
+      const p = h.mesh.position;
+      if (Math.hypot(h.x - p.x, h.z - p.z) > 6) p.set(h.x, 0, h.z);
+      else { p.x += (h.x - p.x) * k; p.z += (h.z - p.z) * k; }
+      h.mesh.rotation.y += angleDelta(h.mesh.rotation.y, h.yaw) * k;
+    }
+  }
+
   /** Drops riders who left the server. */
   sync(roster) {
     for (const [id, rider] of this.riders) if (!roster.has(id)) this.remove(rider);
@@ -186,6 +219,8 @@ export class RemotePlayers {
 
   dispose() {
     for (const rider of [...this.riders.values()]) this.remove(rider);
+    for (const h of this.standing.values()) this.game.levelGroup?.remove(h.mesh);
+    this.standing.clear();
   }
 
   /** Riders close enough to call out for a duel. */

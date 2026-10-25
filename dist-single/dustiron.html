@@ -7578,7 +7578,7 @@ const WORLD_HALF = 420;
 const MAP_CELL = 16;
 const LIFE_VERSION = 3;
 const STAT_KEYS = ['camp', 'bounty', 'kills', 'shots', 'hits', 'time', 'damageTaken'];
-const INTERIOR_IDS = new Set(['guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable']);
+const INTERIOR_IDS = new Set(['guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable', 'pine-saloon', 'pine-trade', 'pine-deputy', 'pine-doctor']);
 const ITEM_KEYS = ['bandage', 'meal', 'coffee', 'whiskey', 'oil', 'feed', 'beer', 'cigarette', 'cigar', ...Object.keys(PELTS)];
 const GEAR_KEYS = ['belt', 'coat', 'map'];
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
@@ -7760,7 +7760,7 @@ function normalizeLife(input) {
   if (value.marker !== null && value.marker !== undefined && !position(value.marker)) return null;
   if (value.interior !== undefined && value.interior !== null
     && (!object(value.interior) || !INTERIOR_IDS.has(value.interior.id) || !position(value.interior.outside)
-      || Math.hypot(value.interior.outside.x, value.interior.outside.z) > 36
+      || !makeTowns().some((t) => Math.hypot(value.interior.outside.x - t.x, value.interior.outside.z - t.z) <= 36)
       || (value.interior.local !== undefined && !(object(value.interior.local) && Math.abs(value.interior.local.x) < 10 && Math.abs(value.interior.local.z) < 8)))) return null;
   if (value.blackjack !== undefined && !validBlackjack(value.blackjack)) return null;
   const worldSeed = value.worldSeed ?? value.seed;
@@ -9899,9 +9899,12 @@ const looks = {
 };
 
 function shopkeeper(room, spec, at) {
-  const model = townsperson(looks[spec.kind]);
+  // Pine Hollow's rooms reuse the Mercy layouts with their own keepers.
+  const keeper = spec.keeper;
+  const model = townsperson(keeper?.look ?? looks[spec.kind]);
   model.arm.rotation.x = 1.1;
-  const npc = { id: `${spec.id}-keeper`, name: names[spec.kind], label: names[spec.kind], kind: spec.kind,
+  const name = keeper?.name ?? names[spec.kind];
+  const npc = { id: `${spec.id}-keeper`, name, label: name, kind: spec.kind, npc: keeper?.npc,
     x: room.center.x + at.x, z: room.center.z + at.z, yaw: 0, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } };
   model.root.position.set(npc.x, 0, npc.z); room.root.add(model.root);
   room.points.push(npc);
@@ -10340,8 +10343,8 @@ return { pine, wilds };
 // ---- src/town-pine.js ----
 __m.town_pine = (() => {
 // Pine Hollow: a logging town in the northwest forest. Its storefronts reuse
-// the Mercy Crossing builders in timber colors; the people who run them stand
-// out front, so the town has no rooms to load. Local frame: the street runs
+// the Mercy Crossing builders in timber colors, and each has a room inside
+// (built by interiors.js) with its own keeper. Local frame: the street runs
 // along z through the town center, fronts face the street.
 
 const { PAL, Shape, meshOf } = __m.models;
@@ -10352,10 +10355,10 @@ const { animateCharacter, turnToward } = __m.character;
 const { road, resample } = __m.decals;
 const { PINE_HOLLOW } = __m.terrain;
 const FRONTS = [
-  { id: 'pine-saloon', kind: 'saloon', side: 1, z: -8, color: 0x4f6b4a, width: 9.6, depth: 7.4, height: 6.8, npc: 'ruby' },
-  { id: 'pine-trade', kind: 'guns', side: -1, z: -8, color: 0x6a4a32, width: 8.4, depth: 7.2, height: 3.8, npc: 'hank' },
-  { id: 'pine-deputy', kind: 'sheriff', side: -1, z: 6, color: 0x5d5446, width: 8, depth: 7, height: 4, npc: 'hale' },
-  { id: 'pine-doctor', kind: 'doctor', side: 1, z: 6, color: 0xcfc6a8, width: 7.6, depth: 6.8, height: 4.2, npc: 'lacey' },
+  { id: 'pine-saloon', label: 'The Timber Wolf', kind: 'saloon', side: 1, z: -8, color: 0x4f6b4a, width: 9.6, depth: 7.4, height: 6.8, npc: 'ruby' },
+  { id: 'pine-trade', label: 'Morrow Trading Post', kind: 'guns', side: -1, z: -8, color: 0x6a4a32, width: 8.4, depth: 7.2, height: 3.8, npc: 'hank' },
+  { id: 'pine-deputy', label: "Deputy's Office", kind: 'sheriff', side: -1, z: 6, color: 0x5d5446, width: 8, depth: 7, height: 4, npc: 'hale' },
+  { id: 'pine-doctor', label: 'Doc Lacey', kind: 'doctor', side: 1, z: 6, color: 0xcfc6a8, width: 7.6, depth: 6.8, height: 4.2, npc: 'lacey' },
 ];
 
 const PINE_NPCS = {
@@ -10395,22 +10398,19 @@ function placeFront(game, group, spec) {
   object.position.set(x, 0, z); object.rotation.y = ry;
   object.add(meshOf(s)); group.add(object);
   game.physics.fixedBox(x, spec.height / 2, z, spec.width / 2, spec.height / 2, spec.depth / 2, ry, GROUPS.world);
-  // The keeper stands at the foot of the porch steps, facing the street.
-  return { x: T.x + spec.side * 7.4, z, yaw: spec.side > 0 ? -Math.PI / 2 : Math.PI / 2 };
+  // Like Mercy Crossing: the door point sits on the porch, the street spot just below it.
+  const info = PINE_NPCS[spec.npc];
+  return { ...spec, keeper: { npc: spec.npc, name: info.name, look: info.look }, x: T.x + spec.side * 8.55, z, outsideX: T.x + spec.side * 7.1, outsideZ: z };
 }
 
-/** Builds Pine Hollow into `group`. Returns the keepers as interaction points. */
+/** Builds Pine Hollow into `group`. Returns its door sites (for rooms) and a loafer on the street. */
 function buildPineHollow(game, group) {
   const T = PINE_HOLLOW, npcs = [];
-  for (const spec of FRONTS) {
-    const spot = placeFront(game, group, spec), info = PINE_NPCS[spec.npc];
-    const model = townsperson(info.look);
-    model.arm.rotation.x = 1.1;
-    model.root.position.set(spot.x, 0, spot.z); model.root.rotation.y = spot.yaw;
-    group.add(model.root);
-    npcs.push({ id: `pine-${spec.npc}`, npc: spec.npc, name: info.name, kind: 'npc', x: spot.x, z: spot.z, yaw: spot.yaw, home: spot.yaw,
-      model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } });
-  }
+  const sites = FRONTS.map((spec) => placeFront(game, group, spec));
+  // A logger whittling by the water tower gives the street some life.
+  const model = townsperson({ shirt: 0x8a3a2a, vest: 0x3a3a30, hat: 0x5a4a3a, band: PAL.woodDark, pants: 0x3a4250 });
+  model.root.position.set(T.x - 19.5, 0, T.z + 4); model.root.rotation.y = Math.PI / 2; group.add(model.root);
+  npcs.push({ id: 'pine-logger', kind: 'idle', x: T.x - 19.5, z: T.z + 4, yaw: Math.PI / 2, home: Math.PI / 2, model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } });
   // Cabins and a water tower behind the storefronts.
   const extras = new Shape();
   const cabins = [[-24, -24, 0.2], [24, -22, -0.15], [-25, 22, 0.1], [23, 24, -0.2], [-6, -34, 0], [8, 33, Math.PI]];
@@ -10437,7 +10437,7 @@ function buildPineHollow(game, group) {
   for (let z = -46; z <= 44; z += 2) points.push({ x: T.x + Math.sin(z * 0.05) * 0.8, z: T.z + z });
   group.add(road(resample(points, 1.1), 6, { fade: 8, seed: 21, base: 0x8a6a48, wash: 0x9c7c58 }));
   return {
-    npcs,
+    npcs, sites,
     tick(dt, player) {
       for (const npc of npcs) {
         const near = player && Math.hypot(player.x - npc.x, player.z - npc.z) < 3;
@@ -10504,9 +10504,10 @@ function buildFrontier(game, world) {
     game.physics.fixedBox(side * (half + 0.5), 2, 0, 0.5, 2, half + 1, 0, GROUPS.world);
     game.physics.fixedBox(0, 2, side * (half + 0.5), half + 1, 2, 0.5, 0, GROUPS.world);
   }
-  const sites = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
-  roads(outdoor, sites);
+  const mercy = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng);
   const pine = buildPineHollow(game, outdoor);
+  const sites = [...mercy, ...pine.sites], rooms = buildInteriors(game, interiorRoot, sites);
+  roads(outdoor, mercy);
   wilds(game, outdoor, world, rng);
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
@@ -10529,15 +10530,16 @@ function buildFrontier(game, world) {
     game.rig.targetDistance = 23; game.rig.snap(room.center.x, room.center.z);
     game.render?.setInterior?.(room.center);
     doorCooldown = 0.8; game.saveT = 0;
-    game.audio?.play(site.id === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1 });
+    game.audio?.play(site.kind === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1 });
     return true;
   };
   const leave = () => {
     if (!active) return;
+    const side = active.site.side;
     const outside = game.run.interior?.outside ?? { x: active.site.outsideX, z: active.site.outsideZ };
-    game.audio?.play(active.site.id === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1, pitch: 0.95 });
+    game.audio?.play(active.site.kind === 'saloon' ? 'batwing' : 'door', { vol: 0.7, reverb: 0.1, pitch: 0.95 });
     active.root.visible = false; active = null; seated = null; focusOverride = null; outdoor.visible = true;
-    game.run.interior = null; movePlayer(game, outside.x, outside.z, outside.x < 0 ? Math.PI / 2 : -Math.PI / 2);
+    game.run.interior = null; movePlayer(game, outside.x, outside.z, side < 0 ? Math.PI / 2 : -Math.PI / 2);
     game.rig.targetDistance = 28; game.rig.snap(outside.x, outside.z); doorCooldown = 1; game.saveT = 0;
     game.render?.setInterior?.(null);
   };
@@ -10547,7 +10549,7 @@ function buildFrontier(game, world) {
     get inside() { return !!active; },
     get seated() { return seated; },
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
-    interactions() { return active ? active.points : [...doors, ...npcs, ...pine.npcs]; },
+    interactions() { return active ? active.points : [...doors, ...npcs]; },
     cameraFocus() { return active?.center ?? null; },
     viewFocus() { return focusOverride ?? active?.center ?? null; },
     setCameraFocus(point) { focusOverride = point; },
@@ -11722,11 +11724,11 @@ const PLAYER_VIEW = 200;
 const EVENT_VIEW = 120;
 
 const GUN_CODES = Object.keys(WEAPONS);
-const ROOMS = ['', 'guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable'];
+const ROOMS = ['', 'guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable', 'pine-saloon', 'pine-trade', 'pine-deputy', 'pine-doctor'];
 const ENEMY_STATES = ['idle', 'alert', 'toCover', 'hold', 'peek', 'aim', 'burst', 'open', 'flank', 'search', 'charge', 'surrender', 'captive'];
 
 /** Player pose flags. */
-const PF = { AIM: 1, ROLL: 2, MOUNT: 4, SEAT: 8, BANDAGE: 16, SNEAK: 32, COAT: 64, IFRAME: 128, ARMED: 256 };
+const PF = { AIM: 1, ROLL: 2, MOUNT: 4, SEAT: 8, BANDAGE: 16, SNEAK: 32, COAT: 64, IFRAME: 128, ARMED: 256, SMOKE: 512, DRUNK: 1024 };
 /** Outlaw flags. */
 const EF = { SURRENDERED: 1, CAPTIVE: 2, KNOWS: 4, TARGET: 8, ENRAGED: 16 };
 
@@ -11769,6 +11771,7 @@ const { LOOKS, Shape, makeCharacter, meshOf, muzzleLocal } = __m.models;
 const { addRollPivot, animateCharacter, angleDelta, makeCorpse, poseSeated, showGun } = __m.character;
 const { horse: horseShape } = __m.interior_social;
 const { PF, GUN_CODES, ROOMS } = __m.protocol;
+const { puff } = __m.vices;
 const SHIRTS = [0x3e6189, 0x7c3a2e, 0x5d6b3a, 0x8a6a42, 0x5a4a62, 0x2f5a58, 0x9e6971, 0x6a5a3a];
 const HATS = [0xc9a273, 0x2e2420, 0x8a6a42, 0x5c3a22, 0xb79b70, 0x3a3a3a];
 const SCARVES = [0xc0452f, 0xd9c9a6, 0x3f5470, 0xb98a45, 0x4b5a4a];
@@ -11788,6 +11791,7 @@ class RemotePlayers {
     this.game = game;
     this.net = net;
     this.riders = new Map();
+    this.standing = new Map();
     this.tags = null;
     if (globalThis.document?.getElementById) {
       this.tags = document.getElementById('rider-tags');
@@ -11855,6 +11859,7 @@ class RemotePlayers {
   }
 
   render(alpha, dt) {
+    this.renderHorses(dt);
     const g = this.game, myRoom = g.frontier?.inside ? g.run.interior?.id ?? '' : '';
     const camera = g.rig.camera, w = globalThis.innerWidth ?? 0, h = globalThis.innerHeight ?? 0;
     for (const rider of this.riders.values()) {
@@ -11883,6 +11888,14 @@ class RemotePlayers {
       if (rider.flags & PF.BANDAGE) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
       showGun(m, armed ? rider.gun : null);
       if (!armed) m.arm.rotation.x = 1.1;
+      if (rider.flags & PF.DRUNK) m.pivot.rotation.z = Math.sin(this.game.realTime * 1.7 + rider.x) * 0.08;
+      else if (!(rider.flags & PF.ROLL)) m.pivot.rotation.z = 0;
+      if (rider.flags & PF.SMOKE) {
+        showGun(m, null);
+        m.arm.rotation.x = 2.2 - Math.abs(Math.sin(this.game.realTime * 1.4)) * 0.6;
+        rider.puffT = (rider.puffT ?? 0) - dt;
+        if (rider.puffT <= 0) { rider.puffT = 1.1; puff(this.game, x, z, rider.yaw); }
+      }
       if (rider.tag && camera) {
         _v.set(x, mounted ? 3.6 : 2.45, z).project(camera);
         const onScreen = _v.z < 1 && Math.abs(_v.x) < 1.1 && Math.abs(_v.y) < 1.1;
@@ -11920,6 +11933,37 @@ class RemotePlayers {
     this.riders.delete(id);
   }
 
+  /** Horses other riders left standing: [ownerId, x, z, yaw, owned]. */
+  horses(rows) {
+    const g = this.game, seen = new Set();
+    for (const [id, x, z, yaw, owned] of rows) {
+      seen.add(id);
+      let h = this.standing.get(id);
+      if (!h || h.owned !== owned) {
+        if (h) g.levelGroup.remove(h.mesh);
+        const s = new Shape();
+        horseShape(s, owned ? 0x704631 : 0x8a7a68, owned ? 0x2a211c : 0xd8d0c0, true);
+        h = { mesh: meshOf(s), owned, x, z, yaw };
+        h.mesh.position.set(x, 0, z);
+        g.levelGroup.add(h.mesh);
+        this.standing.set(id, h);
+      }
+      h.x = x; h.z = z; h.yaw = yaw;
+    }
+    for (const [id, h] of this.standing) if (!seen.has(id)) { g.levelGroup?.remove(h.mesh); this.standing.delete(id); }
+  }
+
+  renderHorses(dt) {
+    const inside = !!this.game.frontier?.inside, k = Math.min(1, dt * 8);
+    for (const h of this.standing.values()) {
+      h.mesh.visible = !inside;
+      const p = h.mesh.position;
+      if (Math.hypot(h.x - p.x, h.z - p.z) > 6) p.set(h.x, 0, h.z);
+      else { p.x += (h.x - p.x) * k; p.z += (h.z - p.z) * k; }
+      h.mesh.rotation.y += angleDelta(h.mesh.rotation.y, h.yaw) * k;
+    }
+  }
+
   /** Drops riders who left the server. */
   sync(roster) {
     for (const [id, rider] of this.riders) if (!roster.has(id)) this.remove(rider);
@@ -11936,6 +11980,8 @@ class RemotePlayers {
 
   dispose() {
     for (const rider of [...this.riders.values()]) this.remove(rider);
+    for (const h of this.standing.values()) this.game.levelGroup?.remove(h.mesh);
+    this.standing.clear();
   }
 
   /** Riders close enough to call out for a duel. */
@@ -11981,6 +12027,7 @@ class NetWorld {
     on('toast', (m) => game.ui.toast(m.text, m.s ?? 3));
     on('quest', this.onQuest);
     on('roster', () => { this.remote.sync(net.roster); game.netUI?.renderRoster(); });
+    on('pelt', (m) => game.wildlife?.onPelt(m));
   }
 
   /** Finds every outlaw and prop by id and turns them into server puppets. */
@@ -12039,6 +12086,7 @@ class NetWorld {
     if (g.player?.alive && Number.isFinite(m.hp)) g.player.hp = m.hp;
     if (Number.isFinite(m.time)) g.worldClock = m.time;
     this.remote.apply(m.p, this.clock);
+    this.remote.horses(m.hz ?? []);
     for (const row of m.e) {
       const [id, x, z, yaw, state, aim, aimYaw, flags, speed, hp] = row;
       const e = this.enemies.get(id);
@@ -12064,6 +12112,7 @@ class NetWorld {
       p.body.setTranslation({ x, y, z }, true);
       p.body.setRotation({ x: qx, y: qy, z: qz, w: qw }, true);
     }
+    g.wildlife?.apply(m.w, m.c);
     this.events(m.ev ?? []);
   }
 
@@ -12150,19 +12199,19 @@ return { NetWorld };
 
 // ---- src/wildlife.js ----
 __m.wildlife = (() => {
-// Wildlife for hunting. Animals appear around the rider according to the land
-// (pronghorn and rabbits in the desert, deer, elk, boar and wolves in the
-// pines), graze, bolt at gunfire and leave a carcass to skin. Wolves and the
-// great bear Old Scar fight back. Each browser keeps its own animals; online,
-// their bites are sent to the server, which owns the rider's health.
-
+// Wildlife for hunting: who lives where, how animals graze, bolt and fight,
+// and the carcasses they leave. This is pure simulation with no meshes, so the
+// same code runs in the browser (offline) and on the server (online, where
+// every rider shares the same herds). wildlife-view.js draws the animals.
+//
+// The host supplies: physics, enemyController, world, riders() and the
+// callbacks bite(rider, dmg, dx, dz), killed(a, carcass, by), bearAllowed(),
+// and optional added(a), removed(a), carcassGone(c), hurt(a).
 const { T } = __m.tuning;
 const { GROUPS, RAPIER } = __m.physics;
-const { MAT, Shape, meshOf } = __m.models;
-const { angleDelta, turnToward } = __m.character;
+const { turnToward } = __m.character;
 const { forestAt, inRiver } = __m.terrain;
 const { townsOf } = __m.towns;
-const { PELTS } = __m.items;
 const SPECIES = {
   rabbit: { hp: 12, speed: 7.5, size: 0.32, radius: 0.3, sense: 12, herd: [1, 2], pelt: 'rabbitPelt', color: 0xa08a6a, belly: 0xd8cbb0 },
   pronghorn: { hp: 55, speed: 10, size: 0.85, radius: 0.5, sense: 26, herd: [2, 4], pelt: 'hide', color: 0xc08a50, belly: 0xf0e6d0, horns: 'prong' },
@@ -12172,16 +12221,219 @@ const SPECIES = {
   wolf: { hp: 60, speed: 8.5, size: 0.78, radius: 0.5, sense: 26, herd: [3, 4], pelt: 'wolfPelt', color: 0x6a6a6e, belly: 0xb8b8b4, temper: 'hunt', bite: 11 },
   bear: { hp: 650, speed: 7.2, size: 1.75, radius: 0.95, sense: 34, herd: [1, 1], pelt: 'bearHide', color: 0x3a2a20, belly: 0x5a4030, temper: 'hunt', bite: 30, legend: true },
 };
+const SPECIES_KEYS = Object.keys(SPECIES);
+const ANIMAL_STATES = ['graze', 'flee', 'charge'];
 
 const SPAWN = { min: 70, max: 110, despawn: 150 };
+const CARCASS_LIFE = 180;
+const SKIN_RANGE = 3.2;
 
 /** Which animals live at a spot, by how green the land is. */
-function speciesFor(green, rng) {
-  if (green > 0.6) return rng < 0.36 ? 'deer' : rng < 0.52 ? 'elk' : rng < 0.7 ? 'boar' : rng < 0.85 ? 'wolf' : 'rabbit';
-  if (green > 0.25) return rng < 0.4 ? 'deer' : rng < 0.6 ? 'boar' : rng < 0.85 ? 'rabbit' : 'pronghorn';
-  return rng < 0.55 ? 'pronghorn' : 'rabbit';
+function speciesFor(green, r) {
+  if (green > 0.6) return r < 0.36 ? 'deer' : r < 0.52 ? 'elk' : r < 0.7 ? 'boar' : r < 0.85 ? 'wolf' : 'rabbit';
+  if (green > 0.25) return r < 0.4 ? 'deer' : r < 0.6 ? 'boar' : r < 0.85 ? 'rabbit' : 'pronghorn';
+  return r < 0.55 ? 'pronghorn' : 'rabbit';
 }
 
+class Wildlife {
+  constructor(host) {
+    this.host = host;
+    this.animals = [];
+    this.carcasses = [];
+    this.spawnT = 1;
+    this.nextId = 1;
+    this.time = 0;
+  }
+
+  dispose() {
+    for (const a of [...this.animals]) this.remove(a);
+    for (const c of [...this.carcasses]) this.dropCarcass(c);
+  }
+
+  byId(id) { return this.animals.find((a) => a.id === id) ?? null; }
+
+  spawn(kind, x, z) {
+    const h = this.host, def = SPECIES[kind];
+    const cap = h.physics.kinematicCapsule(x, z, T.player.halfHeight, def.radius, GROUPS.enemy, null);
+    const a = {
+      id: `a${this.nextId++}`, kind, def, x, z, px: x, pz: z, yaw: Math.random() * 6.28, prevYaw: 0, hp: def.hp, alive: true, animal: true,
+      state: 'graze', stateT: Math.random() * 3, tx: x, tz: z, speed: 0, biteT: 0, hurt: false, walk: false, hitters: new Map(),
+      body: cap.body, collider: cap.collider, bodyY: cap.y,
+    };
+    // Offline, a shot that meets the capsule lands here directly.
+    a.onHit = (dmg, dx, dz, knock, zone) => this.hit(a, dmg * (zone === 'head' ? 1.6 : 1), dx, dz, h.localRider?.() ?? null);
+    h.physics.setOwner(cap.collider, a);
+    this.animals.push(a);
+    h.added?.(a);
+    return a;
+  }
+
+  remove(a) {
+    if (a.body) { this.host.physics.removeBody(a.body); a.body = null; }
+    const i = this.animals.indexOf(a);
+    if (i >= 0) this.animals.splice(i, 1);
+    this.host.removed?.(a);
+  }
+
+  /** Gunfire nearby sends grazers running and draws hunters in. */
+  hear(x, z, range = 45) {
+    for (const a of this.animals) {
+      if (!a.alive || Math.hypot(a.x - x, a.z - z) > range) continue;
+      if (a.def.temper === 'hunt') a.state = 'charge';
+      else this.flee(a, x, z);
+    }
+  }
+
+  flee(a, fx, fz) {
+    const dx = a.x - fx, dz = a.z - fz, d = Math.hypot(dx, dz) || 1;
+    a.state = 'flee'; a.stateT = 6 + Math.random() * 3;
+    a.tx = a.x + dx / d * 60; a.tz = a.z + dz / d * 60;
+  }
+
+  /** Damage from a rider's shot. Returns {killed} like an outlaw's onHit. */
+  hit(a, dmg, dx, dz, by) {
+    if (!a.alive) return { killed: false, crit: false };
+    a.hp -= dmg;
+    if (by) a.hitters.set(by.id, this.time);
+    this.host.hurt?.(a);
+    if (a.hp <= 0) { this.kill(a, dx, dz, by); return { killed: true, crit: false }; }
+    a.hurt = true;
+    if (a.def.temper) { a.state = 'charge'; if (by) a.focus = by.id; }
+    else this.flee(a, by?.x ?? a.x - dx, by?.z ?? a.z - dz);
+    return { killed: false, crit: false };
+  }
+
+  kill(a, dx, dz, by) {
+    a.alive = false;
+    const carcass = { id: `c${a.id.slice(1)}`, kind: a.kind, def: a.def, x: a.x, z: a.z, yaw: a.yaw, dir: dx > 0 ? 1 : -1, t: 0 };
+    this.remove(a);
+    this.carcasses.push(carcass);
+    this.host.killed?.(a, carcass, by);
+  }
+
+  /** Takes the skin from a carcass for a rider standing over it. Returns the pelt id or null. */
+  skin(id, rider) {
+    const c = this.carcasses.find((x) => x.id === id);
+    if (!c || !rider || Math.hypot(c.x - rider.x, c.z - rider.z) > SKIN_RANGE) return null;
+    this.dropCarcass(c);
+    return c.def.pelt;
+  }
+
+  dropCarcass(c) {
+    const i = this.carcasses.indexOf(c);
+    if (i >= 0) this.carcasses.splice(i, 1);
+    this.host.carcassGone?.(c);
+  }
+
+  /** Riders who share credit for a kill: anyone who hit it in the last minute. */
+  creditFor(a) {
+    return [...a.hitters.entries()].filter(([, t]) => this.time - t < 60).map(([id]) => id);
+  }
+
+  // ---------- per tick ----------
+
+  tick(dt) {
+    this.time += dt;
+    const riders = this.host.riders().filter((r) => r.alive && !r.room);
+    this.spawnT -= dt;
+    if (this.spawnT <= 0) { this.spawnT = 1.5; for (const r of riders) this.populate(r); }
+    for (const a of [...this.animals]) {
+      a.px = a.x; a.pz = a.z; a.prevYaw = a.yaw;
+      let near = null, d = Infinity;
+      for (const r of riders) { const k = Math.hypot(a.x - r.x, a.z - r.z); if (k < d) { d = k; near = r; } }
+      if (a.focus) { const f = riders.find((r) => r.id === a.focus); if (f) { near = f; d = Math.hypot(a.x - f.x, a.z - f.z); } }
+      if (d > SPAWN.despawn && !(a.def.legend && d < 400)) { this.remove(a); continue; }
+      this.think(a, near, d, dt);
+    }
+    for (const c of [...this.carcasses]) {
+      c.t += dt;
+      const far = riders.every((r) => Math.hypot(c.x - r.x, c.z - r.z) > SPAWN.despawn * 1.3);
+      if (c.t > CARCASS_LIFE || far) this.dropCarcass(c);
+    }
+  }
+
+  populate(P) {
+    const h = this.host, world = h.world;
+    const cap = forestAt(P.x, P.z) > 0.5 ? 9 : 6, near = this.animals.filter((a) => Math.hypot(a.x - P.x, a.z - P.z) < 130).length;
+    // Old Scar keeps to his den.
+    const den = world.sites?.find((s) => s.kind === 'den'), dd = den ? Math.hypot(den.x - P.x, den.z - P.z) : Infinity;
+    if (den && dd < 90 && dd > 30 && !this.animals.some((a) => a.def.legend) && !this.carcasses.some((c) => c.def.legend) && h.bearAllowed()) {
+      this.spawn('bear', den.x, den.z + 6);
+    }
+    if (near >= cap || P.safe) return;
+    const angle = Math.random() * Math.PI * 2, dist = SPAWN.min + Math.random() * (SPAWN.max - SPAWN.min);
+    const x = P.x + Math.cos(angle) * dist, z = P.z + Math.sin(angle) * dist;
+    if (Math.abs(x) > world.half - 10 || Math.abs(z) > world.half - 10 || inRiver(x, z, 3)) return;
+    if (townsOf(world).some((t) => Math.hypot(x - t.x, z - t.z) < t.radius + 30)) return;
+    if (world.camps.some((c) => Math.hypot(x - c.x, z - c.z) < 45)) return;
+    const kind = speciesFor(forestAt(x, z), Math.random()), [lo, hi] = SPECIES[kind].herd;
+    const n = lo + Math.floor(Math.random() * (hi - lo + 1));
+    for (let i = 0; i < n; i++) this.spawn(kind, x + (Math.random() - 0.5) * 6, z + (Math.random() - 0.5) * 6);
+  }
+
+  think(a, P, d, dt) {
+    const def = a.def;
+    a.stateT -= dt;
+    if (P) {
+      const sense = def.sense * (P.sneaking ? 0.55 : P.moveFraction > 0.75 ? 1.15 : 1) * (P.mounted ? 1.2 : 1);
+      if (P.safe) { if (a.state === 'charge') { a.state = 'graze'; a.focus = null; } }
+      else if (def.temper === 'hunt' && d < sense && a.state !== 'charge') a.state = 'charge';
+      else if (!def.temper && d < sense && a.state !== 'flee') this.flee(a, P.x, P.z);
+      else if (def.temper === 'hurt' && a.hurt && a.state !== 'charge') a.state = 'charge';
+    } else if (a.state === 'charge') a.state = 'graze';
+    let want = 0, tx = a.tx, tz = a.tz;
+    if (a.state === 'charge' && P) {
+      tx = P.x; tz = P.z; want = def.speed * (def.legend ? 0.95 : 1);
+      if (d > 60) { a.state = 'graze'; a.hurt = false; a.focus = null; }
+      a.biteT -= dt;
+      if (d < def.radius + 1.3 && a.biteT <= 0) { a.biteT = def.legend ? 1.4 : 1.1; this.bite(a, P); }
+      if (d < def.radius + 0.9) want = 0;
+    } else if (a.state === 'flee') {
+      want = def.speed;
+      if (a.stateT <= 0) a.state = 'graze';
+    } else {
+      if (a.stateT <= 0) { a.stateT = 3 + Math.random() * 5; const r = Math.random() * 8; a.tx = a.x + Math.cos(r) * 6; a.tz = a.z + Math.sin(r) * 6; a.walk = Math.random() < 0.5; }
+      want = a.walk ? def.speed * 0.18 : 0;
+    }
+    const dx = tx - a.x, dz = tz - a.z, l = Math.hypot(dx, dz);
+    if (l < 0.5) want = 0;
+    if (want > 0) a.yaw = turnToward(a.yaw, Math.atan2(dx, dz), dt * (a.state === 'graze' ? 2 : 6));
+    a.speed += (want - a.speed) * Math.min(1, dt * 4);
+    const mx = Math.sin(a.yaw) * a.speed * dt, mz = Math.cos(a.yaw) * a.speed * dt;
+    if (a.body && (mx || mz)) {
+      const cc = this.host.enemyController;
+      cc.computeColliderMovement(a.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
+      const mv = cc.computedMovement();
+      a.x += mv.x; a.z += mv.z;
+      if (Math.hypot(mv.x, mv.z) < Math.hypot(mx, mz) * 0.3 && a.state !== 'charge') a.yaw += 1.2;
+      a.body.setNextKinematicTranslation({ x: a.x, y: a.bodyY, z: a.z });
+    }
+  }
+
+  bite(a, P) {
+    if (P.invulnerable || P.safe) return;
+    const dx = P.x - a.x, dz = P.z - a.z, d = Math.hypot(dx, dz) || 1;
+    a.bit = (a.bit ?? 0) + 1;
+    this.host.bite(P, a.def.bite, dx / d, dz / d, a);
+  }
+}
+
+return { SPECIES, SPECIES_KEYS, ANIMAL_STATES, Wildlife };
+})();
+
+// ---- src/hunting.js ----
+__m.hunting = (() => {
+// Hunting in the browser: draws animals and carcasses and handles skinning.
+// Offline it runs the Wildlife simulation itself. Online the server runs it
+// for everyone; snapshots move puppet animals here, shots at them go to the
+// server, and skinning asks the server for the pelt.
+
+const { T } = __m.tuning;
+const { GROUPS } = __m.physics;
+const { MAT, Shape, meshOf } = __m.models;
+const { angleDelta } = __m.character;
+const { PELTS } = __m.items;
+const { ANIMAL_STATES, SPECIES, SPECIES_KEYS, Wildlife } = __m.wildlife;
 function buildModel(def) {
   const s = new Shape(), k = def.size, c = def.color, legs = [];
   const tall = def.horns || def === SPECIES.wolf ? 1 : 0.8;
@@ -12200,8 +12452,9 @@ function buildModel(def) {
     }
   } else if (def.horns === 'prong') for (const side of [-1, 1]) s.box(0.05 * k, 0.32 * k, 0.05 * k, 0x2a2420, side * 0.08 * k, 1.66 * k * tall, 0.74 * k, 0.15);
   if (def.tusks) for (const side of [-1, 1]) s.cone(0.04 * k, 0.16 * k, 4, 0xeadfc6, side * 0.1 * k, 1.28 * k * tall, 0.98 * k, -1.2);
-  const root = new THREE.Group();
-  root.add(meshOf(s, MAT.solid));
+  if (def.legend) for (let i = 0; i < 3; i++) s.box(0.04 * k, 0.03 * k, 0.3 * k, 0x8a6a5a, 0.26 * k, 1.05 * k * tall + i * 0.07 * k, 0.1 * k + i * 0.05, 0, 0.3, 0);
+  const root = new THREE.Group(), body = meshOf(s, MAT.solid);
+  root.add(body);
   for (const [x, z] of [[-0.16, 0.42], [0.16, 0.42], [-0.16, -0.42], [0.16, -0.42]]) {
     const leg = new THREE.Group(), ls = new Shape();
     ls.box(0.11 * k, 0.75 * k * tall, 0.11 * k, c, 0, -0.37 * k * tall, 0);
@@ -12210,105 +12463,161 @@ function buildModel(def) {
     leg.position.set(x * k, 0.78 * k * tall, z * k);
     root.add(leg); legs.push(leg);
   }
-  return { root, legs };
+  return { root, body, legs, phase: Math.random() * 6 };
 }
 
-class Wildlife {
+class Hunting {
   constructor(game) {
     this.game = game;
-    this.animals = [];
-    this.spawnT = 1;
+    this.online = !!game.net;
+    this.models = new Map();
+    this.carcassModels = new Map();
+    this.puppets = new Map();
     this.carcasses = [];
+    this.visible = true;
+    this.sim = this.online ? null : new Wildlife(this.localHost());
   }
+
+  /** The offline host: one rider (this player) and local damage. */
+  localHost() {
+    const g = this.game;
+    const rider = () => {
+      const p = g.player;
+      return { id: 'me', x: p.x, z: p.z, alive: p.alive, room: g.frontier?.inside ? 'room' : null, safe: g.inTown(),
+        sneaking: p.sneaking, moveFraction: p.moveFraction, mounted: !!g.horse?.mounted, invulnerable: p.invulnerable };
+    };
+    return {
+      physics: g.physics, enemyController: g.enemyController, world: g.run.world,
+      riders: () => (g.player ? [rider()] : []),
+      localRider: () => (g.player ? rider() : null),
+      bearAllowed: () => !g.run.questFlags?.['hunt:bear'],
+      bite: (r, dmg, dx, dz, a) => { this.biteSound(a); g.player.damage(dmg, dx, dz); },
+      added: (a) => this.addModel(a.id, a.kind),
+      removed: (a) => this.dropModel(a.id),
+      hurt: (a) => this.hurtSound(a),
+      killed: (a, c) => { this.addCarcass(c); if (a.def.legend) this.legendDown(); },
+      carcassGone: (c) => this.dropCarcass(c.id),
+    };
+  }
+
+  get animals() { return this.sim ? this.sim.animals : [...this.puppets.values()]; }
 
   dispose() {
-    for (const a of [...this.animals]) this.remove(a);
-    for (const c of this.carcasses) this.game.levelGroup?.remove(c.model.root);
-    this.carcasses = [];
+    this.sim?.dispose();
+    for (const p of this.puppets.values()) if (p.body) this.game.physics?.removeBody(p.body);
+    for (const id of [...this.models.keys()]) this.dropModel(id);
+    for (const id of [...this.carcassModels.keys()]) this.dropCarcass(id);
+    this.puppets.clear();
   }
 
-  spawn(kind, x, z) {
-    const g = this.game, def = SPECIES[kind];
-    const model = buildModel(def);
-    model.root.position.set(x, 0, z);
-    g.levelGroup.add(model.root);
-    const cap = g.physics.kinematicCapsule(x, z, T.player.halfHeight, def.radius, GROUPS.enemy, null);
-    const a = {
-      kind, def, model, x, z, px: x, pz: z, yaw: Math.random() * 6.28, prevYaw: 0, hp: def.hp, alive: true, animal: true,
-      state: 'graze', stateT: Math.random() * 3, tx: x, tz: z, speed: 0, phase: Math.random() * 6, biteT: 0, hurt: false,
-      body: cap.body, collider: cap.collider, bodyY: cap.y, flash: 0,
-    };
-    a.onHit = (dmg, dx, dz, knock, zone) => this.hit(a, dmg * (zone === 'head' ? 1.6 : 1), dx, dz);
-    // The collider's owner lets player shots find the animal.
-    g.physics.setOwner(cap.collider, a);
-    this.animals.push(a);
-    return a;
+  // ---------- models ----------
+
+  addModel(id, kind) {
+    const m = buildModel(SPECIES[kind]);
+    m.root.visible = this.visible;
+    this.game.levelGroup.add(m.root);
+    this.models.set(id, m);
+    return m;
   }
 
-  remove(a) {
+  dropModel(id) {
+    const m = this.models.get(id);
+    if (!m) return;
+    this.game.levelGroup?.remove(m.root);
+    this.models.delete(id);
+  }
+
+  addCarcass(c) {
+    const m = buildModel(c.def ?? SPECIES[c.kind]);
+    m.root.position.set(c.x, (c.def ?? SPECIES[c.kind]).size * 0.3, c.z);
+    m.root.rotation.set(0, c.yaw, Math.PI / 2 * c.dir);
+    for (const leg of m.legs) leg.rotation.x = 0.2;
+    m.root.visible = this.visible;
+    this.game.levelGroup.add(m.root);
+    this.carcassModels.set(c.id, m);
+    if (!this.carcasses.some((x) => x.id === c.id)) this.carcasses.push(c);
+    this.game.audio.at('bodyFall', c.x, c.z, { vol: Math.min(1, (c.def ?? SPECIES[c.kind]).size), delay: 0.2 });
+  }
+
+  dropCarcass(id) {
+    const m = this.carcassModels.get(id);
+    if (m) this.game.levelGroup?.remove(m.root);
+    this.carcassModels.delete(id);
+    this.carcasses = this.carcasses.filter((c) => c.id !== id);
+  }
+
+  hurtSound(a) {
+    const def = a.def;
+    this.game.audio.at('enemyHurt', a.x, a.z, { vol: 0.4, pitch: def.size < 0.5 ? 1.8 : def.legend ? 0.6 : 1.2 });
+  }
+
+  biteSound(a) { this.game.audio.at('enemyHurt', a.x, a.z, { vol: 0.8, pitch: a.def.legend ? 0.45 : 0.75 }); }
+
+  legendDown() {
     const g = this.game;
-    if (a.body) { g.physics.removeBody(a.body); a.body = null; }
-    g.levelGroup?.remove(a.model.root);
-    const i = this.animals.indexOf(a);
-    if (i >= 0) this.animals.splice(i, 1);
+    g.ui.toast('Old Scar falls. The forest goes quiet.', 5);
+    g.audio.cue?.('victory');
+    if (!this.online) g.questEvent({ type: 'hunt', animal: 'bear' });
   }
 
-  /** Gunfire nearby sends every animal running, and makes hunters come. */
-  hear(x, z, range = 45) {
-    for (const a of this.animals) {
-      if (!a.alive || Math.hypot(a.x - x, a.z - z) > range) continue;
-      if (a.def.temper === 'hunt') a.state = 'charge';
-      else this.flee(a, x, z);
+  setVisible(on) {
+    if (this.visible === on) return;
+    this.visible = on;
+    for (const m of this.models.values()) m.root.visible = on;
+    for (const m of this.carcassModels.values()) m.root.visible = on;
+  }
+
+  // ---------- online puppets ----------
+
+  /** Applies the server's animal rows [id, kind, x, z, yaw, speed, state, hp] and carcass rows [id, kind, x, z, yaw, dir]. */
+  apply(rows = [], carcassRows = []) {
+    const g = this.game, seen = new Set();
+    for (const [id, k, x, z, yaw, speed, state, hp] of rows) {
+      seen.add(id);
+      let p = this.puppets.get(id);
+      if (!p) {
+        const kind = SPECIES_KEYS[k] ?? 'deer', def = SPECIES[kind];
+        const cap = g.physics.kinematicCapsule(x, z, T.player.halfHeight, def.radius, GROUPS.enemy, null);
+        p = { id, kind, def, x, z, px: x, pz: z, yaw, prevYaw: yaw, nx: x, nz: z, nyaw: yaw, speed, state: 'graze', hp: def.hp, alive: true, animal: true, body: cap.body, bodyY: cap.y };
+        p.onHit = (dmg, dx, dz, knock, zone) => { this.game.net.queueHit('a', id, zone ?? 'body', dx, dz); return { killed: false, crit: false }; };
+        g.physics.setOwner(cap.collider, p);
+        this.puppets.set(id, p);
+        this.addModel(id, kind);
+      }
+      p.nx = x; p.nz = z; p.nyaw = yaw; p.speed = speed; p.state = ANIMAL_STATES[state] ?? 'graze';
+      const newHp = hp * p.def.hp;
+      if (newHp < p.hp - 0.5) this.hurtSound(p);
+      if (p.state === 'charge' && p.lastState !== 'charge' && p.def.temper) this.biteSound(p);
+      p.lastState = p.state;
+      p.hp = newHp;
     }
-  }
-
-  flee(a, fx, fz) {
-    const dx = a.x - fx, dz = a.z - fz, d = Math.hypot(dx, dz) || 1;
-    a.state = 'flee'; a.stateT = 6 + Math.random() * 3;
-    a.tx = a.x + dx / d * 60; a.tz = a.z + dz / d * 60;
-  }
-
-  hit(a, dmg, dx, dz) {
-    if (!a.alive) return { killed: false, crit: false };
-    a.hp -= dmg;
-    a.flash = 0.08;
-    const g = this.game;
-    g.audio.at('enemyHurt', a.x, a.z, { vol: 0.4, pitch: a.def.size < 0.5 ? 1.8 : a.def.legend ? 0.6 : 1.2 });
-    if (a.hp <= 0) { this.kill(a, dx, dz); return { killed: true, crit: false }; }
-    a.hurt = true;
-    if (a.def.temper) a.state = 'charge';
-    else { const P = g.player; this.flee(a, P.x, P.z); }
-    return { killed: false, crit: false };
-  }
-
-  kill(a, dx, dz) {
-    const g = this.game;
-    a.alive = false;
-    if (a.body) { g.physics.removeBody(a.body); a.body = null; }
-    a.model.root.rotation.z = Math.PI / 2 * (dx > 0 ? 1 : -1);
-    a.model.root.position.y = a.def.size * 0.3;
-    for (const leg of a.model.legs) leg.rotation.x = 0.2;
-    g.audio.at('bodyFall', a.x, a.z, { vol: a.def.size, delay: 0.2 });
-    this.animals.splice(this.animals.indexOf(a), 1);
-    this.carcasses.push({ ...a, t: 0, id: `skin-${Math.random().toString(36).slice(2)}` });
-    if (a.def.legend) {
-      g.ui.toast('Old Scar falls. The forest goes quiet.', 5);
-      g.audio.cue?.('victory');
-      g.questEvent({ type: 'hunt', animal: 'bear' });
+    for (const [id, p] of this.puppets) {
+      if (seen.has(id)) continue;
+      if (p.body) g.physics.removeBody(p.body);
+      this.puppets.delete(id);
+      this.dropModel(id);
     }
+    const carc = new Set();
+    for (const [id, k, x, z, yaw, dir] of carcassRows) {
+      carc.add(id);
+      if (!this.carcassModels.has(id)) {
+        const kind = SPECIES_KEYS[k] ?? 'deer';
+        this.addCarcass({ id, kind, def: SPECIES[kind], x, z, yaw, dir });
+      }
+    }
+    for (const id of [...this.carcassModels.keys()]) if (!carc.has(id)) this.dropCarcass(id);
   }
 
-  /** Carcasses the player can skin. */
-  points() {
-    return this.carcasses.map((c) => ({ id: c.id, kind: 'skin', label: `Skin the ${c.kind === 'bear' ? 'great bear' : c.kind}`, x: c.x, z: c.z, carcass: c }));
+  /** The server handed us a pelt we skinned. */
+  onPelt(m) {
+    const g = this.game, run = g.run, pelt = m.pelt;
+    if (!PELTS[pelt]) return;
+    run.items[pelt] = Math.min(9, (run.items[pelt] ?? 0) + 1);
+    this.skinned(pelt);
   }
 
-  skin(point) {
-    const g = this.game, c = point.carcass, run = g.run, pelt = c.def.pelt;
-    if ((run.items[pelt] ?? 0) >= 9) { g.ui.toast('You cannot carry more of those.'); return; }
-    run.items[pelt] = (run.items[pelt] ?? 0) + 1;
-    g.levelGroup.remove(c.model.root);
-    this.carcasses.splice(this.carcasses.indexOf(c), 1);
+  skinned(pelt) {
+    const g = this.game, run = g.run;
     g.audio.play('bandage', { vol: 0.5, pitch: 0.7 });
     g.ui.questNote(`${PELTS[pelt].name} · ${run.items[pelt]} carried. Hank or Otto will buy it.`);
     g.save();
@@ -12317,103 +12626,50 @@ class Wildlife {
   // ---------- per tick ----------
 
   tick(dt) {
-    const g = this.game, P = g.player;
-    if (!P || g.frontier?.inside) return;
-    this.spawnT -= dt;
-    if (this.spawnT <= 0) { this.spawnT = 1.5; this.populate(P); }
-    for (const a of [...this.animals]) {
-      a.px = a.x; a.pz = a.z; a.prevYaw = a.yaw;
-      const d = Math.hypot(a.x - P.x, a.z - P.z);
-      if (d > SPAWN.despawn && !a.def.legend) { this.remove(a); continue; }
-      this.think(a, P, d, dt);
-    }
-    for (const c of [...this.carcasses]) {
-      c.t += dt;
-      if (c.t > 150 || Math.hypot(c.x - P.x, c.z - P.z) > SPAWN.despawn * 1.3) { g.levelGroup.remove(c.model.root); this.carcasses.splice(this.carcasses.indexOf(c), 1); }
+    if (this.sim) { this.sim.tick(dt); return; }
+    const k = Math.min(1, dt * 10);
+    for (const p of this.puppets.values()) {
+      p.px = p.x; p.pz = p.z; p.prevYaw = p.yaw;
+      const far = Math.hypot(p.nx - p.x, p.nz - p.z) > 8;
+      p.x = far ? p.nx : p.x + (p.nx - p.x) * k;
+      p.z = far ? p.nz : p.z + (p.nz - p.z) * k;
+      p.yaw += angleDelta(p.yaw, p.nyaw) * k;
+      p.body?.setNextKinematicTranslation({ x: p.x, y: p.bodyY, z: p.z });
     }
   }
 
-  populate(P) {
-    const g = this.game, world = g.run.world, green = forestAt(P.x, P.z);
-    const cap = green > 0.5 ? 9 : 6, near = this.animals.filter((a) => Math.hypot(a.x - P.x, a.z - P.z) < 130).length;
-    // Old Scar keeps to his den until he is killed.
-    const den = world.sites?.find((s) => s.kind === 'den');
-    if (den && !g.run.questFlags?.['hunt:bear'] && !this.animals.some((a) => a.def.legend) && Math.hypot(den.x - P.x, den.z - P.z) < 90 && Math.hypot(den.x - P.x, den.z - P.z) > 30) {
-      this.spawn('bear', den.x, den.z + 6);
-    }
-    if (near >= cap || g.inTown()) return;
-    const angle = Math.random() * Math.PI * 2, dist = SPAWN.min + Math.random() * (SPAWN.max - SPAWN.min);
-    const x = P.x + Math.cos(angle) * dist, z = P.z + Math.sin(angle) * dist;
-    if (Math.abs(x) > world.half - 10 || Math.abs(z) > world.half - 10 || inRiver(x, z, 3)) return;
-    if (townsOf(world).some((t) => Math.hypot(x - t.x, z - t.z) < t.radius + 30)) return;
-    if (world.camps.some((c) => Math.hypot(x - c.x, z - c.z) < 45)) return;
-    const kind = speciesFor(forestAt(x, z), Math.random()), [lo, hi] = SPECIES[kind].herd;
-    const n = lo + Math.floor(Math.random() * (hi - lo + 1));
-    for (let i = 0; i < n; i++) this.spawn(kind, x + (Math.random() - 0.5) * 6, z + (Math.random() - 0.5) * 6);
+  hear(x, z, range) { this.sim?.hear(x, z, range); }
+
+  points() {
+    return this.carcasses.map((c) => ({ id: c.id, kind: 'skin', label: `Skin the ${c.kind === 'bear' ? 'great bear' : c.kind}`, x: c.x, z: c.z, carcass: c }));
   }
 
-  think(a, P, d, dt) {
-    const g = this.game, def = a.def;
-    a.stateT -= dt;
-    const sense = def.sense * (P.sneaking ? 0.55 : P.moveFraction > 0.75 ? 1.15 : 1) * (g.horse?.mounted ? 1.2 : 1);
-    if (P.alive && !g.inTown()) {
-      if (def.temper === 'hunt' && d < sense && a.state !== 'charge') a.state = 'charge';
-      else if (!def.temper && d < sense && a.state !== 'flee') this.flee(a, P.x, P.z);
-      else if (def.temper === 'hurt' && a.hurt && a.state !== 'charge') a.state = 'charge';
-    } else if (a.state === 'charge') a.state = 'graze';
-    let want = 0, tx = a.tx, tz = a.tz;
-    if (a.state === 'charge') {
-      tx = P.x; tz = P.z; want = def.speed * (def.legend ? 0.95 : 1);
-      if (d > 60) { a.state = 'graze'; a.hurt = false; }
-      a.biteT -= dt;
-      if (d < def.radius + 1.3 && a.biteT <= 0) { a.biteT = def.legend ? 1.4 : 1.1; this.bite(a, P); }
-      if (d < def.radius + 0.9) want = 0;
-    } else if (a.state === 'flee') {
-      want = def.speed;
-      if (a.stateT <= 0) a.state = 'graze';
-    } else {
-      if (a.stateT <= 0) { a.stateT = 3 + Math.random() * 5; const r = Math.random() * 8; a.tx = a.x + Math.cos(r) * 6; a.tz = a.z + Math.sin(r) * 6; a.walk = Math.random() < 0.5; }
-      want = a.walk ? def.speed * 0.18 : 0;
-    }
-    const dx = tx - a.x, dz = tz - a.z, l = Math.hypot(dx, dz);
-    if (l < 0.5) want = 0;
-    if (want > 0) a.yaw = turnToward(a.yaw, Math.atan2(dx, dz), dt * (a.state === 'graze' ? 2 : 6));
-    a.speed += (want - a.speed) * Math.min(1, dt * 4);
-    const mx = Math.sin(a.yaw) * a.speed * dt, mz = Math.cos(a.yaw) * a.speed * dt;
-    if (a.body && (mx || mz)) {
-      const cc = g.enemyController;
-      cc.computeColliderMovement(a.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
-      const mv = cc.computedMovement();
-      a.x += mv.x; a.z += mv.z;
-      if (Math.hypot(mv.x, mv.z) < Math.hypot(mx, mz) * 0.3 && a.state !== 'charge') a.yaw += 1.2;
-      a.body.setNextKinematicTranslation({ x: a.x, y: a.bodyY, z: a.z });
-    }
-  }
-
-  bite(a, P) {
-    const g = this.game, dx = P.x - a.x, dz = P.z - a.z, d = Math.hypot(dx, dz) || 1;
-    g.audio.at('enemyHurt', a.x, a.z, { vol: 0.8, pitch: a.def.legend ? 0.45 : 0.75 });
-    if (P.invulnerable || g.inTown()) return;
-    if (g.net) g.net.act('animal', { dmg: a.def.bite, dx: dx / d, dz: dz / d });
-    else P.damage(a.def.bite, dx / d, dz / d);
+  skin(point) {
+    const g = this.game, run = g.run, pelt = (point.carcass.def ?? SPECIES[point.carcass.kind]).pelt;
+    if ((run.items[pelt] ?? 0) >= 9) { g.ui.toast('You cannot carry more of those.'); return; }
+    if (this.online) { g.net.act('skin', { id: point.id }); return; }
+    const p = g.player, got = this.sim.skin(point.id, { x: p.x, z: p.z });
+    if (!got) return;
+    run.items[got] = (run.items[got] ?? 0) + 1;
+    this.skinned(got);
   }
 
   render(alpha, dt) {
     for (const a of this.animals) {
-      const m = a.model;
+      const m = this.models.get(a.id);
+      if (!m) continue;
       m.root.position.set(a.px + (a.x - a.px) * alpha, 0, a.pz + (a.z - a.pz) * alpha);
       m.root.rotation.y = a.prevYaw + angleDelta(a.prevYaw, a.yaw) * alpha;
-      a.phase += dt * (2 + a.speed * 1.6);
+      m.phase += dt * (2 + a.speed * 1.6);
       const swing = Math.min(1, a.speed / 3) * 0.7;
-      m.legs.forEach((leg, i) => { leg.rotation.x = Math.sin(a.phase + (i === 0 || i === 3 ? 0 : Math.PI)) * swing; });
-      m.root.position.y = Math.abs(Math.sin(a.phase)) * Math.min(0.12, a.speed * 0.012) * a.def.size;
-      if (a.state === 'graze' && a.speed < 0.3) m.root.children[0].rotation.x = Math.sin(a.phase * 0.2) > 0.3 ? 0.18 : 0;
-      else m.root.children[0].rotation.x = 0;
+      m.legs.forEach((leg, i) => { leg.rotation.x = Math.sin(m.phase + (i === 0 || i === 3 ? 0 : Math.PI)) * swing; });
+      m.root.position.y = Math.abs(Math.sin(m.phase)) * Math.min(0.12, a.speed * 0.012) * a.def.size;
+      m.body.rotation.x = a.state === 'graze' && a.speed < 0.3 && Math.sin(m.phase * 0.2) > 0.3 ? 0.18 : 0;
     }
   }
 }
 
-return { SPECIES, Wildlife };
+return { Hunting };
 })();
 
 // ---- src/ui-boss.js ----
@@ -12631,7 +12887,7 @@ const { MapView } = __m.map;
 const { NetWorld } = __m.net_world;
 const { townAt } = __m.towns;
 const { drunkScreen } = __m.vices;
-const { Wildlife } = __m.wildlife;
+const { Hunting } = __m.hunting;
 const { BossBar } = __m.ui_boss;
 const { Sky } = __m.sky;
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
@@ -12756,7 +13012,7 @@ class Game {
     for (const shot of run.projectiles ?? []) this.projectiles.spawn(shot.x, shot.z, shot.dx, shot.dz, shot.speed, shot.dmg, shot.left);
     this.corpses = [];
     this.rebuildNav();
-    this.wildlife = new Wildlife(this);
+    this.wildlife = new Hunting(this);
     if (this.net) this.netWorld = new NetWorld(this, this.net);
 
     this.deadEye.meter = run.deadEye ?? 0;
@@ -13273,7 +13529,7 @@ class Game {
       p.render(alpha, simDt);
       this.horse?.render(dt);
       this.netWorld?.render(alpha, simDt);
-      if (this.wildlife) for (const a of [...this.wildlife.animals, ...this.wildlife.carcasses]) a.model.root.visible = !this.frontier.inside;
+      this.wildlife?.setVisible(!this.frontier.inside);
       if (!this.frontier.inside) this.wildlife?.render(alpha, simDt);
       if (this.frontier.inside) {
         for (const e of this.enemies) { e.model.root.visible = false; e.hideAimLine(); }
@@ -13448,11 +13704,14 @@ class Net {
       const armed = !g.inTown() || !!this.dueling;
       const flags = (armed ? PF.ARMED | PF.AIM : 0) | (p.rolling ? PF.ROLL : 0) | (g.horse?.mounted ? PF.MOUNT : 0)
         | (g.frontier?.seated ? PF.SEAT : 0) | (p.bandaging ? PF.BANDAGE : 0) | (p.sneaking ? PF.SNEAK : 0)
-        | (p.coat ? PF.COAT : 0) | (p.invulnerable ? PF.IFRAME : 0);
+        | (g.run.gear?.coat ? PF.COAT : 0) | (p.invulnerable ? PF.IFRAME : 0)
+        | (p.smokeT > 0 ? PF.SMOKE : 0) | ((g.run.drunk ?? 0) > 0.5 ? PF.DRUNK : 0);
       this.send({
         t: 'st', x: q2(p.x), z: q2(p.z), yaw: q3(p.yaw), vx: q2(p.vx), vz: q2(p.vz), sp: q2(p.speedNow),
         f: flags, g: Math.max(0, GUN_CODES.indexOf(p.gun.def.key)), r: Math.max(0, ROOMS.indexOf(room)),
         rf: p.rolling ? q2(p.rollT / T.dodge.duration) : -1,
+        // A horse left standing is shown to everyone nearby.
+        h: g.horse && !g.horse.mounted && !g.horse.away ? [q2(g.horse.x), q2(g.horse.z), q3(g.horse.yaw), g.horse.data.owned ? 1 : 0] : 0,
       });
     }
     this.saveT -= dt;

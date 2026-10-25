@@ -1,16 +1,16 @@
-// Wildlife for hunting. Animals appear around the rider according to the land
-// (pronghorn and rabbits in the desert, deer, elk, boar and wolves in the
-// pines), graze, bolt at gunfire and leave a carcass to skin. Wolves and the
-// great bear Old Scar fight back. Each browser keeps its own animals; online,
-// their bites are sent to the server, which owns the rider's health.
-import * as THREE from 'three';
+// Wildlife for hunting: who lives where, how animals graze, bolt and fight,
+// and the carcasses they leave. This is pure simulation with no meshes, so the
+// same code runs in the browser (offline) and on the server (online, where
+// every rider shares the same herds). wildlife-view.js draws the animals.
+//
+// The host supplies: physics, enemyController, world, riders() and the
+// callbacks bite(rider, dmg, dx, dz), killed(a, carcass, by), bearAllowed(),
+// and optional added(a), removed(a), carcassGone(c), hurt(a).
 import { T } from './tuning.js';
 import { GROUPS, RAPIER } from './physics.js';
-import { MAT, Shape, meshOf } from './models.js';
-import { angleDelta, turnToward } from './character.js';
+import { turnToward } from './character.js';
 import { forestAt, inRiver } from './terrain.js';
 import { townsOf } from './towns.js';
-import { PELTS } from './items.js';
 
 export const SPECIES = {
   rabbit: { hp: 12, speed: 7.5, size: 0.32, radius: 0.3, sense: 12, herd: [1, 2], pelt: 'rabbitPelt', color: 0xa08a6a, belly: 0xd8cbb0 },
@@ -21,88 +21,61 @@ export const SPECIES = {
   wolf: { hp: 60, speed: 8.5, size: 0.78, radius: 0.5, sense: 26, herd: [3, 4], pelt: 'wolfPelt', color: 0x6a6a6e, belly: 0xb8b8b4, temper: 'hunt', bite: 11 },
   bear: { hp: 650, speed: 7.2, size: 1.75, radius: 0.95, sense: 34, herd: [1, 1], pelt: 'bearHide', color: 0x3a2a20, belly: 0x5a4030, temper: 'hunt', bite: 30, legend: true },
 };
+export const SPECIES_KEYS = Object.keys(SPECIES);
+export const ANIMAL_STATES = ['graze', 'flee', 'charge'];
 
 const SPAWN = { min: 70, max: 110, despawn: 150 };
+const CARCASS_LIFE = 180;
+const SKIN_RANGE = 3.2;
 
 /** Which animals live at a spot, by how green the land is. */
-function speciesFor(green, rng) {
-  if (green > 0.6) return rng < 0.36 ? 'deer' : rng < 0.52 ? 'elk' : rng < 0.7 ? 'boar' : rng < 0.85 ? 'wolf' : 'rabbit';
-  if (green > 0.25) return rng < 0.4 ? 'deer' : rng < 0.6 ? 'boar' : rng < 0.85 ? 'rabbit' : 'pronghorn';
-  return rng < 0.55 ? 'pronghorn' : 'rabbit';
-}
-
-function buildModel(def) {
-  const s = new Shape(), k = def.size, c = def.color, legs = [];
-  const tall = def.horns || def === SPECIES.wolf ? 1 : 0.8;
-  s.box(0.5 * k, 0.48 * k, 1.15 * k, c, 0, 0.95 * k * tall, 0);
-  s.box(0.42 * k, 0.14 * k, 0.9 * k, def.belly, 0, 0.72 * k * tall, 0);
-  s.box(0.24 * k, 0.4 * k, 0.26 * k, c, 0, 1.22 * k * tall, 0.55 * k, -0.5);
-  s.box(0.24 * k, 0.24 * k, 0.42 * k, c, 0, 1.4 * k * tall, 0.78 * k);
-  s.box(0.12 * k, 0.1 * k, 0.12 * k, 0x1a1412, 0, 1.36 * k * tall, 1.0 * k);
-  for (const side of [-1, 1]) s.cone(0.06 * k, 0.18 * k, 4, c, side * 0.1 * k, 1.58 * k * tall, 0.7 * k);
-  s.box(0.1 * k, 0.12 * k, 0.24 * k, def.belly, 0, 1.0 * k * tall, -0.62 * k, 0.6);
-  if (def.horns === 'antler' || def.horns === 'rack') {
-    const r = def.horns === 'rack' ? 1.6 : 1;
-    for (const side of [-1, 1]) {
-      s.box(0.05 * k, 0.5 * k * r, 0.05 * k, 0xd8c8a8, side * 0.16 * k, 1.75 * k * tall, 0.72 * k, 0.2, 0, side * 0.5);
-      s.box(0.04 * k, 0.28 * k * r, 0.04 * k, 0xd8c8a8, side * 0.3 * k, 1.9 * k * tall, 0.66 * k, -0.4, 0, side * 0.2);
-    }
-  } else if (def.horns === 'prong') for (const side of [-1, 1]) s.box(0.05 * k, 0.32 * k, 0.05 * k, 0x2a2420, side * 0.08 * k, 1.66 * k * tall, 0.74 * k, 0.15);
-  if (def.tusks) for (const side of [-1, 1]) s.cone(0.04 * k, 0.16 * k, 4, 0xeadfc6, side * 0.1 * k, 1.28 * k * tall, 0.98 * k, -1.2);
-  const root = new THREE.Group();
-  root.add(meshOf(s, MAT.solid));
-  for (const [x, z] of [[-0.16, 0.42], [0.16, 0.42], [-0.16, -0.42], [0.16, -0.42]]) {
-    const leg = new THREE.Group(), ls = new Shape();
-    ls.box(0.11 * k, 0.75 * k * tall, 0.11 * k, c, 0, -0.37 * k * tall, 0);
-    ls.box(0.12 * k, 0.08 * k, 0.14 * k, 0x2a2018, 0, -0.74 * k * tall, 0.02 * k);
-    leg.add(meshOf(ls, MAT.solid));
-    leg.position.set(x * k, 0.78 * k * tall, z * k);
-    root.add(leg); legs.push(leg);
-  }
-  return { root, legs };
+function speciesFor(green, r) {
+  if (green > 0.6) return r < 0.36 ? 'deer' : r < 0.52 ? 'elk' : r < 0.7 ? 'boar' : r < 0.85 ? 'wolf' : 'rabbit';
+  if (green > 0.25) return r < 0.4 ? 'deer' : r < 0.6 ? 'boar' : r < 0.85 ? 'rabbit' : 'pronghorn';
+  return r < 0.55 ? 'pronghorn' : 'rabbit';
 }
 
 export class Wildlife {
-  constructor(game) {
-    this.game = game;
+  constructor(host) {
+    this.host = host;
     this.animals = [];
-    this.spawnT = 1;
     this.carcasses = [];
+    this.spawnT = 1;
+    this.nextId = 1;
+    this.time = 0;
   }
 
   dispose() {
     for (const a of [...this.animals]) this.remove(a);
-    for (const c of this.carcasses) this.game.levelGroup?.remove(c.model.root);
-    this.carcasses = [];
+    for (const c of [...this.carcasses]) this.dropCarcass(c);
   }
 
+  byId(id) { return this.animals.find((a) => a.id === id) ?? null; }
+
   spawn(kind, x, z) {
-    const g = this.game, def = SPECIES[kind];
-    const model = buildModel(def);
-    model.root.position.set(x, 0, z);
-    g.levelGroup.add(model.root);
-    const cap = g.physics.kinematicCapsule(x, z, T.player.halfHeight, def.radius, GROUPS.enemy, null);
+    const h = this.host, def = SPECIES[kind];
+    const cap = h.physics.kinematicCapsule(x, z, T.player.halfHeight, def.radius, GROUPS.enemy, null);
     const a = {
-      kind, def, model, x, z, px: x, pz: z, yaw: Math.random() * 6.28, prevYaw: 0, hp: def.hp, alive: true, animal: true,
-      state: 'graze', stateT: Math.random() * 3, tx: x, tz: z, speed: 0, phase: Math.random() * 6, biteT: 0, hurt: false,
-      body: cap.body, collider: cap.collider, bodyY: cap.y, flash: 0,
+      id: `a${this.nextId++}`, kind, def, x, z, px: x, pz: z, yaw: Math.random() * 6.28, prevYaw: 0, hp: def.hp, alive: true, animal: true,
+      state: 'graze', stateT: Math.random() * 3, tx: x, tz: z, speed: 0, biteT: 0, hurt: false, walk: false, hitters: new Map(),
+      body: cap.body, collider: cap.collider, bodyY: cap.y,
     };
-    a.onHit = (dmg, dx, dz, knock, zone) => this.hit(a, dmg * (zone === 'head' ? 1.6 : 1), dx, dz);
-    // The collider's owner lets player shots find the animal.
-    g.physics.setOwner(cap.collider, a);
+    // Offline, a shot that meets the capsule lands here directly.
+    a.onHit = (dmg, dx, dz, knock, zone) => this.hit(a, dmg * (zone === 'head' ? 1.6 : 1), dx, dz, h.localRider?.() ?? null);
+    h.physics.setOwner(cap.collider, a);
     this.animals.push(a);
+    h.added?.(a);
     return a;
   }
 
   remove(a) {
-    const g = this.game;
-    if (a.body) { g.physics.removeBody(a.body); a.body = null; }
-    g.levelGroup?.remove(a.model.root);
+    if (a.body) { this.host.physics.removeBody(a.body); a.body = null; }
     const i = this.animals.indexOf(a);
     if (i >= 0) this.animals.splice(i, 1);
+    this.host.removed?.(a);
   }
 
-  /** Gunfire nearby sends every animal running, and makes hunters come. */
+  /** Gunfire nearby sends grazers running and draws hunters in. */
   hear(x, z, range = 45) {
     for (const a of this.animals) {
       if (!a.alive || Math.hypot(a.x - x, a.z - z) > range) continue;
@@ -117,80 +90,77 @@ export class Wildlife {
     a.tx = a.x + dx / d * 60; a.tz = a.z + dz / d * 60;
   }
 
-  hit(a, dmg, dx, dz) {
+  /** Damage from a rider's shot. Returns {killed} like an outlaw's onHit. */
+  hit(a, dmg, dx, dz, by) {
     if (!a.alive) return { killed: false, crit: false };
     a.hp -= dmg;
-    a.flash = 0.08;
-    const g = this.game;
-    g.audio.at('enemyHurt', a.x, a.z, { vol: 0.4, pitch: a.def.size < 0.5 ? 1.8 : a.def.legend ? 0.6 : 1.2 });
-    if (a.hp <= 0) { this.kill(a, dx, dz); return { killed: true, crit: false }; }
+    if (by) a.hitters.set(by.id, this.time);
+    this.host.hurt?.(a);
+    if (a.hp <= 0) { this.kill(a, dx, dz, by); return { killed: true, crit: false }; }
     a.hurt = true;
-    if (a.def.temper) a.state = 'charge';
-    else { const P = g.player; this.flee(a, P.x, P.z); }
+    if (a.def.temper) { a.state = 'charge'; if (by) a.focus = by.id; }
+    else this.flee(a, by?.x ?? a.x - dx, by?.z ?? a.z - dz);
     return { killed: false, crit: false };
   }
 
-  kill(a, dx, dz) {
-    const g = this.game;
+  kill(a, dx, dz, by) {
     a.alive = false;
-    if (a.body) { g.physics.removeBody(a.body); a.body = null; }
-    a.model.root.rotation.z = Math.PI / 2 * (dx > 0 ? 1 : -1);
-    a.model.root.position.y = a.def.size * 0.3;
-    for (const leg of a.model.legs) leg.rotation.x = 0.2;
-    g.audio.at('bodyFall', a.x, a.z, { vol: a.def.size, delay: 0.2 });
-    this.animals.splice(this.animals.indexOf(a), 1);
-    this.carcasses.push({ ...a, t: 0, id: `skin-${Math.random().toString(36).slice(2)}` });
-    if (a.def.legend) {
-      g.ui.toast('Old Scar falls. The forest goes quiet.', 5);
-      g.audio.cue?.('victory');
-      g.questEvent({ type: 'hunt', animal: 'bear' });
-    }
+    const carcass = { id: `c${a.id.slice(1)}`, kind: a.kind, def: a.def, x: a.x, z: a.z, yaw: a.yaw, dir: dx > 0 ? 1 : -1, t: 0 };
+    this.remove(a);
+    this.carcasses.push(carcass);
+    this.host.killed?.(a, carcass, by);
   }
 
-  /** Carcasses the player can skin. */
-  points() {
-    return this.carcasses.map((c) => ({ id: c.id, kind: 'skin', label: `Skin the ${c.kind === 'bear' ? 'great bear' : c.kind}`, x: c.x, z: c.z, carcass: c }));
+  /** Takes the skin from a carcass for a rider standing over it. Returns the pelt id or null. */
+  skin(id, rider) {
+    const c = this.carcasses.find((x) => x.id === id);
+    if (!c || !rider || Math.hypot(c.x - rider.x, c.z - rider.z) > SKIN_RANGE) return null;
+    this.dropCarcass(c);
+    return c.def.pelt;
   }
 
-  skin(point) {
-    const g = this.game, c = point.carcass, run = g.run, pelt = c.def.pelt;
-    if ((run.items[pelt] ?? 0) >= 9) { g.ui.toast('You cannot carry more of those.'); return; }
-    run.items[pelt] = (run.items[pelt] ?? 0) + 1;
-    g.levelGroup.remove(c.model.root);
-    this.carcasses.splice(this.carcasses.indexOf(c), 1);
-    g.audio.play('bandage', { vol: 0.5, pitch: 0.7 });
-    g.ui.questNote(`${PELTS[pelt].name} · ${run.items[pelt]} carried. Hank or Otto will buy it.`);
-    g.save();
+  dropCarcass(c) {
+    const i = this.carcasses.indexOf(c);
+    if (i >= 0) this.carcasses.splice(i, 1);
+    this.host.carcassGone?.(c);
+  }
+
+  /** Riders who share credit for a kill: anyone who hit it in the last minute. */
+  creditFor(a) {
+    return [...a.hitters.entries()].filter(([, t]) => this.time - t < 60).map(([id]) => id);
   }
 
   // ---------- per tick ----------
 
   tick(dt) {
-    const g = this.game, P = g.player;
-    if (!P || g.frontier?.inside) return;
+    this.time += dt;
+    const riders = this.host.riders().filter((r) => r.alive && !r.room);
     this.spawnT -= dt;
-    if (this.spawnT <= 0) { this.spawnT = 1.5; this.populate(P); }
+    if (this.spawnT <= 0) { this.spawnT = 1.5; for (const r of riders) this.populate(r); }
     for (const a of [...this.animals]) {
       a.px = a.x; a.pz = a.z; a.prevYaw = a.yaw;
-      const d = Math.hypot(a.x - P.x, a.z - P.z);
-      if (d > SPAWN.despawn && !a.def.legend) { this.remove(a); continue; }
-      this.think(a, P, d, dt);
+      let near = null, d = Infinity;
+      for (const r of riders) { const k = Math.hypot(a.x - r.x, a.z - r.z); if (k < d) { d = k; near = r; } }
+      if (a.focus) { const f = riders.find((r) => r.id === a.focus); if (f) { near = f; d = Math.hypot(a.x - f.x, a.z - f.z); } }
+      if (d > SPAWN.despawn && !(a.def.legend && d < 400)) { this.remove(a); continue; }
+      this.think(a, near, d, dt);
     }
     for (const c of [...this.carcasses]) {
       c.t += dt;
-      if (c.t > 150 || Math.hypot(c.x - P.x, c.z - P.z) > SPAWN.despawn * 1.3) { g.levelGroup.remove(c.model.root); this.carcasses.splice(this.carcasses.indexOf(c), 1); }
+      const far = riders.every((r) => Math.hypot(c.x - r.x, c.z - r.z) > SPAWN.despawn * 1.3);
+      if (c.t > CARCASS_LIFE || far) this.dropCarcass(c);
     }
   }
 
   populate(P) {
-    const g = this.game, world = g.run.world, green = forestAt(P.x, P.z);
-    const cap = green > 0.5 ? 9 : 6, near = this.animals.filter((a) => Math.hypot(a.x - P.x, a.z - P.z) < 130).length;
-    // Old Scar keeps to his den until he is killed.
-    const den = world.sites?.find((s) => s.kind === 'den');
-    if (den && !g.run.questFlags?.['hunt:bear'] && !this.animals.some((a) => a.def.legend) && Math.hypot(den.x - P.x, den.z - P.z) < 90 && Math.hypot(den.x - P.x, den.z - P.z) > 30) {
+    const h = this.host, world = h.world;
+    const cap = forestAt(P.x, P.z) > 0.5 ? 9 : 6, near = this.animals.filter((a) => Math.hypot(a.x - P.x, a.z - P.z) < 130).length;
+    // Old Scar keeps to his den.
+    const den = world.sites?.find((s) => s.kind === 'den'), dd = den ? Math.hypot(den.x - P.x, den.z - P.z) : Infinity;
+    if (den && dd < 90 && dd > 30 && !this.animals.some((a) => a.def.legend) && !this.carcasses.some((c) => c.def.legend) && h.bearAllowed()) {
       this.spawn('bear', den.x, den.z + 6);
     }
-    if (near >= cap || g.inTown()) return;
+    if (near >= cap || P.safe) return;
     const angle = Math.random() * Math.PI * 2, dist = SPAWN.min + Math.random() * (SPAWN.max - SPAWN.min);
     const x = P.x + Math.cos(angle) * dist, z = P.z + Math.sin(angle) * dist;
     if (Math.abs(x) > world.half - 10 || Math.abs(z) > world.half - 10 || inRiver(x, z, 3)) return;
@@ -202,18 +172,19 @@ export class Wildlife {
   }
 
   think(a, P, d, dt) {
-    const g = this.game, def = a.def;
+    const def = a.def;
     a.stateT -= dt;
-    const sense = def.sense * (P.sneaking ? 0.55 : P.moveFraction > 0.75 ? 1.15 : 1) * (g.horse?.mounted ? 1.2 : 1);
-    if (P.alive && !g.inTown()) {
-      if (def.temper === 'hunt' && d < sense && a.state !== 'charge') a.state = 'charge';
+    if (P) {
+      const sense = def.sense * (P.sneaking ? 0.55 : P.moveFraction > 0.75 ? 1.15 : 1) * (P.mounted ? 1.2 : 1);
+      if (P.safe) { if (a.state === 'charge') { a.state = 'graze'; a.focus = null; } }
+      else if (def.temper === 'hunt' && d < sense && a.state !== 'charge') a.state = 'charge';
       else if (!def.temper && d < sense && a.state !== 'flee') this.flee(a, P.x, P.z);
       else if (def.temper === 'hurt' && a.hurt && a.state !== 'charge') a.state = 'charge';
     } else if (a.state === 'charge') a.state = 'graze';
     let want = 0, tx = a.tx, tz = a.tz;
-    if (a.state === 'charge') {
+    if (a.state === 'charge' && P) {
       tx = P.x; tz = P.z; want = def.speed * (def.legend ? 0.95 : 1);
-      if (d > 60) { a.state = 'graze'; a.hurt = false; }
+      if (d > 60) { a.state = 'graze'; a.hurt = false; a.focus = null; }
       a.biteT -= dt;
       if (d < def.radius + 1.3 && a.biteT <= 0) { a.biteT = def.legend ? 1.4 : 1.1; this.bite(a, P); }
       if (d < def.radius + 0.9) want = 0;
@@ -230,7 +201,7 @@ export class Wildlife {
     a.speed += (want - a.speed) * Math.min(1, dt * 4);
     const mx = Math.sin(a.yaw) * a.speed * dt, mz = Math.cos(a.yaw) * a.speed * dt;
     if (a.body && (mx || mz)) {
-      const cc = g.enemyController;
+      const cc = this.host.enemyController;
       cc.computeColliderMovement(a.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
       const mv = cc.computedMovement();
       a.x += mv.x; a.z += mv.z;
@@ -240,24 +211,9 @@ export class Wildlife {
   }
 
   bite(a, P) {
-    const g = this.game, dx = P.x - a.x, dz = P.z - a.z, d = Math.hypot(dx, dz) || 1;
-    g.audio.at('enemyHurt', a.x, a.z, { vol: 0.8, pitch: a.def.legend ? 0.45 : 0.75 });
-    if (P.invulnerable || g.inTown()) return;
-    if (g.net) g.net.act('animal', { dmg: a.def.bite, dx: dx / d, dz: dz / d });
-    else P.damage(a.def.bite, dx / d, dz / d);
-  }
-
-  render(alpha, dt) {
-    for (const a of this.animals) {
-      const m = a.model;
-      m.root.position.set(a.px + (a.x - a.px) * alpha, 0, a.pz + (a.z - a.pz) * alpha);
-      m.root.rotation.y = a.prevYaw + angleDelta(a.prevYaw, a.yaw) * alpha;
-      a.phase += dt * (2 + a.speed * 1.6);
-      const swing = Math.min(1, a.speed / 3) * 0.7;
-      m.legs.forEach((leg, i) => { leg.rotation.x = Math.sin(a.phase + (i === 0 || i === 3 ? 0 : Math.PI)) * swing; });
-      m.root.position.y = Math.abs(Math.sin(a.phase)) * Math.min(0.12, a.speed * 0.012) * a.def.size;
-      if (a.state === 'graze' && a.speed < 0.3) m.root.children[0].rotation.x = Math.sin(a.phase * 0.2) > 0.3 ? 0.18 : 0;
-      else m.root.children[0].rotation.x = 0;
-    }
+    if (P.invulnerable || P.safe) return;
+    const dx = P.x - a.x, dz = P.z - a.z, d = Math.hypot(dx, dz) || 1;
+    a.bit = (a.bit ?? 0) + 1;
+    this.host.bite(P, a.def.bite, dx / d, dz / d, a);
   }
 }

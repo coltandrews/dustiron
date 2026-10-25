@@ -227,3 +227,30 @@ test('two riders in town can play poker dice for a stake', async (t) => {
   else { assert.equal(money(wa.id), 15); assert.equal(money(wb.id), 15); }
   a.close(); b.close();
 });
+
+test('animals are shared: one rider shoots a deer and skins it for a pelt', async (t) => {
+  const { port, hub } = await withServer(t);
+  const { r, welcome } = await enter(port, 'Kit');
+  const s = hub.sessions.get(welcome.id).state;
+  Object.assign(s, { x: -150, z: -150 });
+  hub.sim.movePlayer(s);
+  const deer = hub.sim.wildlife.spawn('deer', -146, -150);
+  deer.state = 'graze'; deer.stateT = 99; deer.def = { ...deer.def, sense: 0 };
+  const snap = await r.wait((m) => m.t === 's' && m.w.some((row) => row[0] === deer.id));
+  assert.equal(snap.w.find((row) => row[0] === deer.id)[1], 2, 'kind index for deer');
+  const g = GUN_CODES.indexOf('revolver');
+  for (let i = 0; i < 6 && deer.alive; i++) {
+    await r.send({ t: 'shot', x: s.x, z: s.z, g, e: [deer.x, deer.z] });
+    await r.send({ t: 'hit', k: 'a', id: deer.id, z: 'head', dx: 1, dz: 0 });
+    await sleep(WEAPONS.revolver.interval * 1000 + 20);
+  }
+  assert.equal(deer.alive, false);
+  const carcass = hub.sim.wildlife.carcasses[0];
+  await r.wait((m) => m.t === 's' && m.c.some((row) => row[0] === carcass.id));
+  Object.assign(s, { x: carcass.x - 1, z: carcass.z });
+  await r.send({ t: 'act', a: 'skin', id: carcass.id });
+  const pelt = await r.wait((m) => m.t === 'pelt');
+  assert.equal(pelt.pelt, 'deerHide');
+  assert.equal(hub.sim.wildlife.carcasses.length, 0, 'a carcass is skinned once');
+  r.close();
+});

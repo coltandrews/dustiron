@@ -167,6 +167,9 @@ export class Hub {
     s.flags = (m.f | 0) & 0xffff;
     s.sneaking = !!(s.flags & PF.SNEAK);
     s.iframe = !!(s.flags & PF.IFRAME);
+    const h = m.h;
+    s.horse = Array.isArray(h) && h.length === 4 && h.every(Number.isFinite) && Math.abs(h[0]) <= WORLD_HALF && Math.abs(h[1]) <= WORLD_HALF
+      ? [q2(h[0]), q2(h[1]), q3(h[2]), h[3] ? 1 : 0] : null;
     s.gun = GUN_CODES[m.g] ? m.g : 0;
     s.rollF = Number.isFinite(m.rf) ? Math.max(-1, Math.min(1, m.rf)) : -1;
     this.sim.movePlayer(s);
@@ -248,6 +251,13 @@ export class Hub {
       p.damage(damageAt(Math.hypot(p.x - from.x, p.z - from.z)), p.x - m.dx * 0.4, 0.6, p.z - m.dz * 0.4, m.dx, m.dz, def.impulse, 'player');
       this.sim.ctxPlayer = null;
       this.sim.player = null;
+    } else if (m.k === 'a') {
+      const a = this.sim.wildlife.byId(String(m.id));
+      if (!a || !a.alive) return;
+      const d = Math.hypot(a.x - from.x, a.z - from.z);
+      if (d > reach) return;
+      const res = this.sim.wildlife.hit(a, damageAt(d) * (zone === 'head' ? 1.6 : 1), m.dx, m.dz, s);
+      if (res.killed) this.events.push([['snd', 'bodyFall', q2(a.x), q2(a.z), 0.8, 1, 0.2], a.x, a.z, null]);
     } else if (m.k === 'p') {
       const target = this.sessions.get(String(m.id))?.state;
       if (!target || target === s || !target.alive) return;
@@ -270,7 +280,7 @@ export class Hub {
           s.lastHeal = now;
           this.heal(s, T.player.bandageHeal);
         } else if (m.src === 'treat') {
-          if (s.room !== 'doctor') return;
+          if (s.room !== 'doctor' && s.room !== 'pine-doctor') return;
           s.lastHeal = now;
           this.heal(s, 100);
         } else if (m.src === 'meal') {
@@ -304,12 +314,9 @@ export class Hub {
         return;
       }
       case 'duel': this.duels.request(session, m); return;
-      case 'animal': {
-        // Wild animals live in each browser; their bites are trusted only up to a bear's.
-        if (!s.alive || now - (s.lastBite ?? 0) < 900 || !Number.isFinite(m.dmg)) return;
-        s.lastBite = now;
-        const d = Math.hypot(m.dx, m.dz) || 1;
-        this.damagePlayer(s, Math.max(0, Math.min(32, m.dmg)), (m.dx || 0) / d, (m.dz || 1) / d, { kind: 'animal' });
+      case 'skin': {
+        const pelt = this.sim.wildlife.skin(String(m.id), s);
+        if (pelt && s.alive) this.send(session, { t: 'pelt', pelt });
         return;
       }
       case 'duelAnswer': this.duels.answer(session, m); return;
@@ -443,6 +450,11 @@ export class Hub {
         if (!near) continue;
         players.push([o.id, q2(o.x), q2(o.z), q3(o.yaw), q2(o.speed), o.flags, o.gun, ROOMS.indexOf(o.room ?? ''), q2(o.rollF), Math.round(o.hp)]);
       }
+      const horses = [];
+      if (!me.room) for (const other of this.sessions.values()) {
+        const h = other.state.horse;
+        if (other.ready && other !== session && h && Math.hypot(h[0] - me.x, h[1] - me.z) < PLAYER_VIEW) horses.push([other.id, ...h]);
+      }
       const ev = [];
       for (const [row, x, z, skip] of events) {
         if (skip === me.id) continue;
@@ -451,9 +463,11 @@ export class Hub {
       const view = me.room ? null : me;
       this.send(session, {
         t: 's', hp: q2(Math.max(0, me.hp)), time: q2(this.sim.time),
-        p: players,
+        p: players, hz: horses,
         e: view ? this.sim.enemyRows(view.x, view.z, EVENT_VIEW, ENEMY_STATES) : [],
         o: view ? this.sim.propRows(view.x, view.z, EVENT_VIEW) : [],
+        w: view ? this.sim.animalRows(view.x, view.z, EVENT_VIEW) : [],
+        c: view ? this.sim.carcassRows(view.x, view.z, EVENT_VIEW) : [],
         ev,
       });
     }
