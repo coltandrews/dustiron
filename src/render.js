@@ -72,5 +72,5 @@ export function createRenderContext(container) {
     scene.fog.near = inside ? 60 : 48; scene.fog.far = inside ? 140 : 105;
   }
 
-  return { renderer, scene, sun, hemi, flash, focusShadow, resize, setInterior };
+  return { renderer, scene, sun, sunOffset, hemi, rim, flash, focusShadow, resize, setInterior, get interior() { return lamp.intensity > 0; } };
 }

@@ -60,7 +60,7 @@ function walls(s, spec, trim) {
   }
 }
 
-function gable(s, w, d, eave, rise, color, fill, overhang = 0.5) {
+export function gable(s, w, d, eave, rise, color, fill, overhang = 0.5) {
   const angle = Math.atan2(rise, d / 2), slope = Math.hypot(d / 2, rise) + overhang;
   for (const side of [-1, 1]) {
     s.box(w + 0.8, 0.2, slope, color, 0, eave + rise / 2, side * d / 4, side * angle);
@@ -87,7 +87,7 @@ function falseFront(s, w, h, z, color, trim, stepped = false) {
   for (let x = -w / 2 + 0.6; x < w / 2; x += 1.1) s.box(0.14, 0.24, 0.18, PAL.woodDark, x, h - 0.2, z + 0.18);
 }
 
-function porch(s, w, depth, high, posts = 2) {
+export function porch(s, w, depth, high, posts = 2) {
   const z0 = 3.4, zc = z0 + depth / 2;
   s.box(w + 0.4, 0.24, depth, PAL.plank, 0, 0.12, zc);
   for (let x = -w / 2; x <= w / 2; x += 0.5) s.box(0.03, 0.02, depth - 0.06, PAL.woodDark, x, 0.245, zc);
@@ -110,7 +110,7 @@ function rail(s, x0, x1, z) {
   for (let x = x0; x <= x1 + 0.01; x += 0.4) s.box(0.06, 0.7, 0.06, PAL.wood, x, 0.6, z);
 }
 
-function lantern(s, x, y, z) {
+export function lantern(s, x, y, z) {
   s.box(0.06, 0.06, 0.32, PAL.iron, x, y + 0.42, z - 0.12);
   s.cyl(0.15, 0.18, 0.08, 6, PAL.iron, x, y + 0.3, z);
   s.cyl(0.11, 0.11, 0.3, 6, 0xf0bc5c, x, y + 0.1, z);
@@ -118,7 +118,7 @@ function lantern(s, x, y, z) {
 }
 
 /** A wooden shingle on an iron bracket with a raised symbol on both faces. */
-function shingle(s, x, high, z, symbol, board = 0xd8c08c) {
+export function shingle(s, x, high, z, symbol, board = 0xd8c08c) {
   s.box(0.06, 0.06, 1.1, PAL.iron, x, high - 0.25, z - 0.45);
   s.box(0.04, 0.32, 0.04, PAL.iron, x, high - 0.42, z - 0.85);
   const y = high - 0.95;
@@ -131,7 +131,7 @@ function shingle(s, x, high, z, symbol, board = 0xd8c08c) {
   }
 }
 
-const SYMBOLS = {
+export const SYMBOLS = {
   guns: (s) => { s.box(0.44, 0.08, 0.02, PAL.iron, 0.06, 0.08, 0); s.cyl(0.08, 0.08, 0.02, 7, PAL.iron, -0.12, 0.06, 0, Math.PI / 2); s.box(0.12, 0.24, 0.02, 0x6b3d24, -0.22, -0.08, 0, 0, 0, -0.35); },
   doctor: (s) => { s.box(0.12, 0.42, 0.02, 0xa63e32, 0, 0, 0); s.box(0.42, 0.12, 0.02, 0xa63e32, 0, 0, 0); },
   sheriff: (s) => { for (let i = 0; i < 5; i++) s.box(0.08, 0.36, 0.02, PAL.brass, 0, 0, 0, 0, 0, i * Math.PI / 5); s.cyl(0.09, 0.09, 0.03, 8, 0xb07a2a, 0, 0, 0, Math.PI / 2); },
@@ -141,7 +141,7 @@ const SYMBOLS = {
   stable: (s) => { s.add(new THREE.TorusGeometry(0.17, 0.045, 5, 12, Math.PI * 1.35), PAL.iron, 0, 0.02, 0, 0, 0, -Math.PI * 0.18); },
 };
 
-const BUILDERS = {
+export const BUILDERS = {
   guns(s, b) {
     walls(s, b, 0x9a5d3d);
     gable(s, b.width, b.depth, b.height, 1.25, 0x4a3830, b.color);

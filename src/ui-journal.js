@@ -4,7 +4,7 @@ import { NPCS, objective, direction } from './quests.js';
 import { AMMO, CATALOGUE, EFFECTS, ammoMax, effectActive, useItem } from './items.js';
 
 const ORDER = { complete: 0, active: 1, failed: 2, turnedIn: 3 };
-const USABLE = ['meal', 'coffee', 'whiskey', 'oil', 'feed'];
+const USABLE = ['meal', 'coffee', 'beer', 'whiskey', 'cigarette', 'cigar', 'oil', 'feed'];
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -58,7 +58,7 @@ export function renderJournal(ui, game, tab = ui.journalTab ?? 'jobs') {
       const fight = game.player.sinceHit < 5 || game.enemies.some((e) => e.alive && e.knows && Math.hypot(e.x - game.player.x, e.z - game.player.z) < 30);
       const res = useItem(life, id, { inFight: fight });
       if (res.ok) {
-        if (id === 'whiskey') game.deadEye.meter = life.deadEye;
+        if (['whiskey', 'beer', 'cigarette', 'cigar'].includes(id)) game.deadEye.meter = life.deadEye;
         if (id === 'oil') game.player.refreshInventory(life);
         if (id === 'feed' && game.horse) game.horse.data.stamina = game.horse.breed.stamina;
         game.save();

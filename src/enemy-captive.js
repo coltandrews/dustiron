@@ -1,5 +1,6 @@
 // Surrender and escort: a badly hurt bounty target drops the gun, kneels and
 // waits. Once restrained (E) the prisoner walks a few steps behind the player.
+import { townsOf } from './towns.js';
 import { GROUPS, RAPIER } from './physics.js';
 import { showGun, turnToward } from './character.js';
 
@@ -70,7 +71,7 @@ export function tickCaptive(e, dt) {
     e.yaw = turnToward(e.yaw, Math.atan2(dx, dz), dt * 8);
   } else e.body.setNextKinematicTranslation({ x: e.x, y: e.bodyY, z: e.z });
   // Reaching town hands the prisoner to the deputy.
-  if (e.game.inTown() && Math.hypot(e.x, e.z) < e.game.run.world.town.radius + 4) {
+  if (e.game.inTown() && townsOf(e.game.run.world).some((t) => Math.hypot(e.x - t.x, e.z - t.z) < t.radius + 4)) {
     e.jailed = true;
     e.captive = false;
     e.model.root.visible = false;

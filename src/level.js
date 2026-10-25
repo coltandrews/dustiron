@@ -15,12 +15,13 @@ export const ROSTERS = [
   ['gunman', 'gunman', 'rusher'],
   ['leader', 'gunman', 'gunman', 'rusher', 'scout'],
   ['leader', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'scout'],
-  ['leader', 'gunman', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout'],
+  ['captain', 'gunman', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout'],
+  ['boss', 'captain', 'leader', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout', 'scout'],
 ];
 export const AMBUSH_ROSTER = ['gunman', 'gunman', 'rusher'];
 
 export function rosterFor(camp) {
-  return [...ROSTERS[Math.max(0, Math.min(3, camp))]];
+  return [...ROSTERS[Math.max(0, Math.min(4, camp))]];
 }
 
 /** A roadside ambush: rocks for cover and three outlaws waiting behind them. */

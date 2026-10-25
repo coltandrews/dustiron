@@ -7,6 +7,7 @@ import { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCo
 import { WEAPONS, Gun, STEADY_TIME } from './weapons.js';
 import { effectActive } from './items.js';
 import { fireShot } from './player-fire.js';
+import { drinkSway, staggerMove, tickVices } from './vices.js';
 
 const COAT_LOOK = { ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a };
 
@@ -59,7 +60,7 @@ export class Player {
   get invulnerable() { return this.rollT >= 0 && this.rollT < T.dodge.iframes; }
   get moveFraction() { return Math.min(1, this.speedNow / T.player.speed); }
   get steady() { return this.steadyT >= STEADY_TIME; }
-  get sway() { return effectActive(this.run, 'whiskey') ? 1.4 : 0; }
+  get sway() { return drinkSway(this.run); }
   get bandaging() { return this.bandageT >= 0; }
 
   /** Spread the reticle should show right now. */
@@ -108,6 +109,7 @@ export class Player {
         const healed = Math.min(P.hp - this.hp, P.bandageHeal);
         this.hp += healed;
         g.ui.toast(`Bandaged · +${Math.round(healed)} health`);
+        g.net?.act('heal', { src: 'bandage' });
         g.audio.play('heal', { bus: 'ui', vol: 0.6 });
         g.save();
       }
@@ -116,6 +118,7 @@ export class Player {
     if (this.run.mealHeal > 0 && effectActive(this.run, 'meal') && this.sinceHit > 5 && this.hp < P.hp) {
       const step = Math.min(this.run.mealHeal, 2 * dt, P.hp - this.hp);
       this.hp += step; this.run.mealHeal -= step;
+      if (g.net && (this.mealSendT = (this.mealSendT ?? 0) - dt) <= 0) { this.mealSendT = 1.5; g.net.act('heal', { src: 'meal' }); }
     }
   }
 
@@ -138,6 +141,7 @@ export class Player {
     this.prevYaw = this.yaw;
     if (!this.alive) return;
     const g = this.game, P = T.player, D = T.dodge;
+    tickVices(this, dt);
 
     // Dodge roll (buffered input).
     this.rollCooldown -= dt * (effectActive(this.run, 'coffee') ? 1.6 : 1);
@@ -163,7 +167,8 @@ export class Player {
     } else {
       this.recoverT = Math.max(0, (this.recoverT ?? 0) - dt);
       const speed = P.speed * this.gun.def.moveMult * (this.recoverT > 0 ? 0.5 : 1) * (this.bandaging ? 0.45 : 1) * (g.horse?.mounted ? g.horse.speedFactor : 1);
-      const tx = intent.move.x * speed, tz = intent.move.z * speed;
+      const move = staggerMove(this.run, g.time, intent.move);
+      const tx = move.x * speed, tz = move.z * speed;
       const accelerating = tx * this.vx + tz * this.vz > 0 || Math.hypot(tx, tz) > Math.hypot(this.vx, this.vz);
       const rate = (speed / (tx || tz ? (accelerating ? P.accelTime : P.stopTime) : P.stopTime)) * dt;
       const dx = tx - this.vx, dz = tz - this.vz;
@@ -214,7 +219,7 @@ export class Player {
     if (this.speedNow < 0.8 && !this.rolling) this.steadyT += gunDt; else this.steadyT = 0;
     if (intent.reload) { intent.reload = false; if (!this.bandaging && gun.startReload()) this.reloadStarted(); }
     this.emptyClickT -= gunDt;
-    if (!g.inTown() && !this.rolling && !this.bandaging && (intent.fireHeld || intent.firePressed)) {
+    if (g.gunsAllowed() && !this.rolling && !this.bandaging && (intent.fireHeld || intent.firePressed)) {
       if (gun.canFire()) fireShot(this);
       else if (gun.ammo <= 0 && intent.firePressed && this.emptyClickT <= 0) {
         this.emptyClickT = 0.3;
@@ -251,6 +256,8 @@ export class Player {
   damage(amount, dirX, dirZ) {
     if (!this.alive || this.invulnerable || this.game.inTown()) return false;
     const g = this.game;
+    // Online the server decides every wound; a bullet that reaches us just stops here.
+    if (g.net) return true;
     if (this.run.gear.coat) amount *= 0.9;
     if (this.bandaging && amount >= T.player.bandageBreak) { this.bandageT = -1; g.ui.toast('Bandage dropped'); }
     g.horse?.spook(amount);
@@ -263,6 +270,21 @@ export class Player {
     g.stats.damageTaken += amount;
     if (this.hp <= 0) { this.hp = 0; this.die(dirX, dirZ); }
     return true;
+  }
+
+  /** A wound the server dealt: same feel as a local hit, with the server's health. */
+  netHurt(amount, dirX, dirZ, hp) {
+    if (!this.alive) return;
+    const g = this.game;
+    if (this.bandaging && amount >= T.player.bandageBreak) { this.bandageT = -1; g.ui.toast('Bandage dropped'); }
+    g.horse?.spook(amount);
+    this.hp = hp;
+    this.sinceHit = 0;
+    this.flash = 0.08;
+    g.addTrauma(Math.min(0.5, 0.15 + amount / 60));
+    g.ui.hurt(dirX, dirZ);
+    g.audio.play('hurt', { vol: 0.9 });
+    g.stats.damageTaken += amount;
   }
 
   die(dirX, dirZ) {
@@ -284,12 +306,18 @@ export class Player {
     m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
     if (this.flash > 0) this.flash -= realDt;
     animateCharacter(m, {
-      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: !this.game.inTown(), flash: this.flash,
+      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: this.game.gunsAllowed(), flash: this.flash,
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
     if (this.game.frontier?.seated && !this.rolling) poseSeated(m);
     if (this.bandaging) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
-    showGun(m, this.game.inTown() ? null : this.gun.def.key);
-    if (this.game.inTown()) m.arm.rotation.x = 1.1;
+    const d = this.run.drunk ?? 0;
+    if (d > 0.3) m.pivot.rotation.z = Math.sin(this.game.time * 1.7) * (d - 0.3) * 0.12;
+    else if (m.pivot.rotation.z && !this.rolling) m.pivot.rotation.z = 0;
+    const armed = this.game.gunsAllowed();
+    showGun(m, armed ? this.gun.def.key : null);
+    if (!armed) m.arm.rotation.x = 1.1;
+    // Hand to the mouth while smoking.
+    if (this.smokeT > 0 && !this.rolling) { showGun(m, null); m.arm.rotation.x = 2.2 - Math.abs(Math.sin(this.smokeT * 1.4)) * 0.6; }
   }
 }

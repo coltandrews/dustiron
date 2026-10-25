@@ -7,7 +7,9 @@ import { createRng } from './rng.js';
 import { GROUPS } from './physics.js';
 import { buildTown } from './town-buildings.js';
 import { buildInteriors, updateInteriorNpcs } from './interiors.js';
-import { desert, ground, roads } from './land.js';
+import { ground, roads } from './land.js';
+import { wilds } from './wilds.js';
+import { buildPineHollow } from './town-pine.js';
 
 function civilians(group, rng) {
   const specs = [
@@ -48,7 +50,8 @@ export function buildFrontier(game, world) {
   }
   const sites = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
   roads(outdoor, sites);
-  desert(game, outdoor, world, rng);
+  const pine = buildPineHollow(game, outdoor);
+  wilds(game, outdoor, world, rng);
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
   }));
@@ -84,11 +87,11 @@ export function buildFrontier(game, world) {
   };
 
   return {
-    sites, npcs, rooms,
+    sites, npcs, rooms, pine,
     get inside() { return !!active; },
     get seated() { return seated; },
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
-    interactions() { return active ? active.points : [...doors, ...npcs]; },
+    interactions() { return active ? active.points : [...doors, ...npcs, ...pine.npcs]; },
     cameraFocus() { return active?.center ?? null; },
     viewFocus() { return focusOverride ?? active?.center ?? null; },
     setCameraFocus(point) { focusOverride = point; },
@@ -119,6 +122,7 @@ export function buildFrontier(game, world) {
         if (!seated && doorCooldown <= 0 && game.player.z > active.center.z + 6.9) leave();
         return;
       }
+      pine.tick(dt, game.player);
       for (const npc of npcs) {
         npc.px = npc.x; npc.pz = npc.z; npc.prevYaw = npc.yaw;
         const player = game.player, near = player && Math.hypot(player.x - npc.x, player.z - npc.z) < 2.3;

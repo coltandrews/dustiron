@@ -47,7 +47,7 @@ test('a live capture pays the higher reward; killing a wanted-alive target fails
       questEvent(copy, defs, { type: 'delivered', targetId: def.targetId });
       assert.equal(copy.quests[def.id].status, 'complete');
       const before = copy.bounty;
-      turnIn(copy, defs, def.id, 'sheriff');
+      turnIn(copy, defs, def.id, def.turnIn);
       assert.equal(copy.bounty, before + def.aliveReward);
       assert.ok(def.aliveReward > def.reward.money || def.want === 'alive');
       if (def.want === 'alive') {

@@ -4,6 +4,7 @@ import { T } from './tuning.js';
 import { GROUPS } from './physics.js';
 import { angleDelta } from './character.js';
 import { randSpread } from './rng.js';
+import { calmFactor } from './vices.js';
 
 const DEG = Math.PI / 180;
 /** Distance from a bandit's center line that counts as a head shot or a graze. */
@@ -20,9 +21,9 @@ export const ZONE_DAMAGE = { head: 2.2, body: 1, limb: 0.7 };
 
 export function fireShot(player) {
   const g = player.game, gun = player.gun, def = gun.def;
-  if (g.inTown()) return;
+  if (!g.gunsAllowed()) return;
   const steady = player.steady;
-  const spreadDeg = gun.fire(player.moveFraction, steady, player.sway);
+  const spreadDeg = gun.fire(player.moveFraction, steady, player.sway) * calmFactor(player.run);
   player.steadyT = 0;
   const aim = g.intent.aim;
   let dx = Math.sin(player.yaw), dz = Math.cos(player.yaw);
@@ -44,6 +45,7 @@ export function fireShot(player) {
   const mult = g.deadEye.active ? T.deadEye.damageMult : 1;
   const precise = steady || g.deadEye.active;
   let anyHit = false, anyKill = false, anyCrit = false, head = false;
+  const ends = g.net ? [] : null;
   for (let i = 0; i < def.pellets; i++) {
     const a = baseA + randSpread((spreadDeg * DEG) / 2);
     const rx = Math.sin(a), rz = Math.cos(a);
@@ -63,7 +65,7 @@ export function fireShot(player) {
         anyHit = true; anyKill ||= res.killed; anyCrit ||= res.crit || zone === 'head'; head ||= zone === 'head';
         g.fx.impact('flesh', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
         g.audio.at('hitFlesh', hit.x, hit.z, { vol: 0.8 });
-        if (res.killed) g.onEnemyKilled(owner, res.crit || zone === 'head');
+        if (res.killed && !owner.animal) g.onEnemyKilled(owner, res.crit || zone === 'head');
         else g.deadEye.add(T.deadEye.fillHit);
         if (pierce > 0) { pierce--; traveled = d + 0.05; ox = hit.x + rx * 0.05; oz = hit.z + rz * 0.05; exclude = hit.collider; continue; }
       } else if (owner && owner.damage) {
@@ -77,8 +79,11 @@ export function fireShot(player) {
       break;
     }
     g.fx.tracer(mz.x, mz.y, mz.z, endX, y, endZ, g.deadEye.active ? 0xffb070 : 0xffe7b0);
+    ends?.push(endX, endZ);
   }
 
+  // Online the shot and any hits it found go to the server, which decides what they did.
+  if (ends) g.net.shot(player.x, player.z, def.key, ends);
   g.fx.muzzle(mz.x, mz.y, mz.z, dx, dz, def.pellets > 1);
   if (def.key !== 'shotgun') g.fx.casing(player.x, 1.0, player.z, dx, dz);
   g.audio.play(def.sound, { vol: 1, vary: 0.06, pitch: def.pitch, reverb: 0.4 });

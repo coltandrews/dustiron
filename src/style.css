@@ -26,7 +26,7 @@
 html, body { height: 100%; margin: 0; overflow: hidden; }
 body { background: var(--ink); color: var(--paper); font: 500 15px/1.4 var(--body); -webkit-font-smoothing: antialiased; }
 #app { position: fixed; inset: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
-#game-canvas { display: block; position: absolute; inset: 0; cursor: none; transition: filter 0.25s; }
+#game-canvas { display: block; position: absolute; inset: 0; cursor: none; transition: filter 0.25s; filter: var(--vice-filter, none); }
 #app.in-menu #game-canvas { cursor: default; }
 #app.deadeye #game-canvas { filter: saturate(0.3) sepia(0.5) contrast(1.12) brightness(0.95); }
 [hidden] { display: none !important; }
@@ -513,3 +513,61 @@ kbd {
   .ammo.cylinder, .toast, #game-canvas { transition: none; }
   .loading i, .reload-hint, .meter.hp .meter-fill.low { animation: none; }
 }
+
+/* ---------- online ---------- */
+.online-join { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(233, 214, 178, 0.18); }
+.online-join .guide-title { margin: 0; }
+.online-join .fine { margin: 0; }
+.online-name { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+.online-name span { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; opacity: 0.8; }
+.online-name input, .chat-form input {
+  font: inherit; color: #f3e6cc; background: rgba(20, 14, 10, 0.72); border: 1px solid rgba(233, 214, 178, 0.35);
+  border-radius: 6px; padding: 8px 10px; min-width: 0; width: 100%; box-sizing: border-box;
+}
+.online-name input:focus, .chat-form input:focus { outline: 2px solid #d9a35a; outline-offset: 1px; }
+.online-status { min-height: 1.2em; margin: 0; color: #f0c27a; font-size: 14px; }
+.online-roster {
+  position: absolute; top: 104px; right: 18px; text-align: right; font-size: 13px; color: #f3e6cc;
+  text-shadow: 0 1px 2px #000; pointer-events: none; max-width: 260px;
+}
+.online-roster:empty { display: none; }
+.roster-names { opacity: 0.75; font-size: 12px; margin-top: 2px; }
+.chat-log {
+  position: absolute; left: 18px; bottom: 120px; width: min(420px, calc(100vw - 36px)); display: grid; gap: 3px;
+  font-size: 14px; color: #f3e6cc; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.6); pointer-events: none;
+}
+.chat-log b { color: #f0c27a; margin-right: 4px; }
+.chat-log i { opacity: 0.8; }
+.chat-form { position: absolute; left: 18px; bottom: 82px; width: min(420px, calc(100vw - 36px)); pointer-events: auto; }
+.duel-banner {
+  position: absolute; top: 18%; left: 50%; transform: translateX(-50%); text-align: center; padding: 12px 20px;
+  background: rgba(24, 16, 11, 0.82); border: 1px solid rgba(233, 214, 178, 0.35); border-radius: 8px;
+  color: #f3e6cc; font-size: 16px; max-width: calc(100vw - 32px); pointer-events: none;
+}
+.duel-count { font-family: 'Rye', serif; font-size: 54px; line-height: 1.1; margin-top: 6px; color: #f0c27a; }
+.duel-count.draw { color: #ff8a5c; }
+.duel-offer {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px));
+  padding: 16px; display: grid; gap: 10px; pointer-events: auto; z-index: 5;
+}
+.duel-offer h3 { margin: 0; font-family: 'Rye', serif; font-weight: 400; }
+.duel-offer .fine { margin: 0; }
+.duel-offer .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#rider-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.rider-tag {
+  position: absolute; left: 0; top: 0; font-size: 13px; font-weight: 600; color: #f3e6cc; white-space: nowrap;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000; will-change: transform;
+}
+
+/* ---------- boss bar ---------- */
+.boss-bar { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100vw - 32px)); text-align: center; color: #f3e6cc; }
+.boss-name { font-size: 15px; margin-bottom: 4px; text-shadow: 0 1px 2px #000; }
+.boss-name b { font-family: 'Rye', serif; font-weight: 400; font-size: 18px; letter-spacing: 0.02em; }
+.boss-name span { opacity: 0.75; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-left: 6px; }
+.boss-track { height: 10px; background: rgba(20, 12, 8, 0.75); border: 1px solid #8a6234; border-radius: 3px; overflow: hidden; }
+.boss-fill { height: 100%; width: 100%; background: linear-gradient(#c0452f, #8a2a1e); transition: width 0.2s; }
+.boss-bar.enraged .boss-fill { background: linear-gradient(#ff7a3a, #c0301e); animation: boss-pulse 0.8s infinite alternate; }
+@keyframes boss-pulse { from { filter: brightness(1); } to { filter: brightness(1.35); } }
+.dice-row { display: grid; grid-template-columns: 90px auto 1fr; gap: 10px; align-items: center; text-align: left; margin: 2px 0; }
+.dice-faces { font-size: 30px; letter-spacing: 2px; line-height: 1; color: #f3e6cc; }
+.dice-verdict { margin-top: 6px; font-weight: 700; color: #f0c27a; }

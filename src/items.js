@@ -19,6 +19,23 @@ export const EFFECTS = {
   meal: { name: 'Well fed', seconds: 90 },
   coffee: { name: 'Coffee', seconds: 120 },
   whiskey: { name: 'Whiskey', seconds: 60 },
+  smoke: { name: 'Tobacco calm', seconds: 75 },
+};
+
+/** How much each drink adds to the rider's drunkenness (0 sober, 1.5 falling down). */
+export const DRINKS = { beer: 0.18, whiskey: 0.38 };
+/** Tobacco: Dead Eye restored and how long the calm lasts. */
+export const SMOKES = { cigarette: { deadEye: 0.25, seconds: 45 }, cigar: { deadEye: 0.5, seconds: 90 } };
+
+/** Animal skins: what a buyer pays for each. */
+export const PELTS = {
+  rabbitPelt: { name: 'Rabbit pelt', price: 3 },
+  hide: { name: 'Pronghorn hide', price: 7 },
+  deerHide: { name: 'Deer hide', price: 9 },
+  elkHide: { name: 'Elk hide', price: 16 },
+  boarHide: { name: 'Boar hide', price: 11 },
+  wolfPelt: { name: 'Wolf pelt', price: 14 },
+  bearHide: { name: 'Old Scar\'s hide', price: 90 },
 };
 
 export const CATALOGUE = {
@@ -42,12 +59,18 @@ export const CATALOGUE = {
   rent: { name: 'Rent Old Dusty', price: 30, kind: 'horse', horse: 'rental', text: 'A steady old horse for this trip. Returns to the stable when you come home.' },
   horse: { name: 'Buy the bay mare', price: 180, kind: 'horse', horse: 'owned', text: 'Faster, stronger and calmer under fire. Yours for this life.' },
   feed: { name: 'Horse feed', price: 2, kind: 'supply', max: 3, text: 'Restores your horse when it is worn out.' },
+  beer: { name: 'Beer', price: 1, kind: 'supply', max: 3, text: 'Cheap and cold. A little Dead Eye, a little wobble.' },
+  cigarette: { name: 'Cigarettes', price: 2, kind: 'supply', max: 9, text: 'Press B to smoke. Restores some Dead Eye and steadies your aim.' },
+  cigar: { name: 'Cigar', price: 5, kind: 'supply', max: 3, text: 'Press B when out of cigarettes. Half a Dead Eye bar and a long calm.' },
 };
 
 export const SHOPS = {
   guns: ['ammo-pistol', 'ammo-heavy', 'ammo-rifle', 'ammo-shells', 'heavy', 'repeater', 'shotgun', 'rifle', 'oil', 'belt'],
   doctor: ['bandage', 'heal'],
-  saloon: ['meal', 'coffee', 'whiskey'],
+  saloon: ['meal', 'coffee', 'beer', 'whiskey', 'cigarette', 'cigar'],
+  pineSaloon: ['meal', 'coffee', 'beer', 'whiskey', 'cigarette', 'cigar'],
+  trading: ['ammo-pistol', 'ammo-rifle', 'ammo-shells', 'repeater', 'rifle', 'oil', 'bandage', 'feed', 'cigarette'],
+  pineDoctor: ['bandage', 'heal'],
   clothes: ['coat'],
   maps: ['map'],
   stable: ['rent', 'horse', 'feed'],
@@ -112,10 +135,17 @@ export function buy(life, itemId, shop = null) {
 export function useItem(life, itemId, { inFight = false, time = life.time } = {}) {
   const count = life.items[itemId] ?? 0;
   if (!count) return { ok: false, message: `You have no ${CATALOGUE[itemId]?.name.toLowerCase() ?? 'such thing'}.` };
-  if (inFight && itemId !== 'whiskey') return { ok: false, message: 'Not in the middle of a fight.' };
+  if (inFight && !['whiskey', 'beer', 'cigarette', 'cigar'].includes(itemId)) return { ok: false, message: 'Not in the middle of a fight.' };
   if (itemId === 'oil') { for (const key of life.unlocked) life.guns[key].condition = 1; }
   else if (itemId === 'feed') { if (!life.horse) return { ok: false, message: 'You have no horse.' }; life.horse.stamina = 1; }
-  else if (EFFECTS[itemId]) {
+  else if (DRINKS[itemId] !== undefined) {
+    life.drunk = Math.min(1.5, (life.drunk ?? 0) + DRINKS[itemId]);
+    life.deadEye = Math.min(1, life.deadEye + (itemId === 'whiskey' ? 0.35 : 0.12));
+    if (itemId === 'whiskey') life.effects.whiskey = time + EFFECTS.whiskey.seconds;
+  } else if (SMOKES[itemId]) {
+    life.effects.smoke = time + SMOKES[itemId].seconds;
+    life.deadEye = Math.min(1, life.deadEye + SMOKES[itemId].deadEye);
+  } else if (EFFECTS[itemId]) {
     life.effects[itemId] = time + EFFECTS[itemId].seconds;
     if (itemId === 'whiskey') life.deadEye = Math.min(1, life.deadEye + 0.35);
     if (itemId === 'meal') life.mealHeal = 30;

@@ -1,6 +1,7 @@
 // The life map shows travelled land. Major waterways stay visible as reference.
 import { MAP_CELL, isDiscovered } from './life.js';
-import { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent } from './terrain.js';
+import { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, forestAt, pineRoadPoints, riverCenter, riverTangent } from './terrain.js';
+import { townsOf } from './towns.js';
 
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
@@ -45,8 +46,14 @@ export class MapView {
     ctx.fillStyle = C.land;
     for (const key of Object.keys(life.discovered)) {
       const [cx, cz] = key.split(':').map(Number);
+      const green = forestAt(-H + (cx + 0.5) * MAP_CELL, -H + (cz + 0.5) * MAP_CELL);
+      ctx.fillStyle = green > 0.5 ? '#a9b47e' : green > 0.2 ? '#cfc794' : C.land;
       ctx.fillRect(X(-H + cx * MAP_CELL), Y(-H + cz * MAP_CELL), MAP_CELL * k + 0.5, MAP_CELL * k + 0.5);
     }
+    // The stage road to Pine Hollow.
+    ctx.strokeStyle = 'rgba(114,84,55,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.beginPath();
+    pineRoadPoints().forEach((pt, i) => (i ? ctx.lineTo(X(pt.x), Y(pt.z)) : ctx.moveTo(X(pt.x), Y(pt.z))));
+    ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
     for (let v = -H; v <= H; v += 30) {
       ctx.moveTo(X(v), Y(-H)); ctx.lineTo(X(v), Y(H));
@@ -124,14 +131,19 @@ export class MapView {
       label(`${camp.name} · ambush cleared`, camp.x, camp.z, C.cleared);
     }
 
-    const town = world.town;
-    ctx.fillStyle = 'rgba(239,220,187,0.28)'; ctx.beginPath();
-    ctx.moveTo(X(-25), Y(-28)); ctx.lineTo(X(24), Y(-25)); ctx.lineTo(X(30), Y(21));
-    ctx.lineTo(X(13), Y(28)); ctx.lineTo(X(-28), Y(23)); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
-    ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
-    ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();
-    label('Town', town.x, town.z);
+    for (const town of townsOf(world)) {
+      ctx.fillStyle = 'rgba(239,220,187,0.35)'; ctx.beginPath(); ctx.arc(X(town.x), Y(town.z), town.radius * k, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
+      ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
+      ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();
+      label(town.name ?? 'Town', town.x, town.z);
+    }
+    // Other riders on a shared server.
+    for (const rider of game.netWorld?.remote.riders.values() ?? []) {
+      if (!rider.alive || rider.room) continue;
+      ctx.fillStyle = '#6a3f8a'; ctx.beginPath(); ctx.arc(X(rider.x), Y(rider.z), 3.5, 0, Math.PI * 2); ctx.fill();
+      label(rider.name, rider.x, rider.z, '#6a3f8a', -10);
+    }
 
     const p = game.player;
     if (p?.alive) {

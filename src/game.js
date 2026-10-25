@@ -23,6 +23,12 @@ import { buildEncounters, captureEncounters, rebuildCampNav } from './encounters
 import { TownActions } from './town-actions.js';
 import { randomSeed } from './rng.js';
 import { MapView } from './map.js';
+import { NetWorld } from './net-world.js';
+import { townAt } from './towns.js';
+import { drunkScreen } from './vices.js';
+import { Wildlife } from './wildlife.js';
+import { BossBar } from './ui-boss.js';
+import { Sky } from './sky.js';
 
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
 const scorchMat = new THREE.MeshLambertMaterial({ color: 0x3a2a20, transparent: true, opacity: 0.55, depthWrite: false });
@@ -75,6 +81,12 @@ export class Game {
     this.navDirty = true;
     this.flanker = null;
     this.camp = { x: 0, z: 0, t: 0 };
+    /** The shared server, when riding online (see game-online.js). */
+    this.net = null;
+    this.netWorld = null;
+    this.bossBar = new BossBar();
+    this.sky = render.sun ? new Sky(render) : null;
+    this.worldClock = null;
 
     this.deadEye = {
       meter: 0, active: false,
@@ -98,6 +110,8 @@ export class Game {
   // ---------- run lifecycle ----------
 
   newRun() {
+    // Online, the server deals the next life; it arrives as a 'life' message.
+    if (this.net) { this.net.act('newLife'); this.ui.show('loading'); return; }
     this.run = createLife(randomSeed());
     writeLife(this.run, undefined, true);
     this.saveFailed = false;
@@ -138,6 +152,8 @@ export class Game {
     for (const shot of run.projectiles ?? []) this.projectiles.spawn(shot.x, shot.z, shot.dx, shot.dz, shot.speed, shot.dmg, shot.left);
     this.corpses = [];
     this.rebuildNav();
+    this.wildlife = new Wildlife(this);
+    if (this.net) this.netWorld = new NetWorld(this, this.net);
 
     this.deadEye.meter = run.deadEye ?? 0;
     this.deadEye.active = false;
@@ -159,6 +175,10 @@ export class Game {
 
   unload() {
     if (!this.levelGroup) return;
+    this.netWorld?.dispose();
+    this.netWorld = null;
+    this.wildlife?.dispose();
+    this.wildlife = null;
     this.horse?.dispose();
     this.horse = null;
     this.worldPoints = null;
@@ -175,6 +195,7 @@ export class Game {
       for (const m of mats) if (m !== MAT.solid && m !== MAT.glow && m !== scorchMat) m.dispose();
     });
     this.scene.remove(this.levelGroup);
+    this.ui.el.app.style?.setProperty('--vice-filter', 'none'); if (this.ui.el.app.dataset) delete this.ui.el.app.dataset.vice;
     this.levelGroup = null;
     this.physics.free();
     this.physics = null;
@@ -190,6 +211,7 @@ export class Game {
   save() {
     if (!this.run || !this.player || !this.player.alive) return;
     this.capturePlayer();
+    if (this.net) { this.run.simTime = this.time; this.net.markLife(); return; }
     captureEncounters(this);
     this.run.simTime = this.time;
     this.run.projectiles = this.projectiles.items.filter((p) => p.active).map(({ x, z, dx, dz, speed, dmg, left }) => ({ x, z, dx, dz, speed, dmg, left }));
@@ -219,8 +241,15 @@ export class Game {
     }
   }
 
+  sightScale() { return Sky.sightScale(this.worldClock ?? this.time); }
+
   inTown() {
-    return !!this.player && (this.frontier?.inside || Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius);
+    return !!this.player && (this.frontier?.inside || !!townAt(this.run.world, this.player.x, this.player.z));
+  }
+
+  /** Guns come out outside town, or anywhere during an agreed duel. */
+  gunsAllowed() {
+    return !this.inTown() || !!this.net?.dueling;
   }
 
   nearestLoot() {
@@ -312,6 +341,9 @@ export class Game {
   quitToTitle() {
     this.save();
     this.unload();
+    if (this.net) { this.net.close(); this.net = null; }
+    this.worldClock = null;
+    this.sky?.reset();
     this.state = 'title';
     this.ui.setContinue(loadSave());
     this.ui.show('title');
@@ -351,7 +383,8 @@ export class Game {
   onPlayerDied() {
     // Write death before effects or menus. A reload must not revive this life.
     this.capturePlayer();
-    if (!endLife(this.run)) this.ui.toast('The life has ended. Browser storage could not save this change.', 8);
+    if (this.net) this.run.status = 'dead';
+    else if (!endLife(this.run)) this.ui.toast('The life has ended. Browser storage could not save this change.', 8);
     this.state = 'dying';
     this.deathT = 1.8;
     this.slowmo = { scale: T.run.deathSlowmo, t: 1.2, target: T.run.deathSlowmo };
@@ -441,7 +474,14 @@ export class Game {
     scorch.scale.setScalar(1.8);
     scorch.rotation.y = Math.random() * 6;
     this.levelGroup.add(scorch);
+    // Online the server already dealt the blast's damage; only the push is shown here.
+    if (this.net) this.pushBodies(x, z);
+    else this.blast(x, z);
+    this.navDirty = true;
+  }
 
+  blast(x, z) {
+    const E = T.explosion;
     for (const e of this.enemies) {
       if (!e.alive) continue;
       const dx = e.x - x, dz = e.z - z, d = Math.hypot(dx, dz) || 0.01;
@@ -466,6 +506,11 @@ export class Game {
       const f = Math.max(0, 1 - d / (E.radius * 1.15));
       p.damage(E.damage * f, p.x - dx / d * 0.3, 0.5, p.z - dz / d * 0.3, dx / d, dz / d, E.impulse * f, 'chain');
     }
+    this.pushBodies(x, z);
+  }
+
+  pushBodies(x, z) {
+    const E = T.explosion;
     const push = (body) => {
       const t = body.translation();
       const dx = t.x - x, dz = t.z - z, d = Math.hypot(dx, dz) || 0.01;
@@ -475,11 +520,12 @@ export class Game {
     };
     for (const it of this.debris.items) push(it.body);
     for (const c of this.corpses) push(c.body);
-    this.navDirty = true;
   }
 
   /** Gunfire: bandits in range hear it. */
   noise(x, z, range) {
+    this.wildlife?.hear(x, z, Math.max(range, 45));
+    if (this.net) return; // the server hears shots online
     for (const e of this.enemies) if (e.alive && Math.hypot(e.x - x, e.z - z) < range) e.hear(x, z, true);
   }
 
@@ -529,6 +575,8 @@ export class Game {
 
   /** The sim time scale for this frame. */
   timeScale() {
+    // A shared world cannot slow down for one rider: online time always runs.
+    if (this.net) return this.player ? 1 : 0;
     if (this.state !== 'playing' && this.state !== 'dying') return 0;
     if (this.hitStopT > 0) return 0;
     const de = this.deadEye.active ? T.deadEye.timeScale : 1;
@@ -542,6 +590,7 @@ export class Game {
     if (this.navDirty || this.navT <= 0) this.rebuildNav();
 
     const p = this.player;
+    if (this.net && this.state !== 'playing') Object.assign(this.intent, { move: { x: 0, z: 0 }, fireHeld: false, firePressed: false });
     this.frontier.beforePlayer(this.intent);
     p.tick(dt, gunDt, this.intent);
     this.frontier.tick(dt);
@@ -556,7 +605,8 @@ export class Game {
         else this.camp.t += dt;
       }
     }
-    for (const e of this.enemies) {
+    if (this.netWorld) this.netWorld.tick(dt);
+    else for (const e of this.enemies) {
       if (this.frontier.inside) {
         if (this.flanker === e) this.flanker = null;
         if (e.token) e.releaseToken();
@@ -571,10 +621,12 @@ export class Game {
     }
     this.spotT -= dt;
     if (this.spotT <= 0) { this.spotT = 0.2; this.updateSpotting(); }
+    this.wildlife.tick(dt);
     this.projectiles.tick(dt);
     for (const pr of this.props) pr.tick(dt);
     this.debris.tick(dt);
     this.physics.step();
+    this.net?.tick(dt);
   }
 
   /** Real-time updates and rendering. */
@@ -607,14 +659,18 @@ export class Game {
     const p = this.player;
     if (p) {
       const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
-      this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
+      this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? townAt(this.run.world, p.x, p.z)?.name ?? 'Mercy Crossing' : (near?.name ?? 'The frontier');
       this.interactionHint = this.horse?.mounted
         ? (this.horse.showDismountHint(this.realTime) ? 'Hold [E] to get off' : '')
         : (this.townActions.hint() || this.lootHint());
       this.frontier.render(alpha);
-      const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
+      drunkScreen(this.ui.el.app, this.run, this.realTime);
+      const simDt = this.net || this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);
       this.horse?.render(dt);
+      this.netWorld?.render(alpha, simDt);
+      if (this.wildlife) for (const a of [...this.wildlife.animals, ...this.wildlife.carcasses]) a.model.root.visible = !this.frontier.inside;
+      if (!this.frontier.inside) this.wildlife?.render(alpha, simDt);
       if (this.frontier.inside) {
         for (const e of this.enemies) { e.model.root.visible = false; e.hideAimLine(); }
         for (const pr of this.props) {
@@ -639,11 +695,13 @@ export class Game {
       }
       const focus = this.frontier.viewFocus() ?? (p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position);
       this.rig.update(dt, focus, p.alive && !this.frontier.inside ? this.intent.aim : null);
+      this.sky?.update(this, dt);
       this.render.focusShadow(this.rig.target.x, this.rig.target.z);
       this.audio.setListener(this.rig.target.x, this.rig.target.z);
-      const fxScale = (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
-      if (this.state === 'playing' || this.state === 'dying') this.fx.update(dt * fxScale);
+      const fxScale = this.net ? 1 : (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
+      if (this.state === 'playing' || this.state === 'dying' || this.net) this.fx.update(dt * fxScale);
       this.ui.update(this, dt);
+      this.bossBar.update(this);
     } else {
       // Title backdrop: slow drift over empty desert.
       this.rig.target.x = Math.sin(this.realTime * 0.05) * 6;

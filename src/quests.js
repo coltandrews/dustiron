@@ -7,7 +7,9 @@ export const STATUS = ['offered', 'active', 'complete', 'turnedIn', 'failed'];
 export const NPCS = {
   sheriff: 'Sheriff Boone', doctor: 'Doctor Finch', maps: 'Elias Ward', silas: 'Silas Reed', martha: 'Martha Bell',
   clara: 'Clara Finch', nora: 'Nora Pike', mae: 'Mae Sullivan', amos: 'Amos Hollis', eli: 'Eli Watts', juan: 'Juan Ortega',
+  hale: 'Deputy Hale', ruby: 'Ruby Tate', hank: 'Hank Morrow', lacey: 'Doc Lacey', otto: 'Otto Brandt',
 };
+const OFFICE_TOWN = { sheriff: 'Mercy Crossing', deputy: 'Pine Hollow' };
 const DELIVERY_LIMIT = 600;
 
 export function direction(x, z) {
@@ -26,10 +28,12 @@ export function makeQuests(world) {
   for (const wanted of world.wanted ?? []) {
     const camp = camps.find((c) => c.id === wanted.campId);
     if (!camp) continue;
+    const office = wanted.office === 'deputy' ? 'hale' : 'sheriff';
+    const home = office === 'hale' ? { x: -262, z: -250 } : { x: 0, z: 0 };
     quests.push({
-      id: `bounty-${camp.id}`, type: 'bounty', giver: 'sheriff', turnIn: 'sheriff', campId: camp.id, targetId: camp.targetId,
-      title: `Wanted: ${wanted.name}`, want: wanted.want, threat: wanted.threat,
-      summary: `${wanted.name} is wanted for ${wanted.crime}. Last seen ${direction(camp.x, camp.z)} of town. Carries a ${wanted.weapon.toLowerCase()}. Wears a red hat.`,
+      id: `bounty-${camp.id}`, type: 'bounty', giver: office, turnIn: office, campId: camp.id, targetId: camp.targetId,
+      title: `Wanted: ${wanted.name}`, want: wanted.want, threat: wanted.threat, boss: !!camp.boss,
+      summary: `${wanted.name} is wanted for ${wanted.crime}. Last seen ${direction(camp.x - home.x, camp.z - home.z)} of ${OFFICE_TOWN[wanted.office ?? 'sheriff']}. Carries a ${wanted.weapon.toLowerCase()}. Wears a red hat.`,
       reward: { money: wanted.want === 'alive' ? wanted.aliveReward : wanted.reward }, aliveReward: wanted.aliveReward,
       area: searchArea(camp.x, camp.z, 55, 1), leadArea: searchArea(camp.x, camp.z, 26, 2),
       fail: wanted.want === 'alive' ? `The sheriff needs ${wanted.name} alive. Killing the target fails the job.` : null,
@@ -67,7 +71,64 @@ export function makeQuests(world) {
     reward: { money: 25 }, area: searchArea(home.x, home.z, 30, 7), threat: 'Low', limit: DELIVERY_LIMIT,
     fail: 'The parcel is late after ten minutes of trail time.',
   });
+  quests.push(...chainQuests(world));
   return quests;
+}
+
+/** Two longer stories in the pine country, each a chain of steps. */
+function chainQuests(world) {
+  const out = [], sites = world.sites ?? [], camps = world.camps;
+  const mill = sites.find((s) => s.kind === 'mill'), den = sites.find((s) => s.kind === 'den'), lodge = sites.find((s) => s.kind === 'lodge');
+  const boss = camps.find((c) => c.boss);
+  const lieutenant = [...camps].filter((c) => c.home === 'pine' && !c.boss).sort((a, b) => b.difficulty - a.difficulty)[0];
+  if (mill && boss && lieutenant) out.push({
+    id: 'iron-gang', type: 'chain', giver: 'hale', turnIn: 'hale', title: 'The Iron Gang', threat: 'Legendary',
+    summary: 'Iron Jack Kell\'s gang burned the Blackwood sawmill and shot the men who worked it. Deputy Hale has no posse left. He wants it finished.',
+    steps: [
+      { kind: 'visit', siteId: mill.id, text: `Search the burned sawmill ${direction(mill.x + 262, mill.z + 250)} of Pine Hollow.` },
+      { kind: 'kill', targetId: lieutenant.targetId, text: `Kill ${lieutenant.targetName}, Kell's lieutenant, at ${lieutenant.name}.` },
+      { kind: 'kill', targetId: boss.targetId, text: `Put down Iron Jack Kell at ${boss.name}. He wears an iron-plated coat.` },
+    ],
+    areas: [searchArea(mill.x, mill.z, 35, 11), searchArea(lieutenant.x, lieutenant.z, 50, 12), searchArea(boss.x, boss.z, 50, 13)],
+    area: searchArea(mill.x, mill.z, 35, 11),
+    reward: { money: 240, items: { bandage: 2 } }, fail: null,
+  });
+  if (den && lodge) out.push({
+    id: 'trapper', type: 'chain', giver: 'otto', turnIn: 'otto', title: 'The trapper\'s commission', threat: 'High',
+    summary: 'Otto Brandt buys hides and tells stories about a bear the size of a wagon. He will pay well for a hunter who can prove the stories.',
+    steps: [
+      { kind: 'bring', item: 'deerHide', count: 3, text: 'Bring Otto three deer hides. Deer graze in the pine meadows.' },
+      { kind: 'bring', item: 'wolfPelt', count: 2, text: 'Bring Otto two wolf pelts. Wolves run in packs deep in the forest.' },
+      { kind: 'hunt', animal: 'bear', text: `Hunt Old Scar near his den ${direction(den.x + 262, den.z + 250)} of Pine Hollow.` },
+    ],
+    areas: [searchArea(-262, -250, 120, 14), searchArea(den.x, den.z, 110, 15), searchArea(den.x, den.z, 40, 16)],
+    area: searchArea(-262, -250, 120, 14),
+    reward: { money: 160, items: { bandage: 1 } }, fail: null,
+  });
+  return out;
+}
+
+/** Hands over the hides a 'bring' step asks for. */
+export function bringStep(life, defs, id) {
+  const def = quest(defs, id), state = life.quests[id];
+  const step = def?.steps?.[state?.step ?? 0];
+  if (!def || state.status !== 'active' || step?.kind !== 'bring') return result(false, 'Nothing to hand over.');
+  if ((life.items[step.item] ?? 0) < step.count) return result(false, `You need ${step.count}.`);
+  life.items[step.item] -= step.count;
+  advance(def, state, life);
+  return result(true, state.status === 'complete' ? 'That settles it.' : 'Good hides. Now the next thing.');
+}
+
+function advance(def, state, life) {
+  state.step = (state.step ?? 0) + 1;
+  // A kill step whose target is already dead in this life is skipped.
+  while (state.step < def.steps.length) {
+    const next = def.steps[state.step];
+    if (next.kind === 'kill' && life.questFlags?.[next.targetId] === 'dead') state.step++;
+    else if (next.kind === 'hunt' && life.questFlags?.[`hunt:${next.animal}`]) state.step++;
+    else break;
+  }
+  if (state.step >= def.steps.length) complete(state);
 }
 
 export function emptyQuestState(quests) {
@@ -85,6 +146,7 @@ export function accept(life, defs, id) {
   state.status = 'active';
   state.since = life.time;
   if (def.type === 'delivery') state.parcel = true;
+  if (def.type === 'chain') { state.step = -1; advance(def, state, life); }
   // A target that is already down only needs proof; a wanted-alive job is lost.
   if (def.type === 'bounty' && life.questFlags?.[def.targetId] === 'dead') {
     if (def.want === 'alive') { state.status = 'failed'; return result(true, `${def.title}: the target is already dead. The job is lost.`); }
@@ -111,6 +173,7 @@ export function objective(life, def) {
     case 'medicine': return state.carrying ? 'Carry the chest back to Doctor Finch.' : 'Find the medicine chest in the camp.';
     case 'survey': return 'Stand at the foot of the landmark.';
     case 'traveler': return 'Find Eli Watts on the road.';
+    case 'chain': return def.steps[state.step ?? 0]?.text ?? '';
     case 'delivery': return `Deliver the parcel to Amos Hollis. ${Math.max(0, Math.ceil((def.limit - (life.time - state.since)) / 60))} min left.`;
     default: return '';
   }
@@ -128,6 +191,7 @@ export function questEvent(life, defs, event) {
   life.questFlags ??= {};
   if (event.type === 'kill' && event.targetId) life.questFlags[event.targetId] = 'dead';
   if (event.type === 'proof' && event.targetId) life.questFlags[`${event.targetId}:proof`] = true;
+  if (event.type === 'hunt' && event.animal) life.questFlags[`hunt:${event.animal}`] = true;
   for (const def of defs) {
     const state = life.quests[def.id];
     if (!state || (state.status !== 'active' && !(state.status === 'offered' && def.type === 'bounty'))) continue;
@@ -147,6 +211,16 @@ export function questEvent(life, defs, event) {
       }
     }
     if (!active) continue;
+    if (def.type === 'chain') {
+      const step = def.steps[state.step ?? 0];
+      const hit = step && ((step.kind === 'visit' && event.type === 'visit' && event.siteId === step.siteId)
+        || (step.kind === 'kill' && event.type === 'kill' && event.targetId === step.targetId)
+        || (step.kind === 'hunt' && event.type === 'hunt' && event.animal === step.animal));
+      if (hit) {
+        advance(def, state, life);
+        notes.push(state.status === 'complete' ? `${def.title}: done. Return to ${NPCS[def.turnIn]}.` : `${def.title}: ${def.steps[state.step].text}`);
+      }
+    }
     if (def.type === 'clear' && event.type === 'kill' && event.campId === def.campId && event.cleared) {
       complete(state); notes.push(`${def.title}: done. Tell Silas Reed.`);
     }

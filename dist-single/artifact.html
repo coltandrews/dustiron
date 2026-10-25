@@ -30,7 +30,7 @@
 html, body { height: 100%; margin: 0; overflow: hidden; }
 body { background: var(--ink); color: var(--paper); font: 500 15px/1.4 var(--body); -webkit-font-smoothing: antialiased; }
 #app { position: fixed; inset: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
-#game-canvas { display: block; position: absolute; inset: 0; cursor: none; transition: filter 0.25s; }
+#game-canvas { display: block; position: absolute; inset: 0; cursor: none; transition: filter 0.25s; filter: var(--vice-filter, none); }
 #app.in-menu #game-canvas { cursor: default; }
 #app.deadeye #game-canvas { filter: saturate(0.3) sepia(0.5) contrast(1.12) brightness(0.95); }
 [hidden] { display: none !important; }
@@ -518,6 +518,64 @@ kbd {
   .loading i, .reload-hint, .meter.hp .meter-fill.low { animation: none; }
 }
 
+/* ---------- online ---------- */
+.online-join { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(233, 214, 178, 0.18); }
+.online-join .guide-title { margin: 0; }
+.online-join .fine { margin: 0; }
+.online-name { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+.online-name span { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; opacity: 0.8; }
+.online-name input, .chat-form input {
+  font: inherit; color: #f3e6cc; background: rgba(20, 14, 10, 0.72); border: 1px solid rgba(233, 214, 178, 0.35);
+  border-radius: 6px; padding: 8px 10px; min-width: 0; width: 100%; box-sizing: border-box;
+}
+.online-name input:focus, .chat-form input:focus { outline: 2px solid #d9a35a; outline-offset: 1px; }
+.online-status { min-height: 1.2em; margin: 0; color: #f0c27a; font-size: 14px; }
+.online-roster {
+  position: absolute; top: 104px; right: 18px; text-align: right; font-size: 13px; color: #f3e6cc;
+  text-shadow: 0 1px 2px #000; pointer-events: none; max-width: 260px;
+}
+.online-roster:empty { display: none; }
+.roster-names { opacity: 0.75; font-size: 12px; margin-top: 2px; }
+.chat-log {
+  position: absolute; left: 18px; bottom: 120px; width: min(420px, calc(100vw - 36px)); display: grid; gap: 3px;
+  font-size: 14px; color: #f3e6cc; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.6); pointer-events: none;
+}
+.chat-log b { color: #f0c27a; margin-right: 4px; }
+.chat-log i { opacity: 0.8; }
+.chat-form { position: absolute; left: 18px; bottom: 82px; width: min(420px, calc(100vw - 36px)); pointer-events: auto; }
+.duel-banner {
+  position: absolute; top: 18%; left: 50%; transform: translateX(-50%); text-align: center; padding: 12px 20px;
+  background: rgba(24, 16, 11, 0.82); border: 1px solid rgba(233, 214, 178, 0.35); border-radius: 8px;
+  color: #f3e6cc; font-size: 16px; max-width: calc(100vw - 32px); pointer-events: none;
+}
+.duel-count { font-family: 'Rye', serif; font-size: 54px; line-height: 1.1; margin-top: 6px; color: #f0c27a; }
+.duel-count.draw { color: #ff8a5c; }
+.duel-offer {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px));
+  padding: 16px; display: grid; gap: 10px; pointer-events: auto; z-index: 5;
+}
+.duel-offer h3 { margin: 0; font-family: 'Rye', serif; font-weight: 400; }
+.duel-offer .fine { margin: 0; }
+.duel-offer .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#rider-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.rider-tag {
+  position: absolute; left: 0; top: 0; font-size: 13px; font-weight: 600; color: #f3e6cc; white-space: nowrap;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000; will-change: transform;
+}
+
+/* ---------- boss bar ---------- */
+.boss-bar { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100vw - 32px)); text-align: center; color: #f3e6cc; }
+.boss-name { font-size: 15px; margin-bottom: 4px; text-shadow: 0 1px 2px #000; }
+.boss-name b { font-family: 'Rye', serif; font-weight: 400; font-size: 18px; letter-spacing: 0.02em; }
+.boss-name span { opacity: 0.75; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-left: 6px; }
+.boss-track { height: 10px; background: rgba(20, 12, 8, 0.75); border: 1px solid #8a6234; border-radius: 3px; overflow: hidden; }
+.boss-fill { height: 100%; width: 100%; background: linear-gradient(#c0452f, #8a2a1e); transition: width 0.2s; }
+.boss-bar.enraged .boss-fill { background: linear-gradient(#ff7a3a, #c0301e); animation: boss-pulse 0.8s infinite alternate; }
+@keyframes boss-pulse { from { filter: brightness(1); } to { filter: brightness(1.35); } }
+.dice-row { display: grid; grid-template-columns: 90px auto 1fr; gap: 10px; align-items: center; text-align: left; margin: 2px 0; }
+.dice-faces { font-size: 30px; letter-spacing: 2px; line-height: 1; color: #f3e6cc; }
+.dice-verdict { margin-top: 6px; font-weight: 700; color: #f0c27a; }
+
 </style>
 <script type="importmap">
 {
@@ -607,6 +665,9 @@ kbd {
         <div><dt><kbd>H</kbd></dt><dd>Wrap a bandage</dd></div>
         <div><dt><kbd>J</kbd></dt><dd>Journal</dd></div>
         <div><dt><kbd>C</kbd></dt><dd>Walk quietly</dd></div>
+        <div><dt><kbd>B</kbd></dt><dd>Smoke</dd></div>
+        <div><dt><kbd>T</kbd></dt><dd>Chat (online)</dd></div>
+        <div><dt><kbd>G</kbd></dt><dd>Duel or dice (online)</dd></div>
         <div><dt><kbd>F</kbd> <kbd>V</kbd></dt><dd>Mount · whistle</dd></div>
         <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
@@ -1044,7 +1105,7 @@ function createRenderContext(container) {
     scene.fog.near = inside ? 60 : 48; scene.fog.far = inside ? 140 : 105;
   }
 
-  return { renderer, scene, sun, hemi, flash, focusShadow, resize, setInterior };
+  return { renderer, scene, sun, sunOffset, hemi, rim, flash, focusShadow, resize, setInterior, get interior() { return lamp.intensity > 0; } };
 }
 
 return { SKY, createRenderContext };
@@ -1174,6 +1235,7 @@ const BINDINGS = {
   mount: ['KeyF'],
   whistle: ['KeyV'],
   sneak: ['KeyC'],
+  smoke: ['KeyB'],
   pause: ['Escape', 'KeyP'],
   map: ['KeyM', 'Tab'],
   debug: ['Backquote'],
@@ -1193,6 +1255,8 @@ class Input {
     this.lastActivity = performance.now();
 
     addEventListener('keydown', (e) => {
+      // Typing a name or a chat line is not playing.
+      if (e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
       if (BLOCK_DEFAULT.has(e.code)) e.preventDefault();
       if (!e.repeat) this.edges.add(e.code);
       this.down.add(e.code);
@@ -1767,6 +1831,19 @@ function bankJobs(ctx) {
       return (t) => { let v = 0; for (const [at, d] of rips) if (t >= at && t < at + d) v += h(l(N(), 5000), 1200) * Math.sin(Math.PI * (t - at) / d) * (0.7 + 0.3 * Math.sin(t * 900)); return v * 0.8; };
     })],
     ['heal', () => make(0.9, () => { const a = OSC(), b = OSC(); return (t) => (a(523) * env(t, 0.01, 4) + (t > 0.12 ? b(784) * env(t - 0.12, 0.01, 4) : 0)) * 0.3; })],
+    // A match strike and flare, then a soft draw on the cigarette.
+    ['match', () => make(1.2, () => {
+      const h = HP(), l = LP();
+      return (t) => (t < 0.09 ? h(N(), 2500) * Math.sin(Math.PI * t / 0.09) * 0.9 : 0)
+        + (t > 0.08 && t < 0.5 ? l(N(), 1800) * Math.exp(-(t - 0.08) * 7) * 0.5 : 0)
+        + (t > 0.6 ? l(N(), 900) * Math.sin(Math.PI * Math.min(1, (t - 0.6) / 0.6)) * 0.35 : 0);
+    })],
+    // Two swallows from a glass.
+    ['gulp', () => make(0.7, () => {
+      const a = OSC(), l = LP();
+      const g = (t, at) => (t >= at && t < at + 0.14 ? a(sweep(t - at, 180, 90, 0.14)) * Math.sin(Math.PI * (t - at) / 0.14) : 0);
+      return (t) => (g(t, 0.05) + g(t, 0.32)) * 0.6 + l(N(), 600) * 0.05 * Math.exp(-t * 3);
+    })],
   );
   return jobs.concat(worldJobs(k, ctx));
 }
@@ -2180,6 +2257,8 @@ const LOOKS = {
   rusher: { shirt: PAL.bShirtB, vest: PAL.poncho, hat: PAL.woodDark, band: PAL.red, pants: PAL.woodDark, bandana: PAL.bandanaB, poncho: true },
   sharpshooter: { shirt: PAL.bShirtC, vest: PAL.black, hat: PAL.black, band: PAL.bone, pants: PAL.black, bandana: PAL.bandanaB, tall: true },
   leader: { shirt: 0x6a2a24, vest: 0x1e1814, hat: 0x2a1e18, band: PAL.brass, pants: 0x2a2624, scarf: 0xb9a06a, tall: true },
+  captain: { shirt: 0x3a4a3a, vest: 0x2a1e18, hat: 0x1e1814, band: 0xb0b0b0, pants: 0x2a2624, scarf: 0x6a2a24, tall: true },
+  boss: { shirt: 0x2a2a2e, vest: 0x5a6068, hat: 0x111111, band: 0xb0b0b0, pants: 0x1e1e22, scarf: 0x8a1c1c, tall: true, poncho: true },
   scout: { shirt: 0xb58e58, vest: 0x5a4a32, hat: 0x8a7a5a, band: PAL.woodDark, pants: 0x4a4740, bandana: 0x5d6b3a },
 };
 
@@ -3938,8 +4017,24 @@ return { BLACKJACK_BET, BETS, emptyBlackjack, handValue, canDoubleBlackjack, can
 __m.terrain = (() => {
 // Shared river shape for the world and the paper map. The channel starts and
 // ends beyond the playable land, so it always reads as part of a larger river.
-const RIVER_MIN_X = -225;
-const RIVER_MAX_X = 225;
+const RIVER_MIN_X = -440;
+const RIVER_MAX_X = 440;
+
+/** The second town sits in the pine country to the northwest. */
+const PINE_HOLLOW = { id: 'pine', name: 'Pine Hollow', x: -262, z: -250, radius: 30 };
+const MERCY = { id: 'mercy', name: 'Mercy Crossing', x: 0, z: 0, radius: 32 };
+
+/**
+ * How green the land is at a point, 0 (desert) to 1 (pine forest). The forest
+ * fills the northwest with a ragged, noisy edge and thins near the river.
+ */
+function forestAt(x, z) {
+  const dx = x - PINE_HOLLOW.x - 20, dz = z - PINE_HOLLOW.z - 10;
+  const wobble = Math.sin(x * 0.021 + 1.3) * 22 + Math.sin(z * 0.017 - 0.4) * 26 + Math.sin((x - z) * 0.009) * 30;
+  const d = Math.hypot(dx * 0.92, dz) - 205 - wobble;
+  const t = Math.max(0, Math.min(1, 0.5 - d / 70));
+  return t * t * (3 - 2 * t);
+}
 
 function riverCenter(x) {
   return 30
@@ -3973,9 +4068,9 @@ function bridgeAt(x) {
 }
 
 /** Three crossings join the north and south sides of the frontier. */
-const BRIDGES = [bridgeAt(-125), bridgeAt(0), bridgeAt(125)];
+const BRIDGES = [bridgeAt(-310), bridgeAt(-125), bridgeAt(0), bridgeAt(125), bridgeAt(310)];
 /** The center crossing carries Main Street and remains the town bridge. */
-const BRIDGE = BRIDGES[1];
+const BRIDGE = BRIDGES[2];
 
 function curve(start, end, bend, segments) {
   const dx = end.x - start.x, dz = end.z - start.z, distance = Math.hypot(dx, dz) || 1;
@@ -3998,10 +4093,18 @@ const crosses = (points) => points.some((p) => inRiver(p.x, p.z, 0.5));
  * river: a camp across the water is reached over its nearest bridge.
  */
 function campTrailPoints(camp, index = 0, segments = 18) {
-  const distance = Math.hypot(camp.x, camp.z);
+  // Camps in the pine country are reached from Pine Hollow, on the same bank.
+  const home = camp.home === 'pine' ? PINE_HOLLOW : MERCY;
+  const rx = camp.x - home.x, rz = camp.z - home.z;
+  const distance = Math.hypot(rx, rz);
   if (distance < 1) return [];
-  const dx = camp.x / distance, dz = camp.z / distance;
+  const dx = rx / distance, dz = rz / distance;
   const end = { x: camp.x - dx * 25, z: camp.z - dz * 25 };
+  if (home !== MERCY) {
+    const start = { x: home.x + dx * (home.radius + 10), z: home.z + dz * (home.radius + 10) };
+    const span = Math.hypot(end.x - start.x, end.z - start.z);
+    return curve(start, end, trailBend(camp, index) * Math.min(26, span * 0.18), segments);
+  }
   const farSide = camp.z > riverCenter(camp.x);
   const crossing = BRIDGES.reduce((best, bridge) => Math.abs(camp.x - bridge.x) < Math.abs(camp.x - best.x) ? bridge : best);
   const start = farSide ? { x: crossing.x, z: crossing.south + 4 } : { x: dx * 44, z: dz * 44 };
@@ -4025,7 +4128,14 @@ function distanceToTrail(x, z, points) {
   return nearest;
 }
 
-return { RIVER_MIN_X, RIVER_MAX_X, riverCenter, riverWidth, riverTangent, inRiver, BRIDGES, BRIDGE, campTrailPoints, distanceToTrail };
+/** The stage road from Mercy Crossing's north end up to Pine Hollow. */
+function pineRoadPoints(segments = 40) {
+  const start = { x: -3.5, z: -62 };
+  const end = { x: PINE_HOLLOW.x, z: PINE_HOLLOW.z + 46 };
+  return curve(start, end, 60, segments);
+}
+
+return { RIVER_MIN_X, RIVER_MAX_X, PINE_HOLLOW, MERCY, forestAt, riverCenter, riverWidth, riverTangent, inRiver, BRIDGES, BRIDGE, campTrailPoints, distanceToTrail, pineRoadPoints };
 })();
 
 // ---- src/world-gen.js ----
@@ -4034,23 +4144,30 @@ __m.world_gen = (() => {
 // small places between them. Pure data, so quests, the map and the renderer
 // all read the same positions.
 const { createRng } = __m.rng;
-const { campTrailPoints, inRiver } = __m.terrain;
+const { campTrailPoints, forestAt, inRiver, MERCY, PINE_HOLLOW, pineRoadPoints, distanceToTrail } = __m.terrain;
 const CAMP_NAMES = ['Coyote Wash', 'Dry Gulch', 'Rattler Flats', 'Buzzard Mesa', 'Red Hollow', 'Cinder Draw'];
+const FAR_NAMES = ['Bone Creek', "Dead Man's Bend", 'Copper Notch', 'Sidewinder Pass', 'Vulture Roost', 'Salt Lick'];
+const PINE_NAMES = ['Timber Cut', 'Blackwater Mill', 'Wolf Den', 'Hemlock Ridge'];
 const DEADLY_NAMES = ['Old Bonanza Mine', 'Hangman Quarry', 'Black Hole Diggings'];
-const TARGET_NAMES = ['Silas Crow', 'Ada Flint', 'Jed Mercer', 'Ruth Voss', 'Cal Rusk', 'Mae Talbot', 'Hob Garrity', 'Lem Stroud'];
-const LANDMARK_NAMES = ['Needle Rock', 'Twin Spires', 'Broken Chimney', "Widow's Finger", 'Saddle Stone', 'Preacher Rock'];
+const TARGET_NAMES = ['Silas Crow', 'Ada Flint', 'Jed Mercer', 'Ruth Voss', 'Cal Rusk', 'Mae Talbot', 'Hob Garrity', 'Lem Stroud', 'Eb Tanner', 'Kit Malone', 'Dutch Varga', 'Nell Crane'];
+/** The boss of the pine country and the hideout he runs. */
+const BOSS = { name: 'Iron Jack Kell', camp: 'The Iron Gang Hideout' };
+const LANDMARK_NAMES = ['Needle Rock', 'Twin Spires', 'Broken Chimney', "Widow's Finger", 'Saddle Stone', 'Preacher Rock', 'Anvil Butte', 'Sleeping Indian', 'Devil Chair'];
 const CRIMES = ['wagon robbery', 'cattle theft', 'a stage holdup', 'arson at the depot', 'murder of a surveyor', 'a bank job in Larkin'];
-const THREATS = ['Low', 'Medium', 'High', 'Deadly'];
-const TARGET_WEAPONS = ['Revolver', 'Shotgun', 'Rifle', 'Twin revolvers'];
+const AMBUSH_NAMES = ['Dead Man Rocks', 'Snake Bend', 'Gallows Cut', 'Cutthroat Rise'];
+const THREATS = ['Low', 'Medium', 'High', 'Deadly', 'Legendary'];
+const TARGET_WEAPONS = ['Revolver', 'Shotgun', 'Rifle', 'Twin revolvers', 'Iron-plated coat and a heavy revolver'];
 
 /** Bounty values by threat. Wanted-alive work pays more because it is harder. */
-const BOUNTY_BASE = [25, 50, 85, 140];
+const BOUNTY_BASE = [25, 50, 85, 140, 260];
 
 function spread(rng, taken, minGap, half, test, tries = 200) {
+  const ox = test.from?.x ?? 0, oz = test.from?.z ?? 0;
   for (let i = 0; i < tries; i++) {
     const a = rng.range(0, Math.PI * 2), d = rng.range(test.min, test.max);
-    const x = Math.round(Math.cos(a) * d), z = Math.round(Math.sin(a) * d);
+    const x = Math.round(ox + Math.cos(a) * d), z = Math.round(oz + Math.sin(a) * d);
     if (Math.abs(x) > half - 24 || Math.abs(z) > half - 24 || inRiver(x, z, 10)) continue;
+    if (test.where && !test.where(x, z)) continue;
     if (taken.some((t) => Math.hypot(t.x - x, t.z - z) < (t.r ?? minGap))) continue;
     return { x, z };
   }
@@ -4078,22 +4195,57 @@ function makeCamps(seed, half) {
   }
   const extra = createRng(seed ^ 0x6465616c);
   const spot = spread(extra, camps.map((c) => ({ ...c, r: 80 })), 80, half, { min: 160, max: half - 30 });
-  if (spot) {
-    camps.push({ id: 'camp-4', name: DEADLY_NAMES[extra.int(0, DEADLY_NAMES.length - 1)], ...spot, difficulty: 3,
+  const desert = (x, z) => forestAt(x, z) < 0.3 && Math.hypot(x - PINE_HOLLOW.x, z - PINE_HOLLOW.z) > 120;
+  const deadly = spread(extra, camps.map((c) => ({ ...c, r: 80 })), 80, 210, { min: 160, max: 180, where: desert })
+    ?? spread(extra, camps.map((c) => ({ ...c, r: 80 })), 80, 210, { min: 150, max: 185 });
+  if (deadly) {
+    camps.push({ id: 'camp-4', name: DEADLY_NAMES[extra.int(0, DEADLY_NAMES.length - 1)], ...deadly, difficulty: 3,
       targetId: 'target-4', targetName: TARGET_NAMES[(names + 7) % TARGET_NAMES.length], reward: 0 });
   }
+  addFarCamps(seed, half, camps, names);
   return camps;
+}
+
+/**
+ * The wider frontier: desert camps far from Mercy Crossing, pine camps around
+ * Pine Hollow and the Iron Gang's hideout deep in the forest.
+ */
+function addFarCamps(seed, half, camps, names) {
+  const rng = createRng(seed ^ 0x66617221);
+  const road = pineRoadPoints();
+  const taken = () => [{ x: 0, z: 0, r: 120 }, { x: PINE_HOLLOW.x, z: PINE_HOLLOW.z, r: 85 }, ...camps.map((c) => ({ ...c, r: 75 }))];
+  const offRoad = (x, z) => distanceToTrail(x, z, road) > 30;
+  const desert = (x, z) => forestAt(x, z) < 0.25 && offRoad(x, z);
+  const pine = (x, z) => forestAt(x, z) > 0.7 && offRoad(x, z) && z < 0;
+  let n = camps.length;
+  const add = (camp) => { n++; camps.push({ id: `camp-${n}`, targetId: `target-${n}`, reward: 0, ...camp }); };
+  for (let i = 0; i < 4; i++) {
+    const spot = spread(rng, taken(), 75, half, { min: 200, max: half - 40, where: desert });
+    if (spot) add({ name: FAR_NAMES[(names + i) % FAR_NAMES.length], ...spot, difficulty: 1 + (i % 3), targetName: TARGET_NAMES[(names + 8 + i) % TARGET_NAMES.length] });
+  }
+  for (let i = 0; i < 2; i++) {
+    const spot = spread(rng, taken(), 75, half, { from: PINE_HOLLOW, min: 85, max: 150, where: pine });
+    if (spot) add({ name: PINE_NAMES[(names + i) % PINE_NAMES.length], ...spot, difficulty: 2 + i, home: 'pine', targetName: TARGET_NAMES[(names + 3 + i * 5) % TARGET_NAMES.length] });
+  }
+  const lair = spread(rng, taken(), 80, half, { from: PINE_HOLLOW, min: 130, max: 175, where: pine })
+    ?? spread(rng, taken(), 60, half, { from: PINE_HOLLOW, min: 110, max: 190 });
+  if (lair) camps.push({ id: 'camp-boss', name: BOSS.camp, ...lair, difficulty: 4, boss: true, home: 'pine', targetId: 'target-boss', targetName: BOSS.name, reward: 0 });
+}
+
+/** The towns of a world. Both are fixed; only the land around them is seeded. */
+function makeTowns() {
+  return [{ ...MERCY }, { ...PINE_HOLLOW }];
 }
 
 /** Wanted-poster data for each camp target. */
 function makeWanted(seed, camps) {
   const rng = createRng(seed ^ 0x77616e74);
   return camps.map((camp, i) => {
-    const want = i === 0 ? 'either' : rng.pick(['either', 'either', 'alive', 'dead']);
-    const base = BOUNTY_BASE[Math.min(3, camp.difficulty)];
+    const want = i === 0 || camp.boss ? 'either' : rng.pick(['either', 'either', 'alive', 'dead']);
+    const base = BOUNTY_BASE[Math.min(4, camp.difficulty)];
     return {
-      campId: camp.id, targetId: camp.targetId, name: camp.targetName, crime: rng.pick(CRIMES),
-      threat: THREATS[Math.min(3, camp.difficulty)], weapon: TARGET_WEAPONS[Math.min(3, camp.difficulty)],
+      campId: camp.id, targetId: camp.targetId, name: camp.targetName, crime: camp.boss ? 'the Larkin train robbery and six killings' : rng.pick(CRIMES),
+      threat: THREATS[Math.min(4, camp.difficulty)], weapon: TARGET_WEAPONS[Math.min(4, camp.difficulty)], office: camp.home === 'pine' ? 'deputy' : 'sheriff',
       want, reward: base, aliveReward: Math.round(base * 1.6 / 5) * 5,
       face: { hat: rng.pick([0x9d302b, 0x5a2a20, 0x3a2a24]), scarf: rng.pick([0xa8322a, 0x26201d, 0x4b5a4a]), beard: rng.chance(0.6) },
     };
@@ -4103,7 +4255,7 @@ function makeWanted(seed, camps) {
 /** Places between town and the camps. Each kind supports exploration or a quest. */
 function makeSites(seed, half, camps) {
   const rng = createRng(seed ^ 0x73697465), sites = [];
-  const taken = [{ x: 0, z: 0, r: 70 }, ...camps.map((c) => ({ x: c.x, z: c.z, r: 45 }))];
+  const taken = [{ x: 0, z: 0, r: 70 }, { x: PINE_HOLLOW.x, z: PINE_HOLLOW.z, r: 60 }, ...camps.map((c) => ({ x: c.x, z: c.z, r: 45 }))];
   const add = (kind, name, test, gap = 32, extra = {}) => {
     const spot = spread(rng, taken, gap, half, test);
     if (!spot) return null;
@@ -4112,7 +4264,7 @@ function makeSites(seed, half, camps) {
     return site;
   };
   const marks = [...LANDMARK_NAMES].sort(() => rng.next() - 0.5);
-  for (let i = 0; i < 4; i++) add('landmark', marks[i], { min: 75, max: half - 30 }, 60, { height: Math.round(rng.range(9, 14)) });
+  for (let i = 0; i < 4; i++) add('landmark', marks[i], { min: 75, max: 180 }, 60, { height: Math.round(rng.range(9, 14)) });
   add('tree', 'Hanging Tree', { min: 70, max: 150 }, 40);
   add('homestead', 'Hollis Homestead', { min: 85, max: 140 }, 45, { npc: 'Amos Hollis' });
   add('traveler', 'Wounded traveler', { min: 60, max: 120 }, 35, { npc: 'Eli Watts' });
@@ -4120,16 +4272,25 @@ function makeSites(seed, half, camps) {
   for (let i = 0; i < 2; i++) add('cache', 'Buried strongbox', { min: 90, max: half - 30 }, 35, { money: 20 + rng.int(0, 3) * 5, rounds: 12 });
   for (let i = 0; i < 2; i++) add('wreck', 'Abandoned wagon', { min: 50, max: 160 }, 30, { loot: i ? 'bandage' : 'rounds' });
   for (let i = 0; i < 2; i++) add('grave', 'Lone grave', { min: 60, max: 170 }, 25);
+  // The wider land beyond the first ring.
+  const open = (x, z) => forestAt(x, z) < 0.4;
+  for (let i = 4; i < 8; i++) add('landmark', marks[i], { min: 200, max: half - 30, where: open }, 70, { height: Math.round(rng.range(11, 17)) });
+  for (let i = 0; i < 3; i++) add('cache', 'Buried strongbox', { min: 200, max: half - 30 }, 40, { money: 35 + rng.int(0, 4) * 5, rounds: 16 });
+  for (let i = 0; i < 3; i++) add('wreck', 'Abandoned wagon', { min: 180, max: half - 40 }, 35, { loot: i % 2 ? 'bandage' : 'rounds' });
+  add('grave', 'Lone grave', { min: 200, max: half - 40 }, 30);
+  add('mill', 'Burned sawmill', { from: PINE_HOLLOW, min: 55, max: 95, where: (x, z) => forestAt(x, z) > 0.6 }, 40);
+  add('den', "Old Scar's den", { from: PINE_HOLLOW, min: 110, max: 190, where: (x, z) => forestAt(x, z) > 0.75 }, 50);
+  add('lodge', 'Trapper lodge', { from: PINE_HOLLOW, min: 60, max: 120, where: (x, z) => forestAt(x, z) > 0.5 }, 40, { npc: 'Otto Brandt' });
   return sites;
 }
 
 /** Two roadside ambush spots beside camp trails, small enough to escape and clear of town. */
 function makeAmbushes(seed, half, camps, sites) {
   const rng = createRng(seed ^ 0x616d6275), out = [];
-  const taken = [{ x: 0, z: 0, r: 75 }, ...camps.map((c) => ({ x: c.x, z: c.z, r: 55 })), ...sites.map((s) => ({ x: s.x, z: s.z, r: 30 }))];
+  const taken = [{ x: 0, z: 0, r: 75 }, { x: PINE_HOLLOW.x, z: PINE_HOLLOW.z, r: 70 }, ...camps.map((c) => ({ x: c.x, z: c.z, r: 55 })), ...sites.map((s) => ({ x: s.x, z: s.z, r: 30 }))];
   const order = camps.map((_, i) => i).sort(() => rng.next() - 0.5);
   for (const index of order) {
-    if (out.length >= 2) break;
+    if (out.length >= 4) break;
     const trail = campTrailPoints(camps[index], index);
     for (let tries = 0; tries < 12; tries++) {
       const k = Math.floor(trail.length * rng.range(0.35, 0.7)), a = trail[k], b = trail[Math.min(trail.length - 1, k + 1)];
@@ -4137,7 +4298,7 @@ function makeAmbushes(seed, half, camps, sites) {
       const x = Math.round(a.x - (b.z - a.z) / len * off * side), z = Math.round(a.z + (b.x - a.x) / len * off * side);
       if (Math.abs(x) > half - 24 || Math.abs(z) > half - 24 || inRiver(x, z, 8)) continue;
       if (taken.some((t) => Math.hypot(t.x - x, t.z - z) < t.r)) continue;
-      out.push({ id: `ambush-${out.length + 1}`, name: out.length ? 'Snake Bend' : 'Dead Man Rocks', x, z, difficulty: 0, ambush: true, along: index });
+      out.push({ id: `ambush-${out.length + 1}`, name: AMBUSH_NAMES[out.length], x, z, difficulty: 0, ambush: true, along: index });
       taken.push({ x, z, r: 50 });
       break;
     }
@@ -4145,7 +4306,7 @@ function makeAmbushes(seed, half, camps, sites) {
   return out;
 }
 
-return { THREATS, BOUNTY_BASE, makeCamps, makeWanted, makeSites, makeAmbushes };
+return { BOSS, THREATS, BOUNTY_BASE, makeCamps, makeTowns, makeWanted, makeSites, makeAmbushes };
 })();
 
 // ---- src/quests.js ----
@@ -4158,7 +4319,9 @@ const STATUS = ['offered', 'active', 'complete', 'turnedIn', 'failed'];
 const NPCS = {
   sheriff: 'Sheriff Boone', doctor: 'Doctor Finch', maps: 'Elias Ward', silas: 'Silas Reed', martha: 'Martha Bell',
   clara: 'Clara Finch', nora: 'Nora Pike', mae: 'Mae Sullivan', amos: 'Amos Hollis', eli: 'Eli Watts', juan: 'Juan Ortega',
+  hale: 'Deputy Hale', ruby: 'Ruby Tate', hank: 'Hank Morrow', lacey: 'Doc Lacey', otto: 'Otto Brandt',
 };
+const OFFICE_TOWN = { sheriff: 'Mercy Crossing', deputy: 'Pine Hollow' };
 const DELIVERY_LIMIT = 600;
 
 function direction(x, z) {
@@ -4177,10 +4340,12 @@ function makeQuests(world) {
   for (const wanted of world.wanted ?? []) {
     const camp = camps.find((c) => c.id === wanted.campId);
     if (!camp) continue;
+    const office = wanted.office === 'deputy' ? 'hale' : 'sheriff';
+    const home = office === 'hale' ? { x: -262, z: -250 } : { x: 0, z: 0 };
     quests.push({
-      id: `bounty-${camp.id}`, type: 'bounty', giver: 'sheriff', turnIn: 'sheriff', campId: camp.id, targetId: camp.targetId,
-      title: `Wanted: ${wanted.name}`, want: wanted.want, threat: wanted.threat,
-      summary: `${wanted.name} is wanted for ${wanted.crime}. Last seen ${direction(camp.x, camp.z)} of town. Carries a ${wanted.weapon.toLowerCase()}. Wears a red hat.`,
+      id: `bounty-${camp.id}`, type: 'bounty', giver: office, turnIn: office, campId: camp.id, targetId: camp.targetId,
+      title: `Wanted: ${wanted.name}`, want: wanted.want, threat: wanted.threat, boss: !!camp.boss,
+      summary: `${wanted.name} is wanted for ${wanted.crime}. Last seen ${direction(camp.x - home.x, camp.z - home.z)} of ${OFFICE_TOWN[wanted.office ?? 'sheriff']}. Carries a ${wanted.weapon.toLowerCase()}. Wears a red hat.`,
       reward: { money: wanted.want === 'alive' ? wanted.aliveReward : wanted.reward }, aliveReward: wanted.aliveReward,
       area: searchArea(camp.x, camp.z, 55, 1), leadArea: searchArea(camp.x, camp.z, 26, 2),
       fail: wanted.want === 'alive' ? `The sheriff needs ${wanted.name} alive. Killing the target fails the job.` : null,
@@ -4218,7 +4383,64 @@ function makeQuests(world) {
     reward: { money: 25 }, area: searchArea(home.x, home.z, 30, 7), threat: 'Low', limit: DELIVERY_LIMIT,
     fail: 'The parcel is late after ten minutes of trail time.',
   });
+  quests.push(...chainQuests(world));
   return quests;
+}
+
+/** Two longer stories in the pine country, each a chain of steps. */
+function chainQuests(world) {
+  const out = [], sites = world.sites ?? [], camps = world.camps;
+  const mill = sites.find((s) => s.kind === 'mill'), den = sites.find((s) => s.kind === 'den'), lodge = sites.find((s) => s.kind === 'lodge');
+  const boss = camps.find((c) => c.boss);
+  const lieutenant = [...camps].filter((c) => c.home === 'pine' && !c.boss).sort((a, b) => b.difficulty - a.difficulty)[0];
+  if (mill && boss && lieutenant) out.push({
+    id: 'iron-gang', type: 'chain', giver: 'hale', turnIn: 'hale', title: 'The Iron Gang', threat: 'Legendary',
+    summary: 'Iron Jack Kell\'s gang burned the Blackwood sawmill and shot the men who worked it. Deputy Hale has no posse left. He wants it finished.',
+    steps: [
+      { kind: 'visit', siteId: mill.id, text: `Search the burned sawmill ${direction(mill.x + 262, mill.z + 250)} of Pine Hollow.` },
+      { kind: 'kill', targetId: lieutenant.targetId, text: `Kill ${lieutenant.targetName}, Kell's lieutenant, at ${lieutenant.name}.` },
+      { kind: 'kill', targetId: boss.targetId, text: `Put down Iron Jack Kell at ${boss.name}. He wears an iron-plated coat.` },
+    ],
+    areas: [searchArea(mill.x, mill.z, 35, 11), searchArea(lieutenant.x, lieutenant.z, 50, 12), searchArea(boss.x, boss.z, 50, 13)],
+    area: searchArea(mill.x, mill.z, 35, 11),
+    reward: { money: 240, items: { bandage: 2 } }, fail: null,
+  });
+  if (den && lodge) out.push({
+    id: 'trapper', type: 'chain', giver: 'otto', turnIn: 'otto', title: 'The trapper\'s commission', threat: 'High',
+    summary: 'Otto Brandt buys hides and tells stories about a bear the size of a wagon. He will pay well for a hunter who can prove the stories.',
+    steps: [
+      { kind: 'bring', item: 'deerHide', count: 3, text: 'Bring Otto three deer hides. Deer graze in the pine meadows.' },
+      { kind: 'bring', item: 'wolfPelt', count: 2, text: 'Bring Otto two wolf pelts. Wolves run in packs deep in the forest.' },
+      { kind: 'hunt', animal: 'bear', text: `Hunt Old Scar near his den ${direction(den.x + 262, den.z + 250)} of Pine Hollow.` },
+    ],
+    areas: [searchArea(-262, -250, 120, 14), searchArea(den.x, den.z, 110, 15), searchArea(den.x, den.z, 40, 16)],
+    area: searchArea(-262, -250, 120, 14),
+    reward: { money: 160, items: { bandage: 1 } }, fail: null,
+  });
+  return out;
+}
+
+/** Hands over the hides a 'bring' step asks for. */
+function bringStep(life, defs, id) {
+  const def = quest(defs, id), state = life.quests[id];
+  const step = def?.steps?.[state?.step ?? 0];
+  if (!def || state.status !== 'active' || step?.kind !== 'bring') return result(false, 'Nothing to hand over.');
+  if ((life.items[step.item] ?? 0) < step.count) return result(false, `You need ${step.count}.`);
+  life.items[step.item] -= step.count;
+  advance(def, state, life);
+  return result(true, state.status === 'complete' ? 'That settles it.' : 'Good hides. Now the next thing.');
+}
+
+function advance(def, state, life) {
+  state.step = (state.step ?? 0) + 1;
+  // A kill step whose target is already dead in this life is skipped.
+  while (state.step < def.steps.length) {
+    const next = def.steps[state.step];
+    if (next.kind === 'kill' && life.questFlags?.[next.targetId] === 'dead') state.step++;
+    else if (next.kind === 'hunt' && life.questFlags?.[`hunt:${next.animal}`]) state.step++;
+    else break;
+  }
+  if (state.step >= def.steps.length) complete(state);
 }
 
 function emptyQuestState(quests) {
@@ -4236,6 +4458,7 @@ function accept(life, defs, id) {
   state.status = 'active';
   state.since = life.time;
   if (def.type === 'delivery') state.parcel = true;
+  if (def.type === 'chain') { state.step = -1; advance(def, state, life); }
   // A target that is already down only needs proof; a wanted-alive job is lost.
   if (def.type === 'bounty' && life.questFlags?.[def.targetId] === 'dead') {
     if (def.want === 'alive') { state.status = 'failed'; return result(true, `${def.title}: the target is already dead. The job is lost.`); }
@@ -4262,6 +4485,7 @@ function objective(life, def) {
     case 'medicine': return state.carrying ? 'Carry the chest back to Doctor Finch.' : 'Find the medicine chest in the camp.';
     case 'survey': return 'Stand at the foot of the landmark.';
     case 'traveler': return 'Find Eli Watts on the road.';
+    case 'chain': return def.steps[state.step ?? 0]?.text ?? '';
     case 'delivery': return `Deliver the parcel to Amos Hollis. ${Math.max(0, Math.ceil((def.limit - (life.time - state.since)) / 60))} min left.`;
     default: return '';
   }
@@ -4279,6 +4503,7 @@ function questEvent(life, defs, event) {
   life.questFlags ??= {};
   if (event.type === 'kill' && event.targetId) life.questFlags[event.targetId] = 'dead';
   if (event.type === 'proof' && event.targetId) life.questFlags[`${event.targetId}:proof`] = true;
+  if (event.type === 'hunt' && event.animal) life.questFlags[`hunt:${event.animal}`] = true;
   for (const def of defs) {
     const state = life.quests[def.id];
     if (!state || (state.status !== 'active' && !(state.status === 'offered' && def.type === 'bounty'))) continue;
@@ -4298,6 +4523,16 @@ function questEvent(life, defs, event) {
       }
     }
     if (!active) continue;
+    if (def.type === 'chain') {
+      const step = def.steps[state.step ?? 0];
+      const hit = step && ((step.kind === 'visit' && event.type === 'visit' && event.siteId === step.siteId)
+        || (step.kind === 'kill' && event.type === 'kill' && event.targetId === step.targetId)
+        || (step.kind === 'hunt' && event.type === 'hunt' && event.animal === step.animal));
+      if (hit) {
+        advance(def, state, life);
+        notes.push(state.status === 'complete' ? `${def.title}: done. Return to ${NPCS[def.turnIn]}.` : `${def.title}: ${def.steps[state.step].text}`);
+      }
+    }
     if (def.type === 'clear' && event.type === 'kill' && event.campId === def.campId && event.cleared) {
       complete(state); notes.push(`${def.title}: done. Tell Silas Reed.`);
     }
@@ -4365,7 +4600,7 @@ function validQuestState(value, defs) {
   }) && Object.keys(value).every((id) => defs.some((d) => d.id === id));
 }
 
-return { STATUS, NPCS, direction, makeQuests, emptyQuestState, quest, accept, objective, questEvent, sellMedicine, turnIn, questsFor, validQuestState };
+return { STATUS, NPCS, direction, makeQuests, bringStep, emptyQuestState, quest, accept, objective, questEvent, sellMedicine, turnIn, questsFor, validQuestState };
 })();
 
 // ---- src/weapons.js ----
@@ -4501,6 +4736,23 @@ const EFFECTS = {
   meal: { name: 'Well fed', seconds: 90 },
   coffee: { name: 'Coffee', seconds: 120 },
   whiskey: { name: 'Whiskey', seconds: 60 },
+  smoke: { name: 'Tobacco calm', seconds: 75 },
+};
+
+/** How much each drink adds to the rider's drunkenness (0 sober, 1.5 falling down). */
+const DRINKS = { beer: 0.18, whiskey: 0.38 };
+/** Tobacco: Dead Eye restored and how long the calm lasts. */
+const SMOKES = { cigarette: { deadEye: 0.25, seconds: 45 }, cigar: { deadEye: 0.5, seconds: 90 } };
+
+/** Animal skins: what a buyer pays for each. */
+const PELTS = {
+  rabbitPelt: { name: 'Rabbit pelt', price: 3 },
+  hide: { name: 'Pronghorn hide', price: 7 },
+  deerHide: { name: 'Deer hide', price: 9 },
+  elkHide: { name: 'Elk hide', price: 16 },
+  boarHide: { name: 'Boar hide', price: 11 },
+  wolfPelt: { name: 'Wolf pelt', price: 14 },
+  bearHide: { name: 'Old Scar\'s hide', price: 90 },
 };
 
 const CATALOGUE = {
@@ -4524,12 +4776,18 @@ const CATALOGUE = {
   rent: { name: 'Rent Old Dusty', price: 30, kind: 'horse', horse: 'rental', text: 'A steady old horse for this trip. Returns to the stable when you come home.' },
   horse: { name: 'Buy the bay mare', price: 180, kind: 'horse', horse: 'owned', text: 'Faster, stronger and calmer under fire. Yours for this life.' },
   feed: { name: 'Horse feed', price: 2, kind: 'supply', max: 3, text: 'Restores your horse when it is worn out.' },
+  beer: { name: 'Beer', price: 1, kind: 'supply', max: 3, text: 'Cheap and cold. A little Dead Eye, a little wobble.' },
+  cigarette: { name: 'Cigarettes', price: 2, kind: 'supply', max: 9, text: 'Press B to smoke. Restores some Dead Eye and steadies your aim.' },
+  cigar: { name: 'Cigar', price: 5, kind: 'supply', max: 3, text: 'Press B when out of cigarettes. Half a Dead Eye bar and a long calm.' },
 };
 
 const SHOPS = {
   guns: ['ammo-pistol', 'ammo-heavy', 'ammo-rifle', 'ammo-shells', 'heavy', 'repeater', 'shotgun', 'rifle', 'oil', 'belt'],
   doctor: ['bandage', 'heal'],
-  saloon: ['meal', 'coffee', 'whiskey'],
+  saloon: ['meal', 'coffee', 'beer', 'whiskey', 'cigarette', 'cigar'],
+  pineSaloon: ['meal', 'coffee', 'beer', 'whiskey', 'cigarette', 'cigar'],
+  trading: ['ammo-pistol', 'ammo-rifle', 'ammo-shells', 'repeater', 'rifle', 'oil', 'bandage', 'feed', 'cigarette'],
+  pineDoctor: ['bandage', 'heal'],
   clothes: ['coat'],
   maps: ['map'],
   stable: ['rent', 'horse', 'feed'],
@@ -4594,10 +4852,17 @@ function buy(life, itemId, shop = null) {
 function useItem(life, itemId, { inFight = false, time = life.time } = {}) {
   const count = life.items[itemId] ?? 0;
   if (!count) return { ok: false, message: `You have no ${CATALOGUE[itemId]?.name.toLowerCase() ?? 'such thing'}.` };
-  if (inFight && itemId !== 'whiskey') return { ok: false, message: 'Not in the middle of a fight.' };
+  if (inFight && !['whiskey', 'beer', 'cigarette', 'cigar'].includes(itemId)) return { ok: false, message: 'Not in the middle of a fight.' };
   if (itemId === 'oil') { for (const key of life.unlocked) life.guns[key].condition = 1; }
   else if (itemId === 'feed') { if (!life.horse) return { ok: false, message: 'You have no horse.' }; life.horse.stamina = 1; }
-  else if (EFFECTS[itemId]) {
+  else if (DRINKS[itemId] !== undefined) {
+    life.drunk = Math.min(1.5, (life.drunk ?? 0) + DRINKS[itemId]);
+    life.deadEye = Math.min(1, life.deadEye + (itemId === 'whiskey' ? 0.35 : 0.12));
+    if (itemId === 'whiskey') life.effects.whiskey = time + EFFECTS.whiskey.seconds;
+  } else if (SMOKES[itemId]) {
+    life.effects.smoke = time + SMOKES[itemId].seconds;
+    life.deadEye = Math.min(1, life.deadEye + SMOKES[itemId].deadEye);
+  } else if (EFFECTS[itemId]) {
     life.effects[itemId] = time + EFFECTS[itemId].seconds;
     if (itemId === 'whiskey') life.deadEye = Math.min(1, life.deadEye + 0.35);
     if (itemId === 'meal') life.mealHeal = 30;
@@ -4610,7 +4875,7 @@ function effectActive(life, id, time = life.time) {
   return (life.effects?.[id] ?? -1) > time;
 }
 
-return { START_MONEY, START_ROUNDS, AMMO, BELT_BONUS, EFFECTS, CATALOGUE, SHOPS, MERCHANT_MARKUP, ammoMax, ammoHeld, priceOf, cannotBuy, buy, useItem, effectActive };
+return { START_MONEY, START_ROUNDS, AMMO, BELT_BONUS, EFFECTS, DRINKS, SMOKES, PELTS, CATALOGUE, SHOPS, MERCHANT_MARKUP, ammoMax, ammoHeld, priceOf, cannotBuy, buy, useItem, effectActive };
 })();
 
 // ---- src/ui-journal.js ----
@@ -4620,7 +4885,7 @@ __m.ui_journal = (() => {
 const { NPCS, objective, direction } = __m.quests;
 const { AMMO, CATALOGUE, EFFECTS, ammoMax, effectActive, useItem } = __m.items;
 const ORDER = { complete: 0, active: 1, failed: 2, turnedIn: 3 };
-const USABLE = ['meal', 'coffee', 'whiskey', 'oil', 'feed'];
+const USABLE = ['meal', 'coffee', 'beer', 'whiskey', 'cigarette', 'cigar', 'oil', 'feed'];
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -4674,7 +4939,7 @@ function renderJournal(ui, game, tab = ui.journalTab ?? 'jobs') {
       const fight = game.player.sinceHit < 5 || game.enemies.some((e) => e.alive && e.knows && Math.hypot(e.x - game.player.x, e.z - game.player.z) < 30);
       const res = useItem(life, id, { inFight: fight });
       if (res.ok) {
-        if (id === 'whiskey') game.deadEye.meter = life.deadEye;
+        if (['whiskey', 'beer', 'cigarette', 'cigar'].includes(id)) game.deadEye.meter = life.deadEye;
         if (id === 'oil') game.player.refreshInventory(life);
         if (id === 'feed' && game.horse) game.horse.data.stamina = game.horse.breed.stamina;
         game.save();
@@ -5909,10 +6174,36 @@ function chooseCover(game, bandit, opts) {
 return { chooseCover };
 })();
 
+// ---- src/towns.js ----
+__m.towns = (() => {
+// Town safety rules shared by the browser and the server. A player inside a
+// town (or inside any shop room) cannot be hurt by outlaws or other players,
+// except by an accepted duel partner.
+
+/** All towns in a world. Older worlds have a single `town` field. */
+function townsOf(world) {
+  return world.towns ?? [world.town];
+}
+
+/** The town that contains a point, or null. */
+function townAt(world, x, z) {
+  for (const town of townsOf(world)) if (Math.hypot(x - town.x, z - town.z) < town.radius) return town;
+  return null;
+}
+
+/** True when the position is protected: inside a shop room or within a town. */
+function inSafeZone(world, x, z, room = null) {
+  return !!room || !!townAt(world, x, z);
+}
+
+return { townsOf, townAt, inSafeZone };
+})();
+
 // ---- src/enemy-captive.js ----
 __m.enemy_captive = (() => {
 // Surrender and escort: a badly hurt bounty target drops the gun, kneels and
 // waits. Once restrained (E) the prisoner walks a few steps behind the player.
+const { townsOf } = __m.towns;
 const { GROUPS, RAPIER } = __m.physics;
 const { showGun, turnToward } = __m.character;
 const FOLLOW_GAP = 2.2;
@@ -5982,7 +6273,7 @@ function tickCaptive(e, dt) {
     e.yaw = turnToward(e.yaw, Math.atan2(dx, dz), dt * 8);
   } else e.body.setNextKinematicTranslation({ x: e.x, y: e.bodyY, z: e.z });
   // Reaching town hands the prisoner to the deputy.
-  if (e.game.inTown() && Math.hypot(e.x, e.z) < e.game.run.world.town.radius + 4) {
+  if (e.game.inTown() && townsOf(e.game.run.world).some((t) => Math.hypot(e.x - t.x, e.z - t.z) < t.radius + 4)) {
     e.jailed = true;
     e.captive = false;
     e.model.root.visible = false;
@@ -6037,6 +6328,19 @@ const BANDIT_TYPES = {
     mag: 5, reload: 1.8, bounty: 40, usesCover: true, sight: 20, flanks: true,
   },
   // Watches the approaches, shouts the camp awake and keeps his distance.
+  // A gang's second: hard to drop, three-round bursts, flanks.
+  captain: {
+    look: 'captain', hp: 280, speed: 4.0, gun: 'heavy', aim: 0.4, burst: 3, burstGap: 0.26, pellets: 1,
+    dmg: 18, bulletSpeed: 46, spreadDeg: 3.2, cooldown: [0.9, 1.6], range: [5, 13], fireRange: 22,
+    mag: 6, reload: 1.6, bounty: 60, usesCover: true, sight: 22, flanks: true, armor: 0.8, stagger: 0.5, noFlee: true, scale: 1.08,
+  },
+  // Iron Jack Kell: an iron-plated coat, long bursts, and a rage at half health.
+  boss: {
+    look: 'boss', hp: 700, speed: 3.5, gun: 'heavy', aim: 0.5, burst: 4, burstGap: 0.2, pellets: 1,
+    dmg: 17, bulletSpeed: 48, spreadDeg: 4, cooldown: [1.2, 1.9], range: [6, 15], fireRange: 24,
+    mag: 8, reload: 2.2, bounty: 150, usesCover: true, sight: 26, armor: 0.55, stagger: 0.15, noFlee: true, boss: true, scale: 1.2,
+    enraged: { burst: 7, burstGap: 0.13, cooldown: [0.6, 1.0], speed: 4.6, aim: 0.36, reload: 1.4, pellets: 2, spreadDeg: 6 },
+  },
   scout: {
     look: 'scout', hp: 55, speed: 5.0, gun: 'repeater', aim: 0.55, burst: 1, burstGap: 0, pellets: 1,
     dmg: 12, bulletSpeed: 48, spreadDeg: 3, cooldown: [1.4, 2.4], range: [12, 19], fireRange: 26,
@@ -6105,7 +6409,9 @@ class Bandit {
     this.bodyY = cap.y;
 
     const look = LOOKS[this.def.look];
-    this.model = addRollPivot(makeCharacter(target ? { ...look, hat: 0x9d302b, band: 0xe4bf6c } : look));
+    this.model = addRollPivot(makeCharacter(target && !this.def.boss ? { ...look, hat: 0x9d302b, band: 0xe4bf6c } : look));
+    if (this.def.scale) this.model.root.scale.setScalar(this.def.scale);
+    this.enraged = false;
     showGun(this.model, this.def.gun);
     this.model.root.position.set(x, 0, z);
     game.levelGroup.add(this.model.root);
@@ -6127,7 +6433,7 @@ class Bandit {
     const d = Math.hypot(dx, dz);
     let see = false;
     // Walking slowly keeps the player harder to spot; running draws the eye.
-    const sight = this.def.sight * (P.sneaking ? 0.6 : P.moveFraction > 0.75 ? 1.1 : 1);
+    const sight = this.def.sight * (this.game.sightScale?.() ?? 1) * (P.sneaking ? 0.6 : P.moveFraction > 0.75 ? 1.1 : 1);
     if (d < sight) {
       const off = Math.abs(angleDelta(this.yaw, Math.atan2(dx, dz)));
       if (d < T.enemy.closeSense || this.knows || off < (T.enemy.sightFovDeg * DEG) / 2) {
@@ -6327,24 +6633,39 @@ class Bandit {
   /** @returns {{killed:boolean, crit:boolean}} */
   onHit(dmg, dirX, dirZ, knock) {
     if (!this.alive) return { killed: false, crit: false };
-    const crit = !this.knows && !this.surrendered;
+    const crit = !this.knows && !this.surrendered && !this.def.armor;
+    dmg *= this.def.armor ?? 1;
+    knock *= this.def.stagger ?? 1;
     this.hp -= crit ? dmg * 2 : dmg;
+    if (this.def.enraged && !this.enraged && this.hp > 0 && this.hp < this.maxHp * 0.5) this.enrage();
     if (this.hp > 0 && !this.surrendered && this.shouldSurrender()) { surrender(this); return { killed: false, crit }; }
     this.flash = 0.06;
     this.kx += dirX * knock * 2.2;
     this.kz += dirZ * knock * 2.2;
     const P = this.game.player;
-    this.lastSeenX = P.x; this.lastSeenZ = P.z; this.lastSeenT = this.game.time;
+    if (P) { this.lastSeenX = P.x; this.lastSeenZ = P.z; this.lastSeenT = this.game.time; }
     if (this.hp <= 0) { this.die(dirX, dirZ, 3 + knock * 1.5); return { killed: true, crit }; }
     if (!this.knows) { this.knows = true; this.engageAfterAlert(); this.game.shout(this); }
     this.game.audio.at('enemyHurt', this.x, this.z, { vol: 0.6 });
-    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction(this.encounter) <= 0.5 && this.type !== 'rusher') {
+    if (!this.fleeing && !this.def.noFlee && this.hp < this.maxHp * 0.25 && this.game.aliveFraction(this.encounter) <= 0.5 && this.type !== 'rusher') {
       this.fleeing = true;
       this.releaseToken();
       this.cover = null;
       this.setState('toCover');
     }
     return { killed: false, crit };
+  }
+
+  /** Half dead, the boss throws off caution: faster, longer bursts and the whole camp called in. */
+  enrage() {
+    if (this.enraged || !this.def.enraged) return;
+    this.enraged = true;
+    this.def = { ...this.def, ...this.def.enraged };
+    const g = this.game;
+    g.audio.at('enemyHurt', this.x, this.z, { vol: 1.2, pitch: 0.5 });
+    g.addTrauma?.(0.25);
+    if (g.player && Math.hypot(g.player.x - this.x, g.player.z - this.z) < 60) g.ui?.toast?.(`${this.encounter.targetName ?? 'The boss'} roars and comes for you!`, 3);
+    for (const e of this.encounter.enemies) if (e !== this && e.alive && !e.knows) e.hear(this.x, this.z, true);
   }
 
   /** A wounded bounty target gives up so they can be taken alive. */
@@ -6620,6 +6941,93 @@ class Bandit {
 return { BANDIT_TYPES, lineGeo, Bandit };
 })();
 
+// ---- src/vices.js ----
+__m.vices = (() => {
+// Drinking and smoking. Drink makes the rider sway, walk a little crooked and
+// blurs the world; tobacco restores Dead Eye and steadies the hands. Both show
+// on other riders online through their pose flags.
+const { SMOKES, effectActive, useItem } = __m.items;
+/** Drunkenness fades by itself over about three minutes. */
+const SOBER_RATE = 0.008;
+
+function drunkness(run) { return run?.drunk ?? 0; }
+
+/** Extra aim sway from drink, on top of the whiskey shakes. */
+function drinkSway(run) {
+  return (effectActive(run, 'whiskey') ? 1.4 : 0) + drunkness(run) * 2.2;
+}
+
+/** Aim spread multiplier: tobacco calms the hands. */
+function calmFactor(run) {
+  return effectActive(run, 'smoke') ? 0.82 : 1;
+}
+
+/** Bends the walking direction from side to side while drunk. */
+function staggerMove(run, time, move) {
+  const d = drunkness(run);
+  if (d < 0.05 || (!move.x && !move.z)) return move;
+  const a = (Math.sin(time * 1.3) + Math.sin(time * 2.9) * 0.5) * d * 0.42, c = Math.cos(a), s = Math.sin(a);
+  return { x: move.x * c - move.z * s, z: move.x * s + move.z * c };
+}
+
+/** Per-tick upkeep: sobering up and smoke puffs. */
+function tickVices(player, dt) {
+  const g = player.game, run = player.run;
+  if (run.drunk > 0) run.drunk = Math.max(0, run.drunk - dt * SOBER_RATE);
+  if (player.smokeT > 0) {
+    player.smokeT -= dt;
+    player.puffT = (player.puffT ?? 0) - dt;
+    if (player.puffT <= 0) { player.puffT = 1.1; puff(g, player.x, player.z, player.yaw); }
+  } else if (effectActive(run, 'smoke')) {
+    player.puffT = (player.puffT ?? 2) - dt;
+    if (player.puffT <= 0) { player.puffT = 2.6; puff(g, player.x, player.z, player.yaw, 0.5); }
+  }
+}
+
+/** A small curl of smoke at the mouth. */
+function puff(g, x, z, yaw, size = 1) {
+  g.fx.emit('dust', x + Math.sin(yaw) * 0.25, 1.75, z + Math.cos(yaw) * 0.25, Math.max(1, Math.round(3 * size)), Math.sin(yaw) * 0.2, Math.cos(yaw) * 0.2, 0.35);
+}
+
+/** Lights a cigarette, or a cigar when there are no cigarettes left. */
+function smoke(player) {
+  const g = player.game, run = player.run;
+  if (!player.alive || player.rolling || player.bandaging || player.smokeT > 0) return;
+  const id = run.items.cigarette > 0 ? 'cigarette' : run.items.cigar > 0 ? 'cigar' : null;
+  if (!id) { g.ui.toast('Nothing to smoke. The saloon sells cigarettes.'); return; }
+  const res = useItem(run, id, { inFight: true });
+  if (!res.ok) { g.ui.toast(res.message); return; }
+  player.smokeT = 5;
+  g.deadEye.meter = run.deadEye;
+  g.audio.play('match', { vol: 0.6 });
+  g.ui.toast(id === 'cigar' ? `A slow cigar · calm for ${SMOKES.cigar.seconds}s` : 'You light a cigarette.', 2.5);
+  g.save();
+}
+
+/** Drinks one carried or freshly bought drink right away. */
+function drink(game, id) {
+  const run = game.run, res = useItem(run, id, { inFight: true });
+  if (res.ok) {
+    game.deadEye.meter = run.deadEye;
+    game.audio.play('gulp', { vol: 0.7 });
+    const d = run.drunk;
+    game.ui.toast(d > 1.1 ? 'The floor tilts. Maybe that was enough.' : d > 0.6 ? 'Warm in the chest and loose in the knees.' : 'That hits the spot.', 3);
+  }
+  return res;
+}
+
+/** Screen effects from drink: a soft blur and warm wash that grow with each glass. */
+function drunkScreen(app, run, time) {
+  const d = drunkness(run);
+  const blur = d > 0.45 ? (d - 0.45) * 1.6 * (0.75 + Math.sin(time * 0.9) * 0.25) : 0;
+  const filter = d > 0.05 ? `blur(${blur.toFixed(2)}px) saturate(${(1 + d * 0.35).toFixed(2)}) sepia(${(d * 0.15).toFixed(2)})` : '';
+  if (!app?.style || !app.dataset) return;
+  if (app.dataset.vice !== filter) { app.dataset.vice = filter; app.style.setProperty('--vice-filter', filter || 'none'); }
+}
+
+return { drunkness, drinkSway, calmFactor, staggerMove, tickVices, puff, smoke, drink, drunkScreen };
+})();
+
 // ---- src/player-fire.js ----
 __m.player_fire = (() => {
 // The player's shot: spread from the gun state, light aim assist, then a ray
@@ -6628,6 +7036,7 @@ const { T } = __m.tuning;
 const { GROUPS } = __m.physics;
 const { angleDelta } = __m.character;
 const { randSpread } = __m.rng;
+const { calmFactor } = __m.vices;
 const DEG = Math.PI / 180;
 /** Distance from a bandit's center line that counts as a head shot or a graze. */
 const HEAD_LINE = 0.13;
@@ -6643,9 +7052,9 @@ const ZONE_DAMAGE = { head: 2.2, body: 1, limb: 0.7 };
 
 function fireShot(player) {
   const g = player.game, gun = player.gun, def = gun.def;
-  if (g.inTown()) return;
+  if (!g.gunsAllowed()) return;
   const steady = player.steady;
-  const spreadDeg = gun.fire(player.moveFraction, steady, player.sway);
+  const spreadDeg = gun.fire(player.moveFraction, steady, player.sway) * calmFactor(player.run);
   player.steadyT = 0;
   const aim = g.intent.aim;
   let dx = Math.sin(player.yaw), dz = Math.cos(player.yaw);
@@ -6667,6 +7076,7 @@ function fireShot(player) {
   const mult = g.deadEye.active ? T.deadEye.damageMult : 1;
   const precise = steady || g.deadEye.active;
   let anyHit = false, anyKill = false, anyCrit = false, head = false;
+  const ends = g.net ? [] : null;
   for (let i = 0; i < def.pellets; i++) {
     const a = baseA + randSpread((spreadDeg * DEG) / 2);
     const rx = Math.sin(a), rz = Math.cos(a);
@@ -6686,7 +7096,7 @@ function fireShot(player) {
         anyHit = true; anyKill ||= res.killed; anyCrit ||= res.crit || zone === 'head'; head ||= zone === 'head';
         g.fx.impact('flesh', hit.x, hit.y, hit.z, hit.nx, hit.nz, rx, rz);
         g.audio.at('hitFlesh', hit.x, hit.z, { vol: 0.8 });
-        if (res.killed) g.onEnemyKilled(owner, res.crit || zone === 'head');
+        if (res.killed && !owner.animal) g.onEnemyKilled(owner, res.crit || zone === 'head');
         else g.deadEye.add(T.deadEye.fillHit);
         if (pierce > 0) { pierce--; traveled = d + 0.05; ox = hit.x + rx * 0.05; oz = hit.z + rz * 0.05; exclude = hit.collider; continue; }
       } else if (owner && owner.damage) {
@@ -6700,8 +7110,11 @@ function fireShot(player) {
       break;
     }
     g.fx.tracer(mz.x, mz.y, mz.z, endX, y, endZ, g.deadEye.active ? 0xffb070 : 0xffe7b0);
+    ends?.push(endX, endZ);
   }
 
+  // Online the shot and any hits it found go to the server, which decides what they did.
+  if (ends) g.net.shot(player.x, player.z, def.key, ends);
   g.fx.muzzle(mz.x, mz.y, mz.z, dx, dz, def.pellets > 1);
   if (def.key !== 'shotgun') g.fx.casing(player.x, 1.0, player.z, dx, dz);
   g.audio.play(def.sound, { vol: 1, vary: 0.06, pitch: def.pitch, reverb: 0.4 });
@@ -6731,6 +7144,7 @@ const { addRollPivot, animateCharacter, showGun, angleDelta, turnToward, makeCor
 const { WEAPONS, Gun, STEADY_TIME } = __m.weapons;
 const { effectActive } = __m.items;
 const { fireShot } = __m.player_fire;
+const { drinkSway, staggerMove, tickVices } = __m.vices;
 const COAT_LOOK = { ...LOOKS.player, vest: 0x335a63, shirt: 0xd9c89a };
 
 class Player {
@@ -6782,7 +7196,7 @@ class Player {
   get invulnerable() { return this.rollT >= 0 && this.rollT < T.dodge.iframes; }
   get moveFraction() { return Math.min(1, this.speedNow / T.player.speed); }
   get steady() { return this.steadyT >= STEADY_TIME; }
-  get sway() { return effectActive(this.run, 'whiskey') ? 1.4 : 0; }
+  get sway() { return drinkSway(this.run); }
   get bandaging() { return this.bandageT >= 0; }
 
   /** Spread the reticle should show right now. */
@@ -6831,6 +7245,7 @@ class Player {
         const healed = Math.min(P.hp - this.hp, P.bandageHeal);
         this.hp += healed;
         g.ui.toast(`Bandaged · +${Math.round(healed)} health`);
+        g.net?.act('heal', { src: 'bandage' });
         g.audio.play('heal', { bus: 'ui', vol: 0.6 });
         g.save();
       }
@@ -6839,6 +7254,7 @@ class Player {
     if (this.run.mealHeal > 0 && effectActive(this.run, 'meal') && this.sinceHit > 5 && this.hp < P.hp) {
       const step = Math.min(this.run.mealHeal, 2 * dt, P.hp - this.hp);
       this.hp += step; this.run.mealHeal -= step;
+      if (g.net && (this.mealSendT = (this.mealSendT ?? 0) - dt) <= 0) { this.mealSendT = 1.5; g.net.act('heal', { src: 'meal' }); }
     }
   }
 
@@ -6861,6 +7277,7 @@ class Player {
     this.prevYaw = this.yaw;
     if (!this.alive) return;
     const g = this.game, P = T.player, D = T.dodge;
+    tickVices(this, dt);
 
     // Dodge roll (buffered input).
     this.rollCooldown -= dt * (effectActive(this.run, 'coffee') ? 1.6 : 1);
@@ -6886,7 +7303,8 @@ class Player {
     } else {
       this.recoverT = Math.max(0, (this.recoverT ?? 0) - dt);
       const speed = P.speed * this.gun.def.moveMult * (this.recoverT > 0 ? 0.5 : 1) * (this.bandaging ? 0.45 : 1) * (g.horse?.mounted ? g.horse.speedFactor : 1);
-      const tx = intent.move.x * speed, tz = intent.move.z * speed;
+      const move = staggerMove(this.run, g.time, intent.move);
+      const tx = move.x * speed, tz = move.z * speed;
       const accelerating = tx * this.vx + tz * this.vz > 0 || Math.hypot(tx, tz) > Math.hypot(this.vx, this.vz);
       const rate = (speed / (tx || tz ? (accelerating ? P.accelTime : P.stopTime) : P.stopTime)) * dt;
       const dx = tx - this.vx, dz = tz - this.vz;
@@ -6937,7 +7355,7 @@ class Player {
     if (this.speedNow < 0.8 && !this.rolling) this.steadyT += gunDt; else this.steadyT = 0;
     if (intent.reload) { intent.reload = false; if (!this.bandaging && gun.startReload()) this.reloadStarted(); }
     this.emptyClickT -= gunDt;
-    if (!g.inTown() && !this.rolling && !this.bandaging && (intent.fireHeld || intent.firePressed)) {
+    if (g.gunsAllowed() && !this.rolling && !this.bandaging && (intent.fireHeld || intent.firePressed)) {
       if (gun.canFire()) fireShot(this);
       else if (gun.ammo <= 0 && intent.firePressed && this.emptyClickT <= 0) {
         this.emptyClickT = 0.3;
@@ -6974,6 +7392,8 @@ class Player {
   damage(amount, dirX, dirZ) {
     if (!this.alive || this.invulnerable || this.game.inTown()) return false;
     const g = this.game;
+    // Online the server decides every wound; a bullet that reaches us just stops here.
+    if (g.net) return true;
     if (this.run.gear.coat) amount *= 0.9;
     if (this.bandaging && amount >= T.player.bandageBreak) { this.bandageT = -1; g.ui.toast('Bandage dropped'); }
     g.horse?.spook(amount);
@@ -6986,6 +7406,21 @@ class Player {
     g.stats.damageTaken += amount;
     if (this.hp <= 0) { this.hp = 0; this.die(dirX, dirZ); }
     return true;
+  }
+
+  /** A wound the server dealt: same feel as a local hit, with the server's health. */
+  netHurt(amount, dirX, dirZ, hp) {
+    if (!this.alive) return;
+    const g = this.game;
+    if (this.bandaging && amount >= T.player.bandageBreak) { this.bandageT = -1; g.ui.toast('Bandage dropped'); }
+    g.horse?.spook(amount);
+    this.hp = hp;
+    this.sinceHit = 0;
+    this.flash = 0.08;
+    g.addTrauma(Math.min(0.5, 0.15 + amount / 60));
+    g.ui.hurt(dirX, dirZ);
+    g.audio.play('hurt', { vol: 0.9 });
+    g.stats.damageTaken += amount;
   }
 
   die(dirX, dirZ) {
@@ -7007,13 +7442,19 @@ class Player {
     m.root.rotation.y = this.prevYaw + angleDelta(this.prevYaw, this.yaw) * alpha;
     if (this.flash > 0) this.flash -= realDt;
     animateCharacter(m, {
-      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: !this.game.inTown(), flash: this.flash,
+      speed: this.rolling ? 0 : this.speedNow, dt: realDt, aiming: this.game.gunsAllowed(), flash: this.flash,
       roll: this.rolling ? this.rollT / T.dodge.duration : -1,
     });
     if (this.game.frontier?.seated && !this.rolling) poseSeated(m);
     if (this.bandaging) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
-    showGun(m, this.game.inTown() ? null : this.gun.def.key);
-    if (this.game.inTown()) m.arm.rotation.x = 1.1;
+    const d = this.run.drunk ?? 0;
+    if (d > 0.3) m.pivot.rotation.z = Math.sin(this.game.time * 1.7) * (d - 0.3) * 0.12;
+    else if (m.pivot.rotation.z && !this.rolling) m.pivot.rotation.z = 0;
+    const armed = this.game.gunsAllowed();
+    showGun(m, armed ? this.gun.def.key : null);
+    if (!armed) m.arm.rotation.x = 1.1;
+    // Hand to the mouth while smoking.
+    if (this.smokeT > 0 && !this.rolling) { showGun(m, null); m.arm.rotation.x = 2.2 - Math.abs(Math.sin(this.smokeT * 1.4)) * 0.6; }
   }
 }
 
@@ -7119,15 +7560,15 @@ __m.life = (() => {
 const { createRng } = __m.rng;
 const { WEAPONS } = __m.weapons;
 const { emptyBlackjack, validBlackjack } = __m.blackjack;
-const { CATALOGUE, START_MONEY, START_ROUNDS, AMMO } = __m.items;
-const { makeAmbushes, makeCamps, makeSites, makeWanted } = __m.world_gen;
+const { CATALOGUE, START_MONEY, START_ROUNDS, AMMO, PELTS } = __m.items;
+const { makeAmbushes, makeCamps, makeSites, makeTowns, makeWanted } = __m.world_gen;
 const { emptyQuestState, makeQuests, validQuestState } = __m.quests;
-const WORLD_HALF = 210;
-const MAP_CELL = 12;
+const WORLD_HALF = 420;
+const MAP_CELL = 16;
 const LIFE_VERSION = 3;
 const STAT_KEYS = ['camp', 'bounty', 'kills', 'shots', 'hits', 'time', 'damageTaken'];
 const INTERIOR_IDS = new Set(['guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable']);
-const ITEM_KEYS = ['bandage', 'meal', 'coffee', 'whiskey', 'oil', 'feed'];
+const ITEM_KEYS = ['bandage', 'meal', 'coffee', 'whiskey', 'oil', 'feed', 'beer', 'cigarette', 'cigar', ...Object.keys(PELTS)];
 const GEAR_KEYS = ['belt', 'coat', 'map'];
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -7145,22 +7586,28 @@ function gunState(key) {
 function makeWorld(seed) {
   const camps = makeCamps(seed, WORLD_HALF), sites = makeSites(seed, WORLD_HALF, camps);
   const ambushes = makeAmbushes(seed, WORLD_HALF, camps, sites);
-  return { seed, half: WORLD_HALF, town: { x: 0, z: 0, radius: 32 }, camps, ambushes, sites, wanted: makeWanted(seed, camps),
+  const towns = makeTowns();
+  return { seed, half: WORLD_HALF, town: towns[0], towns, camps, ambushes, sites, wanted: makeWanted(seed, camps),
     roads: camps.map(({ x, z }) => ({ from: { x: 0, z: 0 }, to: { x, z } })) };
 }
 
 /** Every quest definition for a world. */
 function questDefs(world) { return makeQuests(world); }
 
-function createLife(seed) {
+/**
+ * A fresh life. Offline, every life gets its own world from its seed. On a
+ * shared server every life uses the server's world seed instead.
+ */
+function createLife(seed, worldSeed = seed) {
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new RangeError('Invalid life seed');
-  const world = makeWorld(seed);
+  if (!Number.isInteger(worldSeed) || worldSeed < 0 || worldSeed > 0xffffffff) throw new RangeError('Invalid world seed');
+  const world = makeWorld(worldSeed);
   const life = {
-    version: LIFE_VERSION, status: 'alive', seed, camp: 0, bounty: START_MONEY, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
+    version: LIFE_VERSION, status: 'alive', seed, worldSeed, camp: 0, bounty: START_MONEY, kills: 0, shots: 0, hits: 0, time: 0, damageTaken: 0,
     simTime: 0, projectiles: [],
     hp: 100, unlocked: ['revolver'], weapon: 0, deadEye: 0,
     ammo: { pistol: START_ROUNDS, heavy: 0, rifle: 0, shells: 0 },
-    items: { bandage: 1, meal: 0, coffee: 0, whiskey: 0, oil: 0, feed: 0 },
+    items: Object.fromEntries(ITEM_KEYS.map((key) => [key, key === 'bandage' ? 1 : 0])), drunk: 0,
     gear: { belt: false, coat: false, map: false }, horse: null, effects: {}, mealHeal: 0,
     interior: null, blackjack: emptyBlackjack(),
     player: { x: 0, z: 12, yaw: 0, sinceHit: 99, rollT: -1, rollCooldown: 0, rollX: 0, rollZ: 1 },
@@ -7274,7 +7721,7 @@ function migrateLife(value) {
 
 /** Returns a separate validated record, or null when the record is damaged. */
 function normalizeLife(input) {
-  const value = input?.version === 2 ? migrateLife(input) : input;
+  let value = input?.version === 2 ? migrateLife(input) : input;
   if (!object(value) || value.version !== LIFE_VERSION || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 0xffffffff || !validJson(value)) return null;
   if (!['alive', 'dead'].includes(value.status) || !position(value.player)) return null;
   if (!STAT_KEYS.every((key) => nonnegative(value[key]))) return null;
@@ -7293,6 +7740,7 @@ function normalizeLife(input) {
       && (gun.reloading === undefined || typeof gun.reloading === 'boolean');
   })) return null;
   if (!object(value.ammo) || !Object.keys(AMMO).every((type) => count(value.ammo[type]) && value.ammo[type] <= AMMO[type].max * 2)) return null;
+  if (object(value.items)) value = { ...value, items: { ...Object.fromEntries(ITEM_KEYS.map((key) => [key, 0])), ...value.items } };
   if (!object(value.items) || !ITEM_KEYS.every((key) => count(value.items[key]) && value.items[key] <= 9)) return null;
   if (!object(value.gear) || !GEAR_KEYS.every((key) => typeof value.gear[key] === 'boolean')) return null;
   if (value.horse !== null && !(object(value.horse) && typeof value.horse.owned === 'boolean' && Number.isFinite(value.horse.stamina))) return null;
@@ -7304,9 +7752,16 @@ function normalizeLife(input) {
       || Math.hypot(value.interior.outside.x, value.interior.outside.z) > 36
       || (value.interior.local !== undefined && !(object(value.interior.local) && Math.abs(value.interior.local.x) < 10 && Math.abs(value.interior.local.z) < 8)))) return null;
   if (value.blackjack !== undefined && !validBlackjack(value.blackjack)) return null;
-  const life = createLife(value.seed);
-  if (!validQuestState(value.quests, questDefs(life.world))) return null;
+  const worldSeed = value.worldSeed ?? value.seed;
+  if (!Number.isInteger(worldSeed) || worldSeed < 0 || worldSeed > 0xffffffff) return null;
+  const life = createLife(value.seed, worldSeed);
+  // A save from before the frontier grew lacks the newer jobs and camps; they start fresh.
+  const defs = questDefs(life.world);
+  if (object(value.quests)) value = { ...value, quests: { ...emptyQuestState(defs), ...value.quests } };
+  if (!validQuestState(value.quests, defs)) return null;
+  value = { ...value, camps: { ...value.camps } };
   for (const camp of [...life.world.camps, ...life.world.ambushes]) {
+    value.camps[camp.id] ??= {};
     const snapshot = value.camps[camp.id];
     if (!object(snapshot)) return null;
     if (Object.keys(snapshot).length && (typeof snapshot.cleared !== 'boolean' || !validActors(snapshot.enemies, false) || !validActors(snapshot.props, true))) return null;
@@ -7322,6 +7777,7 @@ function normalizeLife(input) {
   if (Array.isArray(saved.rumors)) life.rumors = saved.rumors.filter((id) => typeof id === 'string');
   life.marker = saved.marker ?? null;
   life.mealHeal = nonnegative(saved.mealHeal) ? Math.min(30, saved.mealHeal) : 0;
+  life.drunk = nonnegative(saved.drunk) ? Math.min(1.5, saved.drunk) : 0;
   life.completed = count(saved.completed) ? saved.completed : 0;
   life.simTime = saved.simTime ?? 0;
   life.projectiles = saved.projectiles ?? [];
@@ -7334,8 +7790,8 @@ function normalizeLife(input) {
 function townError(life) {
   if (life.status !== 'alive') return 'This life has ended.';
   if (life.interior) return null;
-  const { x, z, radius } = life.world.town;
-  return Math.hypot(life.player.x - x, life.player.z - z) > radius ? 'Return to town first.' : null;
+  const home = (life.world.towns ?? [life.world.town]).some(({ x, z, radius }) => Math.hypot(life.player.x - x, life.player.z - z) <= radius);
+  return home ? null : 'Return to town first.';
 }
 
 /** Emergency work when a life has no money and almost no rounds. */
@@ -7515,12 +7971,13 @@ const ROSTERS = [
   ['gunman', 'gunman', 'rusher'],
   ['leader', 'gunman', 'gunman', 'rusher', 'scout'],
   ['leader', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'scout'],
-  ['leader', 'gunman', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout'],
+  ['captain', 'gunman', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout'],
+  ['boss', 'captain', 'leader', 'gunman', 'gunman', 'gunman', 'rusher', 'rusher', 'sharpshooter', 'sharpshooter', 'scout', 'scout'],
 ];
 const AMBUSH_ROSTER = ['gunman', 'gunman', 'rusher'];
 
 function rosterFor(camp) {
-  return [...ROSTERS[Math.max(0, Math.min(3, camp))]];
+  return [...ROSTERS[Math.max(0, Math.min(4, camp))]];
 }
 
 /** A roadside ambush: rocks for cover and three outlaws waiting behind them. */
@@ -7771,7 +8228,51 @@ const LOOKS = {
   amos: { shirt: 0x8a7a5a, vest: 0x5b4127, hat: 0x6b5236, band: PAL.woodDark, pants: 0x3f4a5a },
   eli: { shirt: 0xd9c9a6, vest: 0x4b5a4a, hat: 0x9a7447, band: PAL.woodDark, pants: 0x514338, scarf: 0x8e3f39 },
   juan: { shirt: 0xb85c3a, vest: 0x2f2a27, hat: 0xc9a273, band: 0x8e3f39, pants: 0x3a3330, scarf: 0xe0b450 },
+  otto: { shirt: 0x7a3a2a, vest: 0x5a4632, hat: 0x6a5a42, band: 0x2e2420, pants: 0x4a4436, scarf: 0xb79b70 },
 };
+
+function lodge(s, x, z, game) {
+  for (let y = 0.2; y < 2.8; y += 0.36) {
+    for (const side of [-1, 1]) s.cyl(0.18, 0.18, 6.4, 6, 0x6a4a32, x, y, z + side * 2.5, 0, 0, Math.PI / 2);
+    for (const side of [-1, 1]) s.cyl(0.18, 0.18, 5.4, 6, 0x7a5638, x + side * 3, y + 0.18, z, Math.PI / 2);
+  }
+  s.box(6, 2.8, 5, 0x5a3f2b, x, 1.4, z);
+  for (const side of [-1, 1]) s.box(6.8, 0.2, 3.4, 0x4a4038, x, 3.5, z + side * 1.4, side * 0.6);
+  s.box(1.1, 2.1, 0.1, PAL.woodDark, x, 1.05, z + 2.7);
+  s.box(0.6, 3.8, 0.6, PAL.rockDark, x - 2.4, 1.9, z - 1.2);
+  // Drying racks with stretched hides and a pile of antlers.
+  for (let i = 0; i < 3; i++) {
+    const rx = x + 4.2 + i * 1.5;
+    s.box(0.1, 1.8, 0.1, PAL.woodDark, rx - 0.6, 0.9, z + 1.5); s.box(0.1, 1.8, 0.1, PAL.woodDark, rx + 0.6, 0.9, z + 1.5);
+    s.box(1.3, 0.08, 0.08, PAL.woodDark, rx, 1.75, z + 1.5);
+    s.box(1, 1.1, 0.05, [0xa0805a, 0x8a6a48, 0x6a5a4a][i], rx, 1.15, z + 1.5);
+  }
+  for (let i = 0; i < 4; i++) s.cyl(0.03, 0.05, 0.8, 4, PAL.bone, x - 3.5 + i * 0.2, 0.35, z + 2.4, 0.6, i, 0.4);
+  game.physics.fixedBox(x, 1.4, z, 3.1, 1.4, 2.6, 0, GROUPS.world);
+}
+
+function mill(s, x, z, game) {
+  // Charred posts and beams, a fallen saw blade and the stacked logs nobody took.
+  for (const [dx, dz, h] of [[-4, -3, 3.2], [0, -3, 1.6], [4, -3, 2.6], [-4, 3, 2.2], [4, 3, 3.4], [0, 3, 0.9]]) s.box(0.35, h, 0.35, 0x2c2420, x + dx, h / 2, z + dz);
+  s.box(8.6, 0.3, 0.35, 0x2c2420, x, 3.1, z - 3, 0, 0, 0.08);
+  s.box(9, 0.2, 7, 0x3a2e28, x, 0.1, z);
+  s.cyl(1.3, 1.3, 0.06, 16, 0x8a8a90, x + 1.2, 0.15, z + 0.4, Math.PI / 2 - 0.08, 0.3, 0);
+  for (let i = 0; i < 5; i++) s.cyl(0.32, 0.32, 5, 7, 0x6a4a32, x - 7, 0.32 + Math.floor(i / 3) * 0.55, z - 1.4 + (i % 3) * 0.66 + Math.floor(i / 3) * 0.33, 0, 0, Math.PI / 2);
+  for (let i = 0; i < 8; i++) s.box(0.5, 0.06, 0.5, 0x1e1a18, x - 3 + i * 0.9, 0.22, z + Math.sin(i) * 2, 0, i, 0);
+  game.physics.fixedBox(x - 7, 0.6, z - 0.7, 2.5, 0.6, 1.1, 0, GROUPS.world);
+}
+
+function den(s, x, z, game) {
+  // A dark hollow under a heap of mossy boulders, with bones at the mouth.
+  s.rock(5, 0x6f6c62, x, 2.2, z - 2, 0.8, 0.25, 41);
+  s.rock(3.4, 0x7d7a70, x - 4, 1.4, z, 0.9, 0.3, 42);
+  s.rock(3, 0x5b7a40, x + 3.6, 1.3, z - 0.5, 0.7, 0.3, 43);
+  s.box(2.6, 1.8, 0.1, 0x14100e, x, 0.9, z + 2.4);
+  for (let i = 0; i < 5; i++) s.box(0.06, 0.06, 0.6, PAL.bone, x - 1 + i * 0.5, 0.04, z + 3.4 + Math.sin(i) * 0.4, 0, i, 0);
+  game.physics.fixedCylinder(x, 2, z - 2, 2, 4.2, GROUPS.world);
+  game.physics.fixedCylinder(x - 4, 1.4, z, 1.4, 2.8, GROUPS.world);
+  game.physics.fixedCylinder(x + 3.6, 1.3, z - 0.5, 1.3, 2.4, GROUPS.world);
+}
 const VISIT_RANGE = 14;
 
 function homestead(s, x, z, game) {
@@ -7825,13 +8326,13 @@ function merchantCamp(s, x, z, game) {
 /** Camp positions for objects that sit inside a camp, such as the medicine chest. */
 function campFire(game, camp) {
   const index = game.run.world.camps.indexOf(camp);
-  const layout = generateCamp(game.run.seed + index * 104729, camp.difficulty);
+  const layout = generateCamp((game.run.world.seed ?? game.run.seed) + index * 104729, camp.difficulty);
   return { x: camp.x + layout.campfire.x, z: camp.z + layout.campfire.z };
 }
 
 function buildWorldPoints(game, group) {
   const run = game.run, world = run.world, s = new Shape(), shade = [], npcs = [], points = [];
-  const rng = createRng(run.seed ^ 0x706f696e);
+  const rng = createRng((world.seed ?? run.seed) ^ 0x706f696e);
   const state = (id) => run.known[id];
   const npc = (id, name, x, z, yaw, seated = false) => {
     const model = townsperson(LOOKS[id]);
@@ -7867,6 +8368,15 @@ function buildWorldPoints(game, group) {
       game.physics.fixedBox(x, 0.8, z, 1.4, 0.8, 1.8, 0, GROUPS.world);
       shade.push(blot(x, z, 3, 2.4, 0x7a5a3a, 0.35));
       if (state(site.id) !== 'looted') points.push({ id: site.id, kind: 'loot', label: 'Search the wagon', x: x + 1.8, z: z + 0.6, site });
+    } else if (site.kind === 'lodge') {
+      lodge(s, x, z, game);
+      const otto = npc('otto', 'Otto Brandt', x + 1.2, z + 3.6, 0.2);
+      points.push({ id: 'otto', kind: 'npc', npc: 'otto', name: otto.name, x: otto.x, z: otto.z, site });
+    } else if (site.kind === 'mill') {
+      mill(s, x, z, game);
+      shade.push(blot(x, z, 7, 5.5, 0x1e1a18, 0.45));
+    } else if (site.kind === 'den') {
+      den(s, x, z, game);
     } else if (site.kind === 'grave') {
       grave(s, x, z);
       points.push({ id: site.id, kind: 'grave', label: 'Read the marker', x, z: z + 0.4, site });
@@ -8020,7 +8530,7 @@ function tickProgress(game) {
   if (!p?.alive) return;
   if (!game.frontier.inside) {
     for (const site of run.world.sites) {
-      if (site.kind !== 'landmark' || Math.hypot(site.x - p.x, site.z - p.z) > 14) continue;
+      if (!['landmark', 'mill', 'den'].includes(site.kind) || Math.hypot(site.x - p.x, site.z - p.z) > 14) continue;
       questEvent(game, { type: 'visit', siteId: site.id });
     }
   }
@@ -8048,6 +8558,7 @@ return { questEvent, wantsAlive, enemyKilled, lootSite, readGrave, bearing, tick
 __m.game_input = (() => {
 // Reads keyboard and mouse into the game's intent once per frame, and opens
 // menus. Riding, sneaking, the journal and interactions start here.
+const { smoke } = __m.vices;
 const { T } = __m.tuning;
 function updateIntent(game) {
   const g = game, inp = g.input, it = g.intent;
@@ -8083,6 +8594,7 @@ function updateIntent(game) {
     if (g.lootNearest()) return;
   }
   if (g.state === 'playing' && inp.pressed('bandage')) g.useBandage();
+  if (g.state === 'playing' && inp.pressed('smoke') && p) smoke(p);
   if (g.state === 'playing' && inp.pressed('mount') && g.horse) {
     if (g.horse.mounted) g.ui.toast('Hold E to get off');
     else if (Math.hypot(g.horse.x - p.x, g.horse.z - p.z) < 2.6) g.horse.mount();
@@ -8871,7 +9383,7 @@ function buildTown(game, group) {
   return sites;
 }
 
-return { STORES, buildTown };
+return { STORES, gable, porch, lantern, shingle, SYMBOLS, BUILDERS, buildTown };
 })();
 
 // ---- src/interior-shops.js ----
@@ -9435,18 +9947,28 @@ __m.land = (() => {
 const { MAT, PAL, Shape, meshOf } = __m.models;
 const { GROUPS } = __m.physics;
 const { blot, blotMesh, resample, road } = __m.decals;
-const { BRIDGE, campTrailPoints, distanceToTrail, inRiver } = __m.terrain;
+const { BRIDGE, forestAt, pineRoadPoints } = __m.terrain;
 function ground(group, half, seed) {
-  const geo = new THREE.PlaneGeometry(half * 2 + 60, half * 2 + 60, 96, 96).rotateX(-Math.PI / 2).toNonIndexed();
+  const cells = Math.round((half * 2 + 60) / 4.5);
+  const geo = new THREE.PlaneGeometry(half * 2 + 60, half * 2 + 60, cells, cells).rotateX(-Math.PI / 2).toNonIndexed();
   const pos = geo.attributes.position, colors = new Float32Array(pos.count * 3);
   const base = new THREE.Color(PAL.sand), shade = new THREE.Color(PAL.sandDark);
   const light = new THREE.Color(PAL.sandLight), c = new THREE.Color();
+  const meadow = new THREE.Color(0x5f7a3e), moss = new THREE.Color(0x4a6334), dry = new THREE.Color(0xa39a5c), g = new THREE.Color();
   for (let i = 0; i < pos.count; i += 3) {
     const x = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3, z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3;
     const broad = Math.sin(x * 0.021 + seed) * Math.cos(z * 0.017 - seed * 0.3) + Math.sin((x + z) * 0.008 + seed * 0.1) * 0.6;
     const grain = Math.sin(x * 0.19 + z * 0.13 + seed * 0.07) * 0.08;
     const n = broad * 0.24 + grain;
     c.copy(base).lerp(n < 0 ? light : shade, Math.min(0.45, Math.abs(n)));
+    // Pine country: meadow green with darker moss under the trees and dry grass at the edge.
+    const f = forestAt(x, z);
+    if (f > 0) {
+      g.copy(meadow).lerp(n < 0 ? dry : moss, Math.min(0.5, Math.abs(n) * 1.4));
+      c.lerp(dry, Math.min(1, f * 2.2));
+      const t = Math.max(0, Math.min(1, (f - 0.3) / 0.45));
+      c.lerp(g, t * t * (3 - 2 * t));
+    }
     for (let j = 0; j < 3; j++) { colors[(i + j) * 3] = c.r; colors[(i + j) * 3 + 1] = c.g; colors[(i + j) * 3 + 2] = c.b; }
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -9469,6 +9991,8 @@ function roads(group, doors) {
   const street = resample(smooth(MAIN_STREET), 1.1);
   const taper = (t) => Math.min(1, 0.45 + t * 4, 0.45 + (1 - t) * 4);
   group.add(road(street, (t) => (6.4 + Math.sin(t * 17) * 0.5) * taper(t), { fade: 10, seed: 3 }));
+  // The stage road north to Pine Hollow.
+  group.add(road(resample(pineRoadPoints(), 1.4), (t) => 4.2 + Math.sin(t * 23) * 0.4, { fade: 6, seed: 11 }));
   // Narrow foot paths run from the street to each porch step.
   for (const door of doors) {
     const side = Math.sign(door.x), endX = side * 6.7;
@@ -9554,24 +10078,103 @@ function hoodoo(s, rng, x, z, h) {
   for (let i = 0; i < 4; i++) s.rock(h * rng.range(0.05, 0.1), PAL.rockLight, x + rng.range(-1, 1) * h * 0.35, h * 0.03, z + rng.range(-1, 1) * h * 0.35, 0.6, 0.3, rng.int(1, 999));
 }
 
-/** Grouped scenery across the land, with a few large landmarks. */
-function desert(game, group, world, rng) {
-  const half = world.half ?? 210, camps = world.camps ?? [], s = new Shape(), shade = [];
+return { ground, MAIN_STREET, smooth, roads, cactus, scrub, grass, deadTree, bones, hoodoo };
+})();
+
+// ---- src/wilds.js ----
+__m.wilds = (() => {
+// Scenery across the open land: desert clusters, the pine forest in the
+// northwest and the ragged cliffs at the edge. Meshes are merged per square
+// chunk so the renderer can skip everything outside the camera's view.
+const { PAL, Shape, meshOf } = __m.models;
+const { GROUPS } = __m.physics;
+const { blot, blotMesh } = __m.decals;
+const { campTrailPoints, distanceToTrail, forestAt, inRiver, pineRoadPoints } = __m.terrain;
+const { townsOf } = __m.towns;
+const { MAIN_STREET, bones, cactus, deadTree, grass, hoodoo, scrub, smooth } = __m.land;
+const CHUNK = 70;
+/** Stands in for a Shape on the server, which builds colliders but no meshes. */
+const NULL_SHAPE = { parts: [], add() {}, box() {}, cyl() {}, cone() {}, rock() {} };
+
+/** A pine: a short trunk under three to four stacked cones. */
+function pine(s, rng, x, z, h) {
+  const trunk = h * 0.22, r = h * 0.3, dark = rng.pick([0x2f5132, 0x35593a, 0x2b4a30]), mid = rng.pick([0x3f6b40, 0x456f43, 0x3b6640]);
+  s.cyl(h * 0.045, h * 0.06, trunk + 0.4, 6, 0x5a3f2b, x, trunk / 2, z);
+  const tiers = h > 7 ? 4 : 3;
+  for (let i = 0; i < tiers; i++) {
+    const t = i / tiers, rr = r * (1 - t * 0.62), hh = h * (0.42 - t * 0.06);
+    s.cone(rr, hh, 7, i % 2 ? mid : dark, x, trunk + t * h * 0.66 + hh / 2, z, 0, rng.range(0, 1), 0);
+  }
+}
+
+function bush(s, rng, x, z, scale = 1) {
+  const color = rng.pick([0x4f7a3f, 0x5b8344, 0x46703a]);
+  for (let i = 0; i < 3; i++) {
+    const a = i * 2.1 + rng.range(0, 1), d = i ? 0.35 * scale : 0;
+    s.rock(rng.range(0.38, 0.55) * scale, i % 2 ? color : 0x3f6634, x + Math.cos(a) * d, 0.32 * scale, z + Math.sin(a) * d, 0.8, 0.2, rng.int(1, 999));
+  }
+  if (rng.chance(0.3)) for (let i = 0; i < 3; i++) s.box(0.09, 0.09, 0.09, rng.pick([0xc0452f, 0xe0d070, 0xf2f0e8]), x + rng.range(-0.5, 0.5), 0.62 * scale, z + rng.range(-0.5, 0.5));
+}
+
+function greenGrass(s, rng, x, z) {
+  const color = rng.pick([0x6f9a48, 0x7fa653, 0x5d8a3e, 0x92ad5a]);
+  for (let j = 0; j < rng.int(5, 9); j++) {
+    const h = rng.range(0.3, 0.62);
+    s.cone(0.04, h, 3, color, x + rng.range(-0.3, 0.3), h / 2, z + rng.range(-0.3, 0.3), rng.range(-0.3, 0.3), rng.range(0, 3), rng.range(-0.3, 0.3));
+  }
+}
+
+function log(s, rng, x, z) {
+  const len = rng.range(2.4, 4.2), yaw = rng.range(0, Math.PI);
+  s.cyl(0.26, 0.3, len, 7, 0x6a4a32, x, 0.26, z, 0, yaw, Math.PI / 2);
+  s.cyl(0.24, 0.24, 0.05, 7, 0xb08a5c, x + Math.cos(yaw) * len / 2, 0.26, z - Math.sin(yaw) * len / 2, 0, yaw, Math.PI / 2);
+  if (rng.chance(0.5)) s.rock(0.25, 0x5b8344, x, 0.5, z, 0.5, 0.3, rng.int(1, 99));
+}
+
+function stump(s, rng, x, z) {
+  const r = rng.range(0.25, 0.4);
+  s.cyl(r, r * 1.2, 0.5, 7, 0x6a4a32, x, 0.25, z);
+  s.cyl(r * 0.92, r * 0.92, 0.03, 7, 0xc29a68, x, 0.51, z);
+}
+
+function fern(s, rng, x, z) {
+  const color = rng.pick([0x4d7d3a, 0x5f8c42]);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2 + rng.range(-0.2, 0.2);
+    s.box(0.12, 0.03, 0.75, color, x + Math.sin(a) * 0.3, 0.22, z + Math.cos(a) * 0.3, -0.45, a, 0);
+  }
+}
+
+/** Grouped scenery for the whole land. */
+function wilds(game, group, world, rng) {
+  const half = world.half ?? 210, camps = world.camps ?? [], shade = [];
+  const chunks = new Map();
+  const at = (x, z) => {
+    if (game.headless) return NULL_SHAPE;
+    const key = `${Math.floor((x + half) / CHUNK)}:${Math.floor((z + half) / CHUNK)}`;
+    let s = chunks.get(key);
+    if (!s) { s = new Shape(); chunks.set(key, s); }
+    return s;
+  };
   const trails = camps.map((camp, index) => campTrailPoints(camp, index));
-  const street = smooth(MAIN_STREET);
-  const places = [...(world.sites ?? []).map((p) => ({ x: p.x, z: p.z, r: p.kind === 'landmark' ? 9 : 7 })), ...(world.ambushes ?? []).map((p) => ({ x: p.x, z: p.z, r: 4 }))];
+  const street = smooth(MAIN_STREET), road = pineRoadPoints();
+  const towns = townsOf(world);
+  const places = [...(world.sites ?? []).map((p) => ({ x: p.x, z: p.z, r: p.kind === 'landmark' ? 9 : p.kind === 'mill' || p.kind === 'lodge' ? 14 : 7 })), ...(world.ambushes ?? []).map((p) => ({ x: p.x, z: p.z, r: 4 }))];
   const free = (x, z, margin = 0) => Math.hypot(x, z * 0.9) > 40 + margin
+    && towns.every((t) => t.id === 'mercy' || Math.hypot(x - t.x, z - t.z) > t.radius + 22 + margin)
     && places.every((p) => Math.hypot(x - p.x, z - p.z) > p.r + margin)
     && camps.every((c) => Math.hypot(x - c.x, z - c.z) > 30 + margin)
     && trails.every((trail) => distanceToTrail(x, z, trail) > 3.5 + margin)
     && distanceToTrail(x, z, street) > 4 + margin
+    && distanceToTrail(x, z, road) > 5 + margin
     && !inRiver(x, z, 1 + margin) && Math.abs(x) < half - 6 && Math.abs(z) < half - 6;
   const solids = [];
   const solid = (x, z, r, h) => { solids.push({ x, z, r }); game.physics.fixedCylinder(x, h / 2, z, h / 2, r, GROUPS.world); };
   const clear = (x, z, r) => solids.every((o) => Math.hypot(o.x - x, o.z - z) > o.r + r + 0.8);
+  const tree = (x, z, h) => { if (!free(x, z, 0.5) || !clear(x, z, 0.4)) return; pine(at(x, z), rng, x, z, h); solid(x, z, h * 0.06 + 0.12, h); };
 
-  // Landmarks come from the life's world data so quests and the map agree on them.
   for (const site of world.sites ?? []) {
+    const s = at(site.x, site.z);
     if (site.kind === 'landmark') {
       hoodoo(s, rng, site.x, site.z, site.height); solid(site.x, site.z, site.height * 0.26, site.height);
       shade.push(blot(site.x + 1.5, site.z - 1, site.height * 0.6, site.height * 0.45, 0x8a5a36, 0.35));
@@ -9582,90 +10185,261 @@ function desert(game, group, world, rng) {
     }
   }
 
-  // Clusters: each one is a small scene with its own mix of rocks and plants.
-  const centers = [];
-  for (let i = 0; i < 900 && centers.length < 170; i++) {
+  // Clusters: each is a small scene. The mix depends on how green the land is.
+  const centers = [], area = (half * 2) ** 2, target = Math.round(170 * area / 420 ** 2);
+  for (let i = 0; i < target * 6 && centers.length < target; i++) {
     const x = rng.range(-half + 10, half - 10), z = rng.range(-half + 10, half - 10);
-    if (!free(x, z, 2) || centers.some((c) => Math.hypot(c.x - x, c.z - z) < 15)) continue;
-    centers.push({ x, z, kind: rng.next() });
+    if (!free(x, z, 2) || centers.some((c) => Math.abs(c.x - x) < 15 && Math.hypot(c.x - x, c.z - z) < 15)) continue;
+    centers.push({ x, z, kind: rng.next(), green: forestAt(x, z) });
   }
   for (const center of centers) {
-    const k = center.kind;
+    const { x: cx, z: cz, kind: k, green } = center, s = at(cx, cz);
+    if (green > 0.55) {
+      if (k < 0.62) {
+        // Stand of pines with brush and fallen wood beneath.
+        const n = rng.int(4, 9);
+        for (let j = 0; j < n; j++) { const a = rng.range(0, 6), d = Math.sqrt(rng.next()) * 8; tree(cx + Math.cos(a) * d, cz + Math.sin(a) * d, rng.range(4.5, 8)); }
+        for (let j = 0; j < rng.int(2, 5); j++) (rng.chance(0.5) ? fern : bush)(s, rng, cx + rng.range(-7, 7), cz + rng.range(-7, 7));
+        if (rng.chance(0.4)) log(s, rng, cx + rng.range(-5, 5), cz + rng.range(-5, 5));
+        shade.push(blot(cx, cz, rng.range(7, 10), rng.range(6, 9), 0x3f5a30, 0.3, 0.012, rng.range(0, 3)));
+      } else if (k < 0.82) {
+        // Meadow: tall grass, flowers and a lone tree.
+        for (let j = 0; j < rng.int(8, 14); j++) greenGrass(s, rng, cx + rng.range(-7, 7), cz + rng.range(-7, 7));
+        if (rng.chance(0.6)) tree(cx + rng.range(-4, 4), cz + rng.range(-4, 4), rng.range(5, 7.5));
+        for (let j = 0; j < rng.int(1, 3); j++) bush(s, rng, cx + rng.range(-6, 6), cz + rng.range(-6, 6), rng.range(0.7, 1.1));
+      } else if (k < 0.92) {
+        // Mossy boulders.
+        const r = rng.range(1.4, 3.2);
+        if (clear(cx, cz, r)) {
+          s.rock(r, 0x7d7a70, cx, r * 0.5, cz, rng.range(0.8, 1.2), 0.24, rng.int(1, 999), rng.range(0, 6));
+          s.rock(r * 0.6, 0x5b7a40, cx + 0.2, r * 0.95, cz - 0.1, 0.35, 0.3, rng.int(1, 999));
+          solid(cx, cz, r * 0.8, r * 1.2);
+        }
+        for (let j = 0; j < rng.int(2, 4); j++) fern(s, rng, cx + rng.range(-4, 4), cz + rng.range(-4, 4));
+      } else {
+        // Old logging: stumps and a cut log.
+        for (let j = 0; j < rng.int(3, 6); j++) stump(s, rng, cx + rng.range(-6, 6), cz + rng.range(-6, 6));
+        log(s, rng, cx, cz);
+      }
+      continue;
+    }
+    if (green > 0.2) {
+      if (k >= 0.5) {
+        for (let j = 0; j < rng.int(6, 12); j++) (rng.chance(0.7) ? greenGrass : grass)(s, rng, cx + rng.range(-7, 7), cz + rng.range(-7, 7));
+        if (rng.chance(0.5)) bush(s, rng, cx + rng.range(-5, 5), cz + rng.range(-5, 5), 0.8);
+        continue;
+      }
+      // The forest edge: a few pines among dry grass and scrub.
+      for (let j = 0; j < rng.int(1, 4); j++) tree(cx + rng.range(-7, 7), cz + rng.range(-7, 7), rng.range(4.5, 7));
+      for (let j = 0; j < rng.int(4, 8); j++) (rng.chance(0.5) ? greenGrass : grass)(s, rng, cx + rng.range(-7, 7), cz + rng.range(-7, 7));
+      if (rng.chance(0.5)) scrub(s, rng, cx + rng.range(-5, 5), cz + rng.range(-5, 5));
+      continue;
+    }
     if (k < 0.24) {
-      // Rock outcrop: one or two boulders that block shots, with stones around.
       const r = rng.range(1.6, 4.2);
-      if (clear(center.x, center.z, r)) {
-        s.rock(r, PAL.cliff, center.x, r * 0.55, center.z, rng.range(0.9, 1.3), 0.24, rng.int(1, 999), rng.range(0, 6));
+      if (clear(cx, cz, r)) {
+        s.rock(r, PAL.cliff, cx, r * 0.55, cz, rng.range(0.9, 1.3), 0.24, rng.int(1, 999), rng.range(0, 6));
         const a = rng.range(0, 6), d = r * 0.85;
-        s.rock(r * 0.55, PAL.rockLight, center.x + Math.cos(a) * d, r * 0.3, center.z + Math.sin(a) * d, 0.8, 0.22, rng.int(1, 999));
-        solid(center.x, center.z, r * 0.8, r * 1.2);
-        shade.push(blot(center.x + 0.6, center.z - 0.4, r * 1.6, r * 1.3, 0x8a5a36, 0.3, 0.014, a));
+        s.rock(r * 0.55, PAL.rockLight, cx + Math.cos(a) * d, r * 0.3, cz + Math.sin(a) * d, 0.8, 0.22, rng.int(1, 999));
+        solid(cx, cz, r * 0.8, r * 1.2);
+        shade.push(blot(cx + 0.6, cz - 0.4, r * 1.6, r * 1.3, 0x8a5a36, 0.3, 0.014, a));
       }
       for (let j = 0; j < rng.int(3, 7); j++) {
         const a = rng.range(0, 6), d = rng.range(r + 0.5, r + 4), rr = rng.range(0.18, 0.6);
-        s.rock(rr, rng.chance(0.5) ? PAL.rock : PAL.rockDark, center.x + Math.cos(a) * d, rr * 0.3, center.z + Math.sin(a) * d, 0.6, 0.3, rng.int(1, 999), a);
+        s.rock(rr, rng.chance(0.5) ? PAL.rock : PAL.rockDark, cx + Math.cos(a) * d, rr * 0.3, cz + Math.sin(a) * d, 0.6, 0.3, rng.int(1, 999), a);
       }
-      if (rng.chance(0.6)) scrub(s, rng, center.x + rng.range(-4, 4), center.z + rng.range(-4, 4));
+      if (rng.chance(0.6)) scrub(s, rng, cx + rng.range(-4, 4), cz + rng.range(-4, 4));
     } else if (k < 0.48) {
-      // Cactus grove of three to seven plants with a few scrubs between them.
-      const n = rng.int(3, 7);
-      for (let j = 0; j < n; j++) {
+      for (let j = 0; j < rng.int(3, 7); j++) {
         const a = rng.range(0, 6), d = Math.sqrt(rng.next()) * rng.range(3, 7);
-        cactus(s, rng, center.x + Math.cos(a) * d, center.z + Math.sin(a) * d, rng.range(0.8, 1.15));
+        cactus(s, rng, cx + Math.cos(a) * d, cz + Math.sin(a) * d, rng.range(0.8, 1.15));
       }
-      for (let j = 0; j < rng.int(1, 4); j++) scrub(s, rng, center.x + rng.range(-6, 6), center.z + rng.range(-6, 6));
+      for (let j = 0; j < rng.int(1, 4); j++) scrub(s, rng, cx + rng.range(-6, 6), cz + rng.range(-6, 6));
     } else if (k < 0.82) {
-      // Scrub and dry grass field, the most common ground cover.
       for (let j = 0; j < rng.int(5, 11); j++) {
         const a = rng.range(0, 6), d = Math.sqrt(rng.next()) * 7;
-        if (rng.chance(0.55)) scrub(s, rng, center.x + Math.cos(a) * d, center.z + Math.sin(a) * d, rng.range(0.7, 1.3));
-        else grass(s, rng, center.x + Math.cos(a) * d, center.z + Math.sin(a) * d);
+        if (rng.chance(0.55)) scrub(s, rng, cx + Math.cos(a) * d, cz + Math.sin(a) * d, rng.range(0.7, 1.3));
+        else grass(s, rng, cx + Math.cos(a) * d, cz + Math.sin(a) * d);
       }
-      shade.push(blot(center.x, center.z, rng.range(5, 9), rng.range(4, 7), 0xc0965a, 0.35, 0.012, rng.range(0, 3)));
+      shade.push(blot(cx, cz, rng.range(5, 9), rng.range(4, 7), 0xc0965a, 0.35, 0.012, rng.range(0, 3)));
     } else if (k < 0.92) {
-      // A wash of pale gravel with a few loose stones.
-      shade.push(blot(center.x, center.z, rng.range(6, 11), rng.range(3, 5), 0xdcb582, 0.55, 0.012, rng.range(0, 3)));
+      shade.push(blot(cx, cz, rng.range(6, 11), rng.range(3, 5), 0xdcb582, 0.55, 0.012, rng.range(0, 3)));
       for (let j = 0; j < rng.int(4, 9); j++) {
         const rr = rng.range(0.12, 0.3);
-        s.rock(rr, PAL.rockLight, center.x + rng.range(-6, 6), rr * 0.3, center.z + rng.range(-2.5, 2.5), 0.5, 0.3, rng.int(1, 999));
+        s.rock(rr, PAL.rockLight, cx + rng.range(-6, 6), rr * 0.3, cz + rng.range(-2.5, 2.5), 0.5, 0.3, rng.int(1, 999));
       }
     } else {
-      // Remains of an old camp or a dead animal.
-      bones(s, rng, center.x, center.z);
+      bones(s, rng, cx, cz);
       if (rng.chance(0.5)) {
-        for (let j = 0; j < 7; j++) { const a = j / 7 * Math.PI * 2; s.rock(0.16, PAL.rockDark, center.x + 2.5 + Math.cos(a) * 0.55, 0.06, center.z + Math.sin(a) * 0.55, 0.6, 0.3, j); }
-        s.box(0.9, 0.1, 0.1, 0x3a2a20, center.x + 2.5, 0.06, center.z, 0, 0.5, 0);
-        shade.push(blot(center.x + 2.5, center.z, 0.9, 0.9, 0x4a3426, 0.5));
+        for (let j = 0; j < 7; j++) { const a = j / 7 * Math.PI * 2; s.rock(0.16, PAL.rockDark, cx + 2.5 + Math.cos(a) * 0.55, 0.06, cz + Math.sin(a) * 0.55, 0.6, 0.3, j); }
+        s.box(0.9, 0.1, 0.1, 0x3a2a20, cx + 2.5, 0.06, cz, 0, 0.5, 0);
+        shade.push(blot(cx + 2.5, cz, 0.9, 0.9, 0x4a3426, 0.5));
       }
-      deadTree(s, rng, center.x - 2, center.z + 1.5, rng.range(2, 3));
+      deadTree(s, rng, cx - 2, cz + 1.5, rng.range(2, 3));
     }
   }
-  // A thin layer of single plants keeps the open ground from looking empty.
-  for (let i = 0; i < 420; i++) {
+  // The forest itself: trees scattered thickly where the land is greenest.
+  for (let i = 0; i < Math.round(9000 * area / 840 ** 2); i++) {
+    const x = rng.range(-half + 8, half - 8), z = rng.range(-half + 8, half - 8), green = forestAt(x, z);
+    if (green < 0.45 || rng.next() > green * 0.75) continue;
+    tree(x, z, rng.range(4.5, 7.5));
+  }
+  // Single plants keep open ground from looking empty.
+  const singles = Math.round(420 * area / 420 ** 2);
+  for (let i = 0; i < singles; i++) {
     const x = rng.range(-half + 8, half - 8), z = rng.range(-half + 8, half - 8);
     if (!free(x, z)) continue;
-    const k = rng.next();
-    if (k < 0.45) grass(s, rng, x, z);
+    const k = rng.next(), green = forestAt(x, z), s = at(x, z);
+    if (green > 0.5) {
+      if (k < 0.5) greenGrass(s, rng, x, z);
+      else if (k < 0.7) fern(s, rng, x, z);
+      else if (k < 0.85) bush(s, rng, x, z, rng.range(0.6, 1));
+      else tree(x, z, rng.range(4.5, 7));
+    } else if (k < 0.45) (green > 0.2 ? greenGrass : grass)(s, rng, x, z);
     else if (k < 0.8) scrub(s, rng, x, z, rng.range(0.6, 1));
     else if (k < 0.93) { const rr = rng.range(0.15, 0.45); s.rock(rr, PAL.rock, x, rr * 0.3, z, 0.6, 0.3, rng.int(1, 999)); }
-    else cactus(s, rng, x, z, rng.range(0.7, 1));
+    else if (green < 0.2) cactus(s, rng, x, z, rng.range(0.7, 1));
   }
-  // Ragged cliffs close the edge of the land, in two uneven rows.
+  // Ragged cliffs (desert) or a dark tree wall (forest) close the edge.
   for (const side of [0, 1, 2, 3]) {
     for (let a = -half - 10; a < half + 10;) {
       const r = rng.range(6, 12), edge = half + 4 - rng.range(-2, 5);
       const x = side < 2 ? a : (side === 2 ? -edge : edge);
       const z = side >= 2 ? a : (side === 0 ? -edge : edge);
-      s.rock(r, rng.chance(0.6) ? PAL.cliff : PAL.rock, x, r * 0.45, z, rng.range(0.9, 1.6), 0.28, rng.int(1, 999), rng.range(0, 6));
-      if (rng.chance(0.5)) s.rock(r * 0.6, PAL.rockLight, x + rng.range(-3, 3), r * 0.9, z + rng.range(-3, 3), 1, 0.25, rng.int(1, 999));
+      const s = at(Math.max(-half, Math.min(half - 1, x)), Math.max(-half, Math.min(half - 1, z)));
+      if (forestAt(x, z) > 0.5) {
+        for (let j = 0; j < 3; j++) pine(s, rng, x + rng.range(-4, 4), z + rng.range(-4, 4), rng.range(9, 14));
+        s.rock(r * 0.7, 0x6f6c62, x, r * 0.3, z, 0.9, 0.28, rng.int(1, 999));
+      } else {
+        s.rock(r, rng.chance(0.6) ? PAL.cliff : PAL.rock, x, r * 0.45, z, rng.range(0.9, 1.6), 0.28, rng.int(1, 999), rng.range(0, 6));
+        if (rng.chance(0.5)) s.rock(r * 0.6, PAL.rockLight, x + rng.range(-3, 3), r * 0.9, z + rng.range(-3, 3), 1, 0.25, rng.int(1, 999));
+      }
       a += r * rng.range(0.9, 1.5);
     }
   }
-  group.add(meshOf(s));
+  // The server only needs the colliders above, not the meshes.
+  if (game.headless) return;
+  for (const s of chunks.values()) if (s.parts.length) group.add(meshOf(s));
   if (shade.length) group.add(blotMesh(shade));
 }
 
-return { ground, MAIN_STREET, roads, desert };
+return { pine, wilds };
+})();
+
+// ---- src/town-pine.js ----
+__m.town_pine = (() => {
+// Pine Hollow: a logging town in the northwest forest. Its storefronts reuse
+// the Mercy Crossing builders in timber colors; the people who run them stand
+// out front, so the town has no rooms to load. Local frame: the street runs
+// along z through the town center, fronts face the street.
+
+const { PAL, Shape, meshOf } = __m.models;
+const { GROUPS } = __m.physics;
+const { BUILDERS, SYMBOLS, gable, lantern, shingle } = __m.town_buildings;
+const { townsperson } = __m.townsfolk;
+const { animateCharacter, turnToward } = __m.character;
+const { road, resample } = __m.decals;
+const { PINE_HOLLOW } = __m.terrain;
+const FRONTS = [
+  { id: 'pine-saloon', kind: 'saloon', side: 1, z: -8, color: 0x4f6b4a, width: 9.6, depth: 7.4, height: 6.8, npc: 'ruby' },
+  { id: 'pine-trade', kind: 'guns', side: -1, z: -8, color: 0x6a4a32, width: 8.4, depth: 7.2, height: 3.8, npc: 'hank' },
+  { id: 'pine-deputy', kind: 'sheriff', side: -1, z: 6, color: 0x5d5446, width: 8, depth: 7, height: 4, npc: 'hale' },
+  { id: 'pine-doctor', kind: 'doctor', side: 1, z: 6, color: 0xcfc6a8, width: 7.6, depth: 6.8, height: 4.2, npc: 'lacey' },
+];
+
+const PINE_NPCS = {
+  ruby: { name: 'Ruby Tate', look: { shirt: 0x8a2f3c, vest: 0x2b2026, hat: 0x2b2026, band: 0xc9a273, pants: 0x3a2f35, apron: 0xe8dcc0 } },
+  hank: { name: 'Hank Morrow', look: { shirt: 0x7a6a4a, vest: 0x4a3a28, hat: 0x5c4a32, band: PAL.woodDark, pants: 0x3f3a33, apron: 0xb39a72 } },
+  hale: { name: 'Deputy Hale', look: { shirt: 0x5e6e7a, vest: 0x2e2a26, hat: 0x3a2e24, band: PAL.brass, pants: 0x34302c, star: true } },
+  lacey: { name: 'Doc Lacey', look: { shirt: 0xe3dccb, vest: 0x3a4a3c, hat: 0x2b2a2a, band: PAL.black, pants: 0x34383d } },
+};
+
+function cabin(s, w, d, h, color) {
+  for (let y = 0.2; y < h; y += 0.36) {
+    s.cyl(0.18, 0.18, w + 0.4, 6, y % 0.72 < 0.36 ? color : 0x6a4a32, 0, y, d / 2, 0, 0, Math.PI / 2);
+    s.cyl(0.18, 0.18, w + 0.4, 6, color, 0, y, -d / 2, 0, 0, Math.PI / 2);
+    s.cyl(0.18, 0.18, d + 0.4, 6, 0x6a4a32, w / 2, y + 0.18, 0, Math.PI / 2);
+    s.cyl(0.18, 0.18, d + 0.4, 6, 0x6a4a32, -w / 2, y + 0.18, 0, Math.PI / 2);
+  }
+  s.box(w, h, d, 0x5a3f2b, 0, h / 2, 0);
+  gable(s, w, d, h, 1.6, 0x4a4038, color, 0.6);
+  s.box(1.1, 2.1, 0.1, PAL.woodDark, 0, 1.05, d / 2 + 0.2);
+  s.box(0.9, 0.8, 0.1, 0xf0c070, w * 0.28, 1.7, d / 2 + 0.2);
+  s.box(0.7, h + 1.4, 0.7, PAL.rockDark, -w / 2 + 0.6, (h + 1.4) / 2, -d / 4);
+}
+
+function waterTower(s) {
+  for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) s.box(0.22, 6, 0.22, PAL.wood, x, 3, z);
+  s.box(3, 0.2, 3, PAL.plank, 0, 6, 0);
+  s.cyl(1.6, 1.6, 2.6, 10, 0x7a5a3a, 0, 7.4, 0);
+  for (let y = 6.5; y < 8.6; y += 0.7) s.cyl(1.63, 1.63, 0.08, 10, PAL.iron, 0, y, 0);
+  s.cone(1.8, 1, 10, 0x4a4038, 0, 9.2, 0);
+}
+
+function placeFront(game, group, spec) {
+  const T = PINE_HOLLOW, x = T.x + spec.side * 13, z = T.z + spec.z, ry = -spec.side * Math.PI / 2;
+  const s = new Shape(), object = new THREE.Group();
+  BUILDERS[spec.kind](s, spec);
+  shingle(s, spec.width / 2 - 0.18, spec.kind === 'saloon' ? 3.5 : 3.0, 5.25, SYMBOLS[spec.kind]);
+  object.position.set(x, 0, z); object.rotation.y = ry;
+  object.add(meshOf(s)); group.add(object);
+  game.physics.fixedBox(x, spec.height / 2, z, spec.width / 2, spec.height / 2, spec.depth / 2, ry, GROUPS.world);
+  // The keeper stands at the foot of the porch steps, facing the street.
+  return { x: T.x + spec.side * 7.4, z, yaw: spec.side > 0 ? -Math.PI / 2 : Math.PI / 2 };
+}
+
+/** Builds Pine Hollow into `group`. Returns the keepers as interaction points. */
+function buildPineHollow(game, group) {
+  const T = PINE_HOLLOW, npcs = [];
+  for (const spec of FRONTS) {
+    const spot = placeFront(game, group, spec), info = PINE_NPCS[spec.npc];
+    const model = townsperson(info.look);
+    model.arm.rotation.x = 1.1;
+    model.root.position.set(spot.x, 0, spot.z); model.root.rotation.y = spot.yaw;
+    group.add(model.root);
+    npcs.push({ id: `pine-${spec.npc}`, npc: spec.npc, name: info.name, kind: 'npc', x: spot.x, z: spot.z, yaw: spot.yaw, home: spot.yaw,
+      model, animation: { speed: 0, dt: 0, aiming: false, flash: 0 } });
+  }
+  // Cabins and a water tower behind the storefronts.
+  const extras = new Shape();
+  const cabins = [[-24, -24, 0.2], [24, -22, -0.15], [-25, 22, 0.1], [23, 24, -0.2], [-6, -34, 0], [8, 33, Math.PI]];
+  for (const [cx, cz, ry] of cabins) {
+    const c = new Shape();
+    cabin(c, 6, 5, 2.8, 0x7a5638);
+    const o = new THREE.Group(); o.position.set(T.x + cx, 0, T.z + cz); o.rotation.y = ry + (cx < 0 ? Math.PI / 2 : -Math.PI / 2);
+    o.add(meshOf(c)); group.add(o);
+    game.physics.fixedBox(T.x + cx, 1.6, T.z + cz, 3.2, 1.6, 2.7, o.rotation.y, GROUPS.world);
+  }
+  waterTower(extras);
+  const tower = meshOf(extras); tower.position.set(T.x - 22, 0, T.z + 2); group.add(tower);
+  game.physics.fixedBox(T.x - 22, 3, T.z + 2, 1.6, 3, 1.6, 0, GROUPS.world);
+  // Lamp posts and hitching rails along the street.
+  const street = new Shape();
+  for (const z of [-20, -2, 14]) for (const side of [-1, 1]) {
+    street.box(0.16, 3.2, 0.16, PAL.woodDark, side * 5.8, 1.6, z);
+    lantern(street, side * 5.8, 3.05, z + 0.12);
+    street.box(2.6, 0.12, 0.12, PAL.woodLight, side * 6.6, 0.95, z + 6);
+    for (const dz of [-1.2, 1.2]) street.box(0.12, 1, 0.12, PAL.wood, side * 6.6, 0.5, z + 6 + dz);
+  }
+  const lamps = meshOf(street); lamps.position.set(T.x, 0, T.z); group.add(lamps);
+  const points = [];
+  for (let z = -46; z <= 44; z += 2) points.push({ x: T.x + Math.sin(z * 0.05) * 0.8, z: T.z + z });
+  group.add(road(resample(points, 1.1), 6, { fade: 8, seed: 21, base: 0x8a6a48, wash: 0x9c7c58 }));
+  return {
+    npcs,
+    tick(dt, player) {
+      for (const npc of npcs) {
+        const near = player && Math.hypot(player.x - npc.x, player.z - npc.z) < 3;
+        const want = near ? Math.atan2(player.x - npc.x, player.z - npc.z) : npc.home;
+        npc.yaw = turnToward(npc.yaw, want, dt * 4);
+        npc.model.root.rotation.y = npc.yaw;
+        npc.animation.dt = dt; animateCharacter(npc.model, npc.animation); npc.model.arm.rotation.x = 1.1;
+      }
+    },
+  };
+}
+
+return { PINE_NPCS, buildPineHollow };
 })();
 
 // ---- src/frontier.js ----
@@ -9679,7 +10453,9 @@ const { createRng } = __m.rng;
 const { GROUPS } = __m.physics;
 const { buildTown } = __m.town_buildings;
 const { buildInteriors, updateInteriorNpcs } = __m.interiors;
-const { desert, ground, roads } = __m.land;
+const { ground, roads } = __m.land;
+const { wilds } = __m.wilds;
+const { buildPineHollow } = __m.town_pine;
 function civilians(group, rng) {
   const specs = [
     ['martha', 'Martha Bell', 'bounty', [[-3.6, -10], [-3.6, 3], [-1, 3], [-1, -10]], { shirt: 0x706c85, vest: 0x3d3346, hat: 0x2f2a33, band: 0x9e6971, pants: 0x3a3540, scarf: 0xd9c9a6 }],
@@ -9719,7 +10495,8 @@ function buildFrontier(game, world) {
   }
   const sites = buildTown(game, outdoor, world), npcs = civilians(outdoor, rng), rooms = buildInteriors(game, interiorRoot, sites);
   roads(outdoor, sites);
-  desert(game, outdoor, world, rng);
+  const pine = buildPineHollow(game, outdoor);
+  wilds(game, outdoor, world, rng);
   const doors = sites.map((site) => ({
     id: `door-${site.id}`, siteId: site.id, kind: 'door', label: site.label, x: site.x, z: site.z,
   }));
@@ -9755,11 +10532,11 @@ function buildFrontier(game, world) {
   };
 
   return {
-    sites, npcs, rooms,
+    sites, npcs, rooms, pine,
     get inside() { return !!active; },
     get seated() { return seated; },
     locationLabel() { return active?.label ?? 'Mercy Crossing'; },
-    interactions() { return active ? active.points : [...doors, ...npcs]; },
+    interactions() { return active ? active.points : [...doors, ...npcs, ...pine.npcs]; },
     cameraFocus() { return active?.center ?? null; },
     viewFocus() { return focusOverride ?? active?.center ?? null; },
     setCameraFocus(point) { focusOverride = point; },
@@ -9790,6 +10567,7 @@ function buildFrontier(game, world) {
         if (!seated && doorCooldown <= 0 && game.player.z > active.center.z + 6.9) leave();
         return;
       }
+      pine.tick(dt, game.player);
       for (const npc of npcs) {
         npc.px = npc.x; npc.pz = npc.z; npc.prevYaw = npc.yaw;
         const player = game.player, near = player && Math.hypot(player.x - npc.x, player.z - npc.z) < 2.3;
@@ -10124,65 +10902,95 @@ const ENEMY_FIELDS = ['hp', 'x', 'z', 'yaw', 'ammo', 'reloadT', 'cooldown', 'kno
   'homeX', 'homeZ', 'wanderX', 'wanderZ', 'wanderT', 'peekX', 'peekZ', 'fleeing', 'unseenT',
   'stimX', 'stimZ', 'perceptT', 'spottedX', 'spottedZ', 'spottedT', 'vx', 'vz', 'kx', 'kz', 'surrendered', 'captive'];
 
+/** Every camp and ambush site in the world, in a fixed order. */
+function campList(world) {
+  return [...world.camps, ...(world.ambushes ?? [])];
+}
+
 function buildEncounters(game) {
-  const world = game.run.world, camps = [...world.camps, ...(world.ambushes ?? [])];
-  return camps.map((camp, index) => {
-    const saved = game.run.camps[camp.id];
-    saved.cleared ??= false;
-    const layout = camp.ambush ? generateAmbush(game.run.seed + index * 7717) : generateCamp(game.run.seed + index * 104729, camp.difficulty);
-    const encounter = { ...camp, enemies: [], props: [], nav: new NavGrid(32, 0.5, 0.45, camp) };
-    if (game.levelGroup && !camp.ambush) campDecor(game, camp, layout, game.run.seed + index * 104729);
-    const oldProps = new Map((saved.props ?? []).map((p) => [p.id, p]));
-    layout.props.forEach((spec, i) => {
-      const id = `${camp.id}:prop:${i}`, old = oldProps.get(id);
-      if (old?.alive === false) return;
-      const p = new Prop(game, spec.kind, { ...spec, x: spec.x + camp.x, z: spec.z + camp.z });
-      p.id = id;
-      if (old) {
-        if (Number.isFinite(old.hp)) p.hp = old.hp;
-        p.fuse = old.fuse ?? -1;
-        if (old.looted !== undefined) p.setLooted(old.looted, true);
-        if (p.body && old.body) {
-          p.body.setTranslation(old.body.position, true);
-          p.body.setRotation(old.body.rotation, true);
-          p.body.setLinvel(old.body.velocity, true);
-          p.body.setAngvel(old.body.angularVelocity, true);
-          p.physObj.capture();
-          p.physObj.prevP.copy(p.physObj.currP);
-          p.physObj.prevQ.copy(p.physObj.currQ);
-          p.physObj.render(1);
-        }
+  return campList(game.run.world).map((camp, index) => buildEncounter(game, camp, index));
+}
+
+/**
+ * Builds one camp: props, outlaws and its path grid. Saved state in
+ * game.run.camps restores damage and dead outlaws. Layouts come from the
+ * world seed, so every player of a shared world sees the same camp.
+ */
+function buildEncounter(game, camp, index, decorate = true) {
+  const seed = game.run.world.seed ?? game.run.seed;
+  game.run.camps[camp.id] ??= {};
+  const saved = game.run.camps[camp.id];
+  saved.cleared ??= false;
+  const layout = camp.ambush ? generateAmbush(seed + index * 7717) : generateCamp(seed + index * 104729, camp.difficulty);
+  const encounter = { ...camp, index, enemies: [], props: [], nav: new NavGrid(32, 0.5, 0.45, camp) };
+  if (decorate && game.levelGroup && !camp.ambush) encounter.decor = campDecor(game, camp, layout, seed + index * 104729);
+  const oldProps = new Map((saved.props ?? []).map((p) => [p.id, p]));
+  layout.props.forEach((spec, i) => {
+    const id = `${camp.id}:prop:${i}`, old = oldProps.get(id);
+    if (old?.alive === false) return;
+    // Forest camps keep their layout but leave out the desert cactus.
+    if (camp.home === 'pine' && spec.kind === 'cactus') return;
+    const p = new Prop(game, spec.kind, { ...spec, x: spec.x + camp.x, z: spec.z + camp.z });
+    p.id = id;
+    if (old) {
+      if (Number.isFinite(old.hp)) p.hp = old.hp;
+      p.fuse = old.fuse ?? -1;
+      if (old.looted !== undefined) p.setLooted(old.looted, true);
+      if (p.body && old.body) {
+        p.body.setTranslation(old.body.position, true);
+        p.body.setRotation(old.body.rotation, true);
+        p.body.setLinvel(old.body.velocity, true);
+        p.body.setAngvel(old.body.angularVelocity, true);
+        p.physObj.capture();
+        p.physObj.prevP.copy(p.physObj.currP);
+        p.physObj.prevQ.copy(p.physObj.currQ);
+        p.physObj.render(1);
       }
-      encounter.props.push(p);
-    });
-    const oldEnemies = new Map((saved.enemies ?? []).map((e) => [e.id, e]));
-    layout.enemies.forEach((spec, i) => {
-      const target = i === 0 && !camp.ambush;
-      const id = target ? camp.targetId : `${camp.id}:outlaw:${i}`, old = oldEnemies.get(id);
-      if (old?.alive === false) return;
-      const e = new Bandit(game, spec.type, spec.x + camp.x, spec.z + camp.z, camp.difficulty, encounter, target);
-      e.id = id;
-      e.campId = camp.id;
-      if (target) {
-        // The marked outlaw wears a red hat. Its identity stays fixed for this life.
-        e.model.root.userData.targetName = camp.targetName;
-      }
-      if (old) {
-        for (const key of ENEMY_FIELDS) if (old[key] !== undefined) e[key] = old[key];
-        e.px = e.x; e.pz = e.z; e.prevYaw = e.yaw;
-        e.body.setTranslation({ x: e.x, y: e.bodyY, z: e.z }, true);
-        // A cover point is tied to a live prop. Find a new point after loading.
-        if (['hold', 'peek', 'toCover', 'flank'].includes(e.state)) e.state = 'toCover';
-        if (e.state === 'aim' || e.state === 'burst') { e.token = true; game.tokens.holders.add(e); }
-        if (e.surrendered) { showGun(e.model, null); e.setState(e.captive ? 'captive' : 'surrender'); e.state = e.captive ? 'captive' : 'surrender'; }
-        if (e.captive && game.player) teleport(e, game.player.x - 1.5, game.player.z - 1.5);
-      }
-      encounter.enemies.push(e);
-    });
-    encounter.nav.setStatic(encounter.props.filter((p) => !p.dynamic).map((p) => p.footprint()));
-    encounter.nav.rebuild(encounter.props.filter((p) => p.dynamic).map((p) => p.footprint()));
-    return encounter;
+    }
+    encounter.props.push(p);
   });
+  const oldEnemies = new Map((saved.enemies ?? []).map((e) => [e.id, e]));
+  layout.enemies.forEach((spec, i) => {
+    const target = i === 0 && !camp.ambush;
+    const id = target ? camp.targetId : `${camp.id}:outlaw:${i}`, old = oldEnemies.get(id);
+    if (old?.alive === false) return;
+    const e = new Bandit(game, spec.type, spec.x + camp.x, spec.z + camp.z, camp.difficulty, encounter, target);
+    e.id = id;
+    e.campId = camp.id;
+    if (target) {
+      // The marked outlaw wears a red hat. Its identity stays fixed for this life.
+      e.model.root.userData.targetName = camp.targetName;
+    }
+    if (old) {
+      for (const key of ENEMY_FIELDS) if (old[key] !== undefined) e[key] = old[key];
+      e.px = e.x; e.pz = e.z; e.prevYaw = e.yaw;
+      e.body.setTranslation({ x: e.x, y: e.bodyY, z: e.z }, true);
+      // A cover point is tied to a live prop. Find a new point after loading.
+      if (['hold', 'peek', 'toCover', 'flank'].includes(e.state)) e.state = 'toCover';
+      if (e.state === 'aim' || e.state === 'burst') { e.token = true; game.tokens.holders.add(e); }
+      if (e.surrendered) { showGun(e.model, null); e.setState(e.captive ? 'captive' : 'surrender'); e.state = e.captive ? 'captive' : 'surrender'; }
+      if (e.captive && game.player) teleport(e, game.player.x - 1.5, game.player.z - 1.5);
+    }
+    encounter.enemies.push(e);
+  });
+  encounter.nav.setStatic(encounter.props.filter((p) => !p.dynamic).map((p) => p.footprint()));
+  encounter.nav.rebuild(encounter.props.filter((p) => p.dynamic).map((p) => p.footprint()));
+  return encounter;
+}
+
+/** Removes a camp's outlaws and props from the scene and physics (the camp dressing stays). */
+function disposeEncounter(game, encounter) {
+  for (const e of encounter.enemies) {
+    if (e.token) e.releaseToken();
+    if (game.flanker === e) game.flanker = null;
+    if (e.body) { game.physics.removeBody(e.body); e.body = null; }
+    e.alive = false;
+    game.levelGroup?.remove(e.model.root);
+    if (e.aimLine) { game.levelGroup?.remove(e.aimLine); e.aimLine.material.dispose(); }
+  }
+  for (const p of encounter.props) if (p.alive) { p.alive = false; p.remove(); }
+  encounter.enemies = [];
+  encounter.props = [];
 }
 
 function captureEncounters(game) {
@@ -10216,7 +11024,7 @@ function rebuildCampNav(encounters) {
   }
 }
 
-return { buildEncounters, captureEncounters, rebuildCampNav };
+return { campList, buildEncounters, buildEncounter, disposeEncounter, captureEncounters, rebuildCampNav };
 })();
 
 // ---- src/dialogue.js ----
@@ -10228,6 +11036,7 @@ const ROLES = {
   sheriff: 'Sheriff', doctor: 'Town doctor', maps: 'Map maker', guns: 'Gunsmith', clothes: 'Clothier', saloon: 'Saloon keeper',
   stable: 'Livery', silas: 'Rancher', martha: 'Hears every rumor', clara: 'Doctor Finch\'s cousin', nora: 'Postmistress',
   amos: 'Homesteader', eli: 'Wounded traveler', juan: 'Trail merchant',
+  hale: 'Deputy of Pine Hollow', ruby: 'Runs the Timber Wolf', hank: 'Trading post', lacey: 'Pine Hollow doctor', otto: 'Trapper',
 };
 
 /** Shop kinds in town map to the person behind the counter. */
@@ -10248,6 +11057,11 @@ const FIRST = {
   amos: 'Strangers don\'t come out this far by accident. State your business.',
   eli: 'Water... and a bandage, if you have one. My horse threw me and the leg won\'t hold.',
   juan: 'Juan Ortega. Rounds, bandages, coffee. Town prices are cheaper, but town is far.',
+  hale: 'Hale. Deputy, jailer and gravedigger, since the Iron Gang came. The board is short on lawmen and long on names.',
+  ruby: 'Ruby Tate. This is the Timber Wolf. Beer is cold, whiskey is honest, and the dice are on the house.',
+  hank: 'Hank Morrow. Rifle rounds, oil, tobacco. I buy skins, too. The forest feeds those who can shoot.',
+  lacey: 'Doc Lacey. Sit down before you fall down.',
+  otto: 'Otto Brandt. Thirty winters in these woods. You have the look of someone who could hunt. Can you?',
 };
 const LATER = {
   sheriff: 'Back again. The board changes when men die or hang.',
@@ -10264,6 +11078,11 @@ const LATER = {
   amos: 'Back again.',
   eli: 'Still here.',
   juan: 'Prices are the same as last time.',
+  hale: 'Any news from the woods?',
+  ruby: 'Back for another?',
+  hank: 'Brought me skins?',
+  lacey: 'Let me look at you.',
+  otto: 'The bear was seen again. Wagon-sized, I tell you.',
 };
 
 /** Opening speech and the small amount of job information needed beside it. */
@@ -10294,6 +11113,8 @@ function completionLine(def, state) {
   if (def.type === 'survey') return 'You got the bearing? Good. Here is your pay.';
   if (def.type === 'traveler') return 'You found Eli. Here is your pay.';
   if (def.type === 'delivery') return 'Amos got the parcel. Here is your pay.';
+  if (def.id === 'iron-gang') return 'Kell is dead? Then Pine Hollow can sleep tonight. Here. The town owes you more than this.';
+  if (def.id === 'trapper') return 'Old Scar\'s hide! I will tell this one until I die. Here is your pay, hunter.';
   return 'You finished it. Here is your pay.';
 }
 
@@ -10332,11 +11153,15 @@ __m.town_actions = (() => {
 const { work, rumorOrder } = __m.life;
 const { CATALOGUE, SHOPS, buy, cannotBuy, priceOf } = __m.items;
 const { BETS, canDoubleBlackjack, canSplitBlackjack, doubleBlackjack, hitBlackjack, splitBlackjack, standBlackjack, startBlackjack } = __m.blackjack;
-const { accept, NPCS, quest, sellMedicine, turnIn } = __m.quests;
+const { accept, bringStep, NPCS, quest, sellMedicine, turnIn } = __m.quests;
+const { PELTS, CATALOGUE: ITEMS } = __m.items;
+const { drink } = __m.vices;
 const { KEEPER_NPC, greeting, offerText, rumorLine } = __m.dialogue;
 const { lootSite, readGrave, takeMedicine } = __m.progress;
 const { captivePoint, restrain } = __m.enemy_captive;
-const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant' };
+const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant', ruby: 'pineSaloon', hank: 'trading', lacey: 'pineDoctor' };
+const PELT_BUYERS = new Set(['hank', 'otto']);
+const BARKEEPS = new Set(['mae', 'ruby']);
 const BROWSE_LABEL = {
   guns: 'Show me your weapons',
   doctor: 'I need medicine',
@@ -10345,6 +11170,9 @@ const BROWSE_LABEL = {
   maps: 'Show me your maps',
   stable: 'Show me the horses',
   merchant: 'Show me your goods',
+  pineSaloon: 'What are you pouring?',
+  trading: 'Let me see the shelves',
+  pineDoctor: 'I need patching up',
 };
 const LEAD_PRICE = 5, RUMOR_PRICE = 3;
 
@@ -10377,6 +11205,7 @@ class TownActions {
       for (const e of g.enemies) { const p = captivePoint(e); if (p) list.push(p); }
       const horse = g.horse?.point();
       if (horse) list.push(horse);
+      if (g.wildlife) list.push(...g.wildlife.points());
     }
     return list;
   }
@@ -10427,13 +11256,18 @@ class TownActions {
     const quick = { cache: lootSite, loot: lootSite, medicine: takeMedicine };
     if (quick[point.kind]) { g.ui.questNote(quick[point.kind](g, point)); g.audio.play('coin', { bus: 'ui', vol: 0.6 }); g.save(); return; }
     if (point.kind === 'grave') { g.ui.toast(readGrave(g, point), 7); g.save(); return; }
+    if (point.kind === 'skin') { g.wildlife.skin(point); return; }
     if (point.kind === 'proof') {
       g.worldPoints.remove(point);
       g.questEvent({ type: 'proof', targetId: point.enemy.id });
       if (!g.questDefs.some((q) => q.targetId === point.enemy.id && g.run.quests[q.id].status !== 'offered')) g.ui.questNote('You take the red hat. The sheriff pays for proof like this.');
       return;
     }
-    if (point.kind === 'restrain') { if (restrain(point.enemy)) g.save(); return; }
+    if (point.kind === 'restrain') {
+      if (g.net) g.net.act('restrain', { id: point.enemy.id });
+      else if (restrain(point.enemy)) g.save();
+      return;
+    }
     this.current = point;
     this.view = null;
     this.cameraDistance = g.rig.targetDistance;
@@ -10497,8 +11331,8 @@ class TownActions {
       text = offerText(life, def);
       actions = [{ id: `accept:${def.id}`, label: 'Take the job' }, { id: 'back', label: 'Not now' }];
     } else if (this.view?.posters) {
-      text = defs.filter((d) => d.type === 'bounty').map((d) => `${d.title.replace('Wanted: ', '')} · ${d.threat} threat · ${d.want === 'either' ? 'dead or alive' : d.want} · $${d.reward.money}${d.want === 'either' ? ` ($${d.aliveReward} alive)` : ''} · ${statusWord(life.quests[d.id].status)}`).join('\n');
-      actions = defs.filter((d) => d.type === 'bounty' && life.quests[d.id].status === 'offered').map((d) => ({ id: `offer:${d.id}`, label: `Read: ${d.title.replace('Wanted: ', '')}` }));
+      text = defs.filter((d) => d.type === 'bounty' && d.giver === npc).map((d) => `${d.title.replace('Wanted: ', '')} · ${d.threat} threat · ${d.want === 'either' ? 'dead or alive' : d.want} · $${d.reward.money}${d.want === 'either' ? ` ($${d.aliveReward} alive)` : ''} · ${statusWord(life.quests[d.id].status)}`).join('\n');
+      actions = defs.filter((d) => d.type === 'bounty' && d.giver === npc && life.quests[d.id].status === 'offered').map((d) => ({ id: `offer:${d.id}`, label: `Read: ${d.title.replace('Wanted: ', '')}` }));
       actions.push({ id: 'back', label: 'Step back from the board' });
     } else {
       if (npc) {
@@ -10515,9 +11349,21 @@ class TownActions {
         }
         if (def.giver === npc && s === 'offered' && def.type !== 'bounty') actions.push({ id: `offer:${def.id}`, label: `Ask about work: ${def.title}` });
       }
-      if (npc === 'sheriff') {
-        actions.push({ id: 'posters', label: 'Read the wanted board' });
-        actions.push({ id: 'work', label: 'Ask for a day of town work' });
+      if (npc === 'sheriff' || npc === 'hale') actions.push({ id: 'posters', label: 'Read the wanted board' });
+      if (npc === 'sheriff') actions.push({ id: 'work', label: 'Ask for a day of town work' });
+      if (BARKEEPS.has(npc)) {
+        actions.push({ id: 'drink:beer', label: `Have a beer at the bar · $${ITEMS.beer.price}`, disabled: life.bounty < ITEMS.beer.price });
+        actions.push({ id: 'drink:whiskey', label: `Knock back a whiskey · $${ITEMS.whiskey.price}`, disabled: life.bounty < ITEMS.whiskey.price });
+      }
+      if (PELT_BUYERS.has(npc)) {
+        const worth = Object.entries(PELTS).reduce((sum, [id, p]) => sum + (life.items[id] ?? 0) * p.price, 0);
+        if (worth) actions.push({ id: 'sell-pelts', label: `Sell your hides and pelts · $${worth}` });
+      }
+      for (const def of defs) {
+        const s = life.quests[def.id], step = def.steps?.[s.step ?? 0];
+        if (def.type === 'chain' && def.turnIn === npc && s.status === 'active' && step?.kind === 'bring') {
+          actions.push({ id: `bring:${def.id}`, label: `Hand over ${step.count} ${PELTS[step.item].name.toLowerCase()}s (${life.items[step.item] ?? 0} carried)`, disabled: (life.items[step.item] ?? 0) < step.count });
+        }
       }
       if (npc === 'martha') {
         for (const def of defs) {
@@ -10583,6 +11429,7 @@ class TownActions {
       const item = id.slice(4);
       result = buy(life, item, shop);
       if (result.ok && CATALOGUE[item].kind === 'horse') g.spawnHorse();
+      if (result.ok && item === 'heal') g.net?.act('heal', { src: 'treat' });
     } else if (id === 'work' && npc === 'sheriff') result = work(life);
     else if (id.startsWith('lead:') && npc === 'martha') {
       resultIsSpeech = true;
@@ -10607,6 +11454,17 @@ class TownActions {
       result = { ok: true, message: 'Take this letter to Clara. Please.' };
     } else if (id === 'amos:parcel') { resultIsSpeech = true; g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Tell Nora thanks.' }; }
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
+    else if (id.startsWith('drink:') && BARKEEPS.has(npc)) {
+      const what = id.slice(6), price = ITEMS[what].price;
+      if (life.bounty < price) result = { ok: false, message: `You need $${price}.` };
+      else { life.bounty -= price; life.items[what] = (life.items[what] ?? 0) + 1; result = drink(g, what); resultIsSpeech = false; }
+    } else if (id === 'sell-pelts' && PELT_BUYERS.has(npc)) {
+      let paid = 0;
+      for (const [pid, p] of Object.entries(PELTS)) { paid += (life.items[pid] ?? 0) * p.price; life.items[pid] = 0; }
+      life.bounty += paid;
+      result = { ok: paid > 0, message: paid ? `Paid $${paid} for your skins.` : 'You have nothing to sell.' };
+      if (paid) g.audio.play('coin', { bus: 'ui', vol: 0.7 });
+    } else if (id.startsWith('bring:')) { resultIsSpeech = true; result = bringStep(life, defs, id.slice(6)); }
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');
       const moves = { hit: hitBlackjack, stand: standBlackjack, double: doubleBlackjack, split: splitBlackjack };
@@ -10649,7 +11507,8 @@ return { npcOf, TownActions };
 __m.map = (() => {
 // The life map shows travelled land. Major waterways stay visible as reference.
 const { MAP_CELL, isDiscovered } = __m.life;
-const { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, riverCenter, riverTangent } = __m.terrain;
+const { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, forestAt, pineRoadPoints, riverCenter, riverTangent } = __m.terrain;
+const { townsOf } = __m.towns;
 const C = {
   paper: '#efdcbb', land: '#e8d0a8', unknown: '#bca17b', ink: '#1c130f', soft: '#725437',
   grid: 'rgba(28,19,15,0.08)', river: '#587784', riverBank: '#99734d',
@@ -10693,8 +11552,14 @@ class MapView {
     ctx.fillStyle = C.land;
     for (const key of Object.keys(life.discovered)) {
       const [cx, cz] = key.split(':').map(Number);
+      const green = forestAt(-H + (cx + 0.5) * MAP_CELL, -H + (cz + 0.5) * MAP_CELL);
+      ctx.fillStyle = green > 0.5 ? '#a9b47e' : green > 0.2 ? '#cfc794' : C.land;
       ctx.fillRect(X(-H + cx * MAP_CELL), Y(-H + cz * MAP_CELL), MAP_CELL * k + 0.5, MAP_CELL * k + 0.5);
     }
+    // The stage road to Pine Hollow.
+    ctx.strokeStyle = 'rgba(114,84,55,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.beginPath();
+    pineRoadPoints().forEach((pt, i) => (i ? ctx.lineTo(X(pt.x), Y(pt.z)) : ctx.moveTo(X(pt.x), Y(pt.z))));
+    ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
     for (let v = -H; v <= H; v += 30) {
       ctx.moveTo(X(v), Y(-H)); ctx.lineTo(X(v), Y(H));
@@ -10772,14 +11637,19 @@ class MapView {
       label(`${camp.name} · ambush cleared`, camp.x, camp.z, C.cleared);
     }
 
-    const town = world.town;
-    ctx.fillStyle = 'rgba(239,220,187,0.28)'; ctx.beginPath();
-    ctx.moveTo(X(-25), Y(-28)); ctx.lineTo(X(24), Y(-25)); ctx.lineTo(X(30), Y(21));
-    ctx.lineTo(X(13), Y(28)); ctx.lineTo(X(-28), Y(23)); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
-    ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
-    ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();
-    label('Town', town.x, town.z);
+    for (const town of townsOf(world)) {
+      ctx.fillStyle = 'rgba(239,220,187,0.35)'; ctx.beginPath(); ctx.arc(X(town.x), Y(town.z), town.radius * k, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C.ink; ctx.fillRect(X(town.x) - 6, Y(town.z) - 5, 12, 10);
+      ctx.beginPath(); ctx.moveTo(X(town.x) - 8, Y(town.z) - 5);
+      ctx.lineTo(X(town.x), Y(town.z) - 11); ctx.lineTo(X(town.x) + 8, Y(town.z) - 5); ctx.closePath(); ctx.fill();
+      label(town.name ?? 'Town', town.x, town.z);
+    }
+    // Other riders on a shared server.
+    for (const rider of game.netWorld?.remote.riders.values() ?? []) {
+      if (!rider.alive || rider.room) continue;
+      ctx.fillStyle = '#6a3f8a'; ctx.beginPath(); ctx.arc(X(rider.x), Y(rider.z), 3.5, 0, Math.PI * 2); ctx.fill();
+      label(rider.name, rider.x, rider.z, '#6a3f8a', -10);
+    }
 
     const p = game.player;
     if (p?.alive) {
@@ -10825,6 +11695,901 @@ class MapView {
 return { MapView };
 })();
 
+// ---- src/protocol.js ----
+__m.protocol = (() => {
+// Messages between the browser and the game server. Everything is JSON.
+// Snapshots use short arrays so twenty players stay cheap to send.
+const { WEAPONS } = __m.weapons;
+const PROTOCOL_VERSION = 1;
+const MAX_PLAYERS = 20;
+const MAX_MESSAGE = 64 * 1024;
+const SNAPSHOT_HZ = 15;
+const STATE_HZ = 20;
+/** Players farther apart than this do not receive each other's updates. */
+const PLAYER_VIEW = 200;
+/** Outlaws and world events farther than this from a player are not sent to them. */
+const EVENT_VIEW = 120;
+
+const GUN_CODES = Object.keys(WEAPONS);
+const ROOMS = ['', 'guns', 'doctor', 'sheriff', 'maps', 'clothes', 'saloon', 'stable'];
+const ENEMY_STATES = ['idle', 'alert', 'toCover', 'hold', 'peek', 'aim', 'burst', 'open', 'flank', 'search', 'charge', 'surrender', 'captive'];
+
+/** Player pose flags. */
+const PF = { AIM: 1, ROLL: 2, MOUNT: 4, SEAT: 8, BANDAGE: 16, SNEAK: 32, COAT: 64, IFRAME: 128, ARMED: 256 };
+/** Outlaw flags. */
+const EF = { SURRENDERED: 1, CAPTIVE: 2, KNOWS: 4, TARGET: 8, ENRAGED: 16 };
+
+const q2 = (v) => Math.round(v * 100) / 100;
+const q3 = (v) => Math.round(v * 1000) / 1000;
+
+/** Cleans a player name: letters, digits, spaces and a few marks, 2 to 16 characters. */
+function cleanName(name) {
+  const text = String(name ?? '').replace(/[^\p{L}\p{N} '._-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+  return text.length >= 2 ? text : null;
+}
+
+/** Cleans a chat line. */
+function cleanChat(text) {
+  const line = String(text ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 140);
+  return line || null;
+}
+
+const DUEL_MODES = { blood: 'to first blood', death: 'to the death' };
+const DUEL_WAGERS = [0, 5, 10, 25, 50];
+/** A duel to first blood ends when one side has lost this much health. */
+const FIRST_BLOOD = 40;
+const DUEL_COUNTDOWN = 3;
+const DUEL_LIMIT = 120;
+const DUEL_RANGE = 25;
+
+return { PROTOCOL_VERSION, MAX_PLAYERS, MAX_MESSAGE, SNAPSHOT_HZ, STATE_HZ, PLAYER_VIEW, EVENT_VIEW, GUN_CODES, ROOMS, ENEMY_STATES, PF, EF, q2, q3, cleanName, cleanChat, DUEL_MODES, DUEL_WAGERS, FIRST_BLOOD, DUEL_COUNTDOWN, DUEL_LIMIT, DUEL_RANGE };
+})();
+
+// ---- src/remote-players.js ----
+__m.remote_players = (() => {
+// Other riders on the shared server: a model per rider that eases toward the
+// latest snapshot, a solid capsule so shots and shoulders meet it, a name tag,
+// and a horse under them when they ride. Shots that strike a rider are sent
+// to the server, which decides whether they count.
+
+const { T } = __m.tuning;
+const { GROUPS } = __m.physics;
+const { LOOKS, Shape, makeCharacter, meshOf, muzzleLocal } = __m.models;
+const { addRollPivot, animateCharacter, angleDelta, makeCorpse, poseSeated, showGun } = __m.character;
+const { horse: horseShape } = __m.interior_social;
+const { PF, GUN_CODES, ROOMS } = __m.protocol;
+const SHIRTS = [0x3e6189, 0x7c3a2e, 0x5d6b3a, 0x8a6a42, 0x5a4a62, 0x2f5a58, 0x9e6971, 0x6a5a3a];
+const HATS = [0xc9a273, 0x2e2420, 0x8a6a42, 0x5c3a22, 0xb79b70, 0x3a3a3a];
+const SCARVES = [0xc0452f, 0xd9c9a6, 0x3f5470, 0xb98a45, 0x4b5a4a];
+
+/** A stable look for a rider id, so friends can tell each other apart. */
+function riderLook(id, coat) {
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const look = { ...LOOKS.player, shirt: SHIRTS[h % SHIRTS.length], hat: HATS[(h >> 3) % HATS.length], scarf: SCARVES[(h >> 6) % SCARVES.length] };
+  return coat ? { ...look, vest: 0x335a63 } : look;
+}
+
+const _v = new THREE.Vector3();
+
+class RemotePlayers {
+  constructor(game, net) {
+    this.game = game;
+    this.net = net;
+    this.riders = new Map();
+    this.tags = null;
+    if (globalThis.document?.getElementById) {
+      this.tags = document.getElementById('rider-tags');
+      if (this.tags) this.tags.replaceChildren();
+    }
+  }
+
+  get(id) { return this.riders.get(id) ?? null; }
+
+  create(id) {
+    const g = this.game, info = this.net.roster.get(id) ?? { name: 'Rider', coat: 0 };
+    const model = addRollPivot(makeCharacter(riderLook(id, info.coat)));
+    g.levelGroup.add(model.root);
+    const rider = {
+      id, name: info.name, coat: info.coat, model, x: 0, z: 0, px: 0, pz: 0, yaw: 0, tx: 0, tz: 0, tyaw: 0,
+      speed: 0, flags: 0, gun: 'revolver', room: '', rollF: -1, hp: 100, alive: true, seen: 0, fresh: true,
+      remote: true, horse: null, tag: null,
+    };
+    const cap = g.physics.kinematicCapsule(0, 0, T.player.halfHeight, T.player.radius, GROUPS.enemy, rider);
+    rider.body = cap.body; rider.bodyY = cap.y;
+    // A bullet from this browser that meets the capsule is reported, never applied here.
+    rider.onHit = (dmg, dx, dz, knock, zone) => {
+      this.net.queueHit('p', id, zone ?? 'body', dx, dz);
+      return { killed: false, crit: false };
+    };
+    if (this.tags) {
+      rider.tag = document.createElement('div');
+      rider.tag.className = 'rider-tag';
+      rider.tag.textContent = info.name;
+      this.tags.appendChild(rider.tag);
+    }
+    this.riders.set(id, rider);
+    return rider;
+  }
+
+  /** Applies one snapshot's rider rows. Riders missing from it are hidden after a moment. */
+  apply(rows, time) {
+    for (const row of rows) {
+      const [id, x, z, yaw, speed, flags, gun, room, rollF, hp] = row;
+      const rider = this.riders.get(id) ?? this.create(id);
+      if (!rider.alive) continue;
+      rider.tx = x; rider.tz = z; rider.tyaw = yaw; rider.speed = speed; rider.flags = flags;
+      rider.gun = GUN_CODES[gun] ?? 'revolver'; rider.room = ROOMS[room] ?? ''; rider.rollF = rollF; rider.hp = hp;
+      rider.seen = time;
+      if (rider.fresh) { rider.x = rider.px = x; rider.z = rider.pz = z; rider.yaw = yaw; rider.fresh = false; }
+      const info = this.net.roster.get(id);
+      if (info && rider.tag && rider.name !== info.name) { rider.name = info.name; rider.tag.textContent = info.name; }
+    }
+  }
+
+  /** Eases each rider toward the latest snapshot and moves their capsule. */
+  tick(dt, time) {
+    const k = Math.min(1, dt * 14);
+    for (const rider of this.riders.values()) {
+      rider.px = rider.x; rider.pz = rider.z;
+      if (!rider.alive) continue;
+      const far = Math.hypot(rider.tx - rider.x, rider.tz - rider.z) > 8;
+      rider.x = far ? rider.tx : rider.x + (rider.tx - rider.x) * k;
+      rider.z = far ? rider.tz : rider.z + (rider.tz - rider.z) * k;
+      if (far) { rider.px = rider.x; rider.pz = rider.z; }
+      rider.yaw += angleDelta(rider.yaw, rider.tyaw) * k;
+      rider.stale = time - rider.seen > 1.5;
+      rider.body?.setNextKinematicTranslation({ x: rider.x, y: rider.bodyY, z: rider.z });
+    }
+  }
+
+  render(alpha, dt) {
+    const g = this.game, myRoom = g.frontier?.inside ? g.run.interior?.id ?? '' : '';
+    const camera = g.rig.camera, w = globalThis.innerWidth ?? 0, h = globalThis.innerHeight ?? 0;
+    for (const rider of this.riders.values()) {
+      const m = rider.model;
+      const visible = rider.alive && !rider.stale && rider.room === myRoom;
+      if (!rider.alive) { if (rider.tag) rider.tag.hidden = true; continue; }
+      m.root.visible = visible;
+      if (rider.horse) rider.horse.visible = visible && !!(rider.flags & PF.MOUNT);
+      if (rider.tag) rider.tag.hidden = !visible;
+      if (!visible) continue;
+      const x = rider.px + (rider.x - rider.px) * alpha, z = rider.pz + (rider.z - rider.pz) * alpha;
+      const mounted = !!(rider.flags & PF.MOUNT);
+      m.root.position.set(x, mounted ? 1.18 : 0, z);
+      m.root.rotation.y = rider.yaw;
+      const armed = !!(rider.flags & PF.ARMED);
+      animateCharacter(m, { speed: mounted ? 0 : rider.speed, dt, aiming: armed, flash: 0, roll: rider.flags & PF.ROLL ? Math.max(0, rider.rollF) : -1 });
+      if (rider.flags & PF.SEAT) poseSeated(m);
+      if (mounted) {
+        m.legs[0].rotation.set(-1.25, 0, -0.32); m.legs[1].rotation.set(-1.25, 0, 0.32);
+        if (m.knees) m.knees[0].rotation.x = m.knees[1].rotation.x = 1.35;
+        if (!rider.horse) { const s = new Shape(); horseShape(s, 0x704631, 0x2a211c, true); rider.horse = meshOf(s); g.levelGroup.add(rider.horse); }
+        rider.horse.visible = true;
+        rider.horse.position.set(x, 0, z);
+        rider.horse.rotation.y = rider.yaw;
+      } else if (m.legs[0].rotation.z !== 0) { m.legs[0].rotation.z = 0; m.legs[1].rotation.z = 0; }
+      if (rider.flags & PF.BANDAGE) { m.arm.rotation.x = 1.35; m.body.rotation.x = 0.18; } else m.body.rotation.x = 0;
+      showGun(m, armed ? rider.gun : null);
+      if (!armed) m.arm.rotation.x = 1.1;
+      if (rider.tag && camera) {
+        _v.set(x, mounted ? 3.6 : 2.45, z).project(camera);
+        const onScreen = _v.z < 1 && Math.abs(_v.x) < 1.1 && Math.abs(_v.y) < 1.1;
+        rider.tag.hidden = !onScreen;
+        if (onScreen) rider.tag.style.transform = `translate(${((_v.x + 1) / 2) * w}px, ${((1 - _v.y) / 2) * h}px) translate(-50%, -100%)`;
+      }
+    }
+  }
+
+  /** A rider fired: muzzle flash, tracers to where their bullets stopped, and the shot sound. */
+  shot(id, x, z, gunCode, ends) {
+    const rider = this.riders.get(id), g = this.game;
+    const gun = GUN_CODES[gunCode] ?? 'revolver';
+    const yaw = rider ? rider.yaw : 0, m = muzzleLocal(gun);
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    const mx = x + m.x * c + m.z * s, mz = z - m.x * s + m.z * c;
+    for (let i = 0; i + 1 < ends.length; i += 2) g.fx.tracer(mx, m.y, mz, ends[i], T.player.gunHeight, ends[i + 1], 0xffe7b0);
+    g.fx.muzzle(mx, m.y, mz, Math.sin(yaw), Math.cos(yaw), gun === 'shotgun');
+    const def = { revolver: ['revolver', 1], heavy: ['revolver', 0.8], repeater: ['rifle', 1.2], shotgun: ['shotgun', 1], rifle: ['rifle', 1] }[gun];
+    g.audio.at(def[0], x, z, { vol: 0.9, pitch: def[1], reverb: 0.35 });
+  }
+
+  /** A rider was killed: they fall where they stood. */
+  die(id, dx, dz) {
+    const rider = this.riders.get(id);
+    if (!rider || !rider.alive) return;
+    rider.alive = false;
+    if (rider.body) { this.game.physics.removeBody(rider.body); rider.body = null; }
+    if (rider.tag) rider.tag.hidden = true;
+    if (rider.horse) rider.horse.visible = false;
+    rider.model.root.visible = true;
+    makeCorpse(this.game, rider.model, rider.x, rider.z, rider.yaw, dx, dz, 3.5);
+    this.game.audio.at('bodyFall', rider.x, rider.z, { vol: 0.8, delay: 0.4 });
+    // The next life arrives as a new rider row; forget this one.
+    this.riders.delete(id);
+  }
+
+  /** Drops riders who left the server. */
+  sync(roster) {
+    for (const [id, rider] of this.riders) if (!roster.has(id)) this.remove(rider);
+  }
+
+  remove(rider) {
+    const g = this.game;
+    if (rider.body) g.physics.removeBody(rider.body);
+    g.levelGroup?.remove(rider.model.root);
+    if (rider.horse) g.levelGroup?.remove(rider.horse);
+    rider.tag?.remove();
+    this.riders.delete(rider.id);
+  }
+
+  dispose() {
+    for (const rider of [...this.riders.values()]) this.remove(rider);
+  }
+
+  /** Riders close enough to call out for a duel. */
+  near(x, z, range, room) {
+    return [...this.riders.values()].filter((r) => r.alive && !r.stale && r.room === room && Math.hypot(r.x - x, r.z - z) < range);
+  }
+}
+
+
+return { riderLook, RemotePlayers };
+})();
+
+// ---- src/net-world.js ----
+__m.net_world = (() => {
+// Keeps this browser's world in step with the server. Outlaws become puppets
+// that ease toward server positions; props and riders are hit through the
+// server; world events (shots, bullets, deaths, broken barrels) are replayed
+// here as effects. The life's own quests and items stay in this browser and
+// are saved to the server by net.js.
+const { ENEMY_STATES, EF } = __m.protocol;
+const { angleDelta, showGun } = __m.character;
+const { RemotePlayers } = __m.remote_players;
+const { buildEncounter, campList, disposeEncounter } = __m.encounters;
+const { enemyKilled } = __m.progress;
+class NetWorld {
+  constructor(game, net) {
+    this.game = game;
+    this.net = net;
+    this.remote = new RemotePlayers(game, net);
+    this.enemies = new Map();
+    this.props = new Map();
+    this.clock = 0;
+    this.index();
+    const on = (type, fn) => net.on(type, fn.bind(this));
+    on('s', this.onSnapshot);
+    on('ev', (m) => this.events(m.list));
+    on('camp', this.onCamp);
+    on('hurt', this.onHurt);
+    on('hp', (m) => { if (game.player?.alive) game.player.hp = m.hp; });
+    on('died', this.onDied);
+    on('adj', this.onAdjust);
+    on('pos', (m) => game.player?.alive && game.teleportPlayer(m.x, m.z));
+    on('toast', (m) => game.ui.toast(m.text, m.s ?? 3));
+    on('quest', this.onQuest);
+    on('roster', () => { this.remote.sync(net.roster); game.netUI?.renderRoster(); });
+  }
+
+  /** Finds every outlaw and prop by id and turns them into server puppets. */
+  index() {
+    this.enemies.clear();
+    this.props.clear();
+    for (const encounter of this.game.encounters) {
+      for (const e of encounter.enemies) this.puppet(e);
+      for (const p of encounter.props) this.prop(p);
+    }
+  }
+
+  puppet(e) {
+    this.enemies.set(e.id, e);
+    e.netX = e.x; e.netZ = e.z; e.netYaw = e.yaw;
+    e.onHit = (dmg, dx, dz, knock, zone) => {
+      this.net.queueHit('e', e.id, zone ?? 'body', dx, dz);
+      e.flash = 0.06;
+      return { killed: false, crit: false };
+    };
+  }
+
+  prop(p) {
+    this.props.set(p.id, p);
+    p.damage = (amount, hx, hy, hz, dx, dz, impulse, source = 'player') => {
+      if (source === 'player' && p.alive) { this.net.queueHit('o', p.id, 'body', dx, dz); p.flash = 0.05; }
+      return p.def.surface;
+    };
+  }
+
+  // ---------- per tick ----------
+
+  tick(dt) {
+    this.clock += dt;
+    const k = Math.min(1, dt * 12);
+    for (const e of this.enemies.values()) {
+      e.px = e.x; e.pz = e.z; e.prevYaw = e.yaw;
+      if (!e.alive) continue;
+      const far = Math.hypot(e.netX - e.x, e.netZ - e.z) > 6;
+      e.x = far ? e.netX : e.x + (e.netX - e.x) * k;
+      e.z = far ? e.netZ : e.z + (e.netZ - e.z) * k;
+      e.yaw += angleDelta(e.yaw, e.netYaw) * k;
+      e.body?.setNextKinematicTranslation({ x: e.x, y: e.bodyY, z: e.z });
+      if ((e.state === 'aim' || e.state === 'burst') && !this.game.frontier.inside) e.updateAimLine();
+      else e.hideAimLine();
+    }
+    this.remote.tick(dt, this.clock);
+  }
+
+  render(alpha, dt) { this.remote.render(alpha, dt); }
+
+  // ---------- messages ----------
+
+  onSnapshot(m) {
+    const g = this.game;
+    if (g.player?.alive && Number.isFinite(m.hp)) g.player.hp = m.hp;
+    if (Number.isFinite(m.time)) g.worldClock = m.time;
+    this.remote.apply(m.p, this.clock);
+    for (const row of m.e) {
+      const [id, x, z, yaw, state, aim, aimYaw, flags, speed, hp] = row;
+      const e = this.enemies.get(id);
+      if (!e || !e.alive) continue;
+      e.netX = x; e.netZ = z; e.netYaw = yaw;
+      e.state = ENEMY_STATES[state] ?? 'idle';
+      e.aimT = aim * e.def.aim; e.aimYaw = aimYaw;
+      e.knows = !!(flags & EF.KNOWS);
+      e.moveSpeed = speed;
+      if (Number.isFinite(hp)) e.hp = hp * e.maxHp;
+      if (flags & EF.ENRAGED && !e.enraged) e.enrage();
+      const surrendered = !!(flags & EF.SURRENDERED);
+      if (surrendered && !e.surrendered) {
+        showGun(e.model, null);
+        if (Math.hypot(e.x - g.player.x, e.z - g.player.z) < 30) g.ui.toast(`${e.encounter.targetName ?? 'The outlaw'} gives up.`, 3);
+      }
+      e.surrendered = surrendered;
+      e.captive = !!(flags & EF.CAPTIVE);
+    }
+    for (const [id, x, y, z, qx, qy, qz, qw] of m.o ?? []) {
+      const p = this.props.get(id);
+      if (!p?.alive || !p.body) continue;
+      p.body.setTranslation({ x, y, z }, true);
+      p.body.setRotation({ x: qx, y: qy, z: qz, w: qw }, true);
+    }
+    this.events(m.ev ?? []);
+  }
+
+  events(list) {
+    const g = this.game;
+    for (const ev of list) {
+      switch (ev[0]) {
+        case 'muz': g.fx.muzzle(ev[1], ev[2], ev[3], ev[4], ev[5], !!ev[6]); break;
+        case 'imp': g.fx.impact(ev[1], ev[2], ev[3], ev[4], ev[5], ev[6], ev[7], ev[8]); break;
+        case 'snd': g.audio.at(ev[1], ev[2], ev[3], { vol: ev[4], pitch: ev[5], delay: ev[6] }); break;
+        case 'proj': g.projectiles.spawn(ev[1], ev[2], ev[3], ev[4], ev[5], 0, ev[6]); break;
+        case 'pbreak': { const p = this.props.get(ev[1]); if (p?.alive) p.break(ev[2], ev[3]); break; }
+        case 'ekill': this.onKill(ev); break;
+        case 'ps': this.remote.shot(ev[1], ev[2], ev[3], ev[4], ev[5]); break;
+        case 'pdie': this.remote.die(ev[1], ev[2], ev[3]); break;
+        default:
+      }
+    }
+  }
+
+  onKill([, id, dx, dz, force, killer, cleared, credit]) {
+    const g = this.game, e = this.enemies.get(id);
+    if (!e || !e.alive) return;
+    e.die(dx, dz, force);
+    const me = this.net.id;
+    if (cleared && g.run.camps[e.encounter.id]) g.run.camps[e.encounter.id].serverCleared = true;
+    if (killer === me) g.onEnemyKilled(e, false);
+    else if (credit.includes(me)) { enemyKilled(g, e); g.save(); }
+  }
+
+  onCamp(m) {
+    const g = this.game, list = campList(g.run.world), index = list.findIndex((c) => c.id === m.id);
+    if (index < 0) return;
+    const at = g.encounters.findIndex((c) => c.id === m.id);
+    if (at >= 0) disposeEncounter(g, g.encounters[at]);
+    g.run.camps[m.id] = m.state;
+    const fresh = buildEncounter(g, list[index], index, false);
+    if (at >= 0) fresh.decor = g.encounters[at].decor;
+    if (at >= 0) g.encounters[at] = fresh; else g.encounters.push(fresh);
+    g.props = g.encounters.flatMap((c) => c.props);
+    g.enemies = g.encounters.flatMap((c) => c.enemies);
+    for (const e of fresh.enemies) this.puppet(e);
+    for (const p of fresh.props) this.prop(p);
+    g.navDirty = true;
+  }
+
+  onHurt(m) {
+    const p = this.game.player;
+    if (p?.alive) p.netHurt(m.a, m.dx, m.dz, m.hp, m.by);
+  }
+
+  onDied(m) {
+    const p = this.game.player;
+    this.game.killedBy = m.by;
+    if (p?.alive) { p.hp = 0; p.die(m.dx, m.dz); }
+  }
+
+  onAdjust(m) {
+    const g = this.game;
+    g.run.bounty = Math.max(0, g.run.bounty + m.money);
+    g.ui.questNote(`${m.reason}: ${m.money > 0 ? '+' : '−'}$${Math.abs(m.money)}`);
+    g.audio.play('coin', { bus: 'ui', vol: 0.6 });
+  }
+
+  onQuest(m) {
+    const g = this.game, event = m.event;
+    g.questEvent(event);
+    if (event.type === 'delivered') {
+      const e = this.enemies.get(event.targetId);
+      if (e?.alive) {
+        e.alive = false; e.jailed = true;
+        if (e.body) { g.physics.removeBody(e.body); e.body = null; }
+        e.model.root.visible = false;
+        e.hideAimLine();
+      }
+    }
+  }
+
+  dispose() { this.remote.dispose(); }
+}
+
+return { NetWorld };
+})();
+
+// ---- src/wildlife.js ----
+__m.wildlife = (() => {
+// Wildlife for hunting. Animals appear around the rider according to the land
+// (pronghorn and rabbits in the desert, deer, elk, boar and wolves in the
+// pines), graze, bolt at gunfire and leave a carcass to skin. Wolves and the
+// great bear Old Scar fight back. Each browser keeps its own animals; online,
+// their bites are sent to the server, which owns the rider's health.
+
+const { T } = __m.tuning;
+const { GROUPS, RAPIER } = __m.physics;
+const { MAT, Shape, meshOf } = __m.models;
+const { angleDelta, turnToward } = __m.character;
+const { forestAt, inRiver } = __m.terrain;
+const { townsOf } = __m.towns;
+const { PELTS } = __m.items;
+const SPECIES = {
+  rabbit: { hp: 12, speed: 7.5, size: 0.32, radius: 0.3, sense: 12, herd: [1, 2], pelt: 'rabbitPelt', color: 0xa08a6a, belly: 0xd8cbb0 },
+  pronghorn: { hp: 55, speed: 10, size: 0.85, radius: 0.5, sense: 26, herd: [2, 4], pelt: 'hide', color: 0xc08a50, belly: 0xf0e6d0, horns: 'prong' },
+  deer: { hp: 65, speed: 9, size: 0.9, radius: 0.5, sense: 22, herd: [2, 3], pelt: 'deerHide', color: 0x8a6440, belly: 0xd8c8a8, horns: 'antler' },
+  elk: { hp: 140, speed: 8, size: 1.25, radius: 0.7, sense: 26, herd: [1, 2], pelt: 'elkHide', color: 0x6e5034, belly: 0xc8b090, horns: 'rack' },
+  boar: { hp: 85, speed: 6.5, size: 0.7, radius: 0.55, sense: 14, herd: [1, 2], pelt: 'boarHide', color: 0x4a3a30, belly: 0x5a4a3e, tusks: true, temper: 'hurt', bite: 14 },
+  wolf: { hp: 60, speed: 8.5, size: 0.78, radius: 0.5, sense: 26, herd: [3, 4], pelt: 'wolfPelt', color: 0x6a6a6e, belly: 0xb8b8b4, temper: 'hunt', bite: 11 },
+  bear: { hp: 650, speed: 7.2, size: 1.75, radius: 0.95, sense: 34, herd: [1, 1], pelt: 'bearHide', color: 0x3a2a20, belly: 0x5a4030, temper: 'hunt', bite: 30, legend: true },
+};
+
+const SPAWN = { min: 70, max: 110, despawn: 150 };
+
+/** Which animals live at a spot, by how green the land is. */
+function speciesFor(green, rng) {
+  if (green > 0.6) return rng < 0.36 ? 'deer' : rng < 0.52 ? 'elk' : rng < 0.7 ? 'boar' : rng < 0.85 ? 'wolf' : 'rabbit';
+  if (green > 0.25) return rng < 0.4 ? 'deer' : rng < 0.6 ? 'boar' : rng < 0.85 ? 'rabbit' : 'pronghorn';
+  return rng < 0.55 ? 'pronghorn' : 'rabbit';
+}
+
+function buildModel(def) {
+  const s = new Shape(), k = def.size, c = def.color, legs = [];
+  const tall = def.horns || def === SPECIES.wolf ? 1 : 0.8;
+  s.box(0.5 * k, 0.48 * k, 1.15 * k, c, 0, 0.95 * k * tall, 0);
+  s.box(0.42 * k, 0.14 * k, 0.9 * k, def.belly, 0, 0.72 * k * tall, 0);
+  s.box(0.24 * k, 0.4 * k, 0.26 * k, c, 0, 1.22 * k * tall, 0.55 * k, -0.5);
+  s.box(0.24 * k, 0.24 * k, 0.42 * k, c, 0, 1.4 * k * tall, 0.78 * k);
+  s.box(0.12 * k, 0.1 * k, 0.12 * k, 0x1a1412, 0, 1.36 * k * tall, 1.0 * k);
+  for (const side of [-1, 1]) s.cone(0.06 * k, 0.18 * k, 4, c, side * 0.1 * k, 1.58 * k * tall, 0.7 * k);
+  s.box(0.1 * k, 0.12 * k, 0.24 * k, def.belly, 0, 1.0 * k * tall, -0.62 * k, 0.6);
+  if (def.horns === 'antler' || def.horns === 'rack') {
+    const r = def.horns === 'rack' ? 1.6 : 1;
+    for (const side of [-1, 1]) {
+      s.box(0.05 * k, 0.5 * k * r, 0.05 * k, 0xd8c8a8, side * 0.16 * k, 1.75 * k * tall, 0.72 * k, 0.2, 0, side * 0.5);
+      s.box(0.04 * k, 0.28 * k * r, 0.04 * k, 0xd8c8a8, side * 0.3 * k, 1.9 * k * tall, 0.66 * k, -0.4, 0, side * 0.2);
+    }
+  } else if (def.horns === 'prong') for (const side of [-1, 1]) s.box(0.05 * k, 0.32 * k, 0.05 * k, 0x2a2420, side * 0.08 * k, 1.66 * k * tall, 0.74 * k, 0.15);
+  if (def.tusks) for (const side of [-1, 1]) s.cone(0.04 * k, 0.16 * k, 4, 0xeadfc6, side * 0.1 * k, 1.28 * k * tall, 0.98 * k, -1.2);
+  const root = new THREE.Group();
+  root.add(meshOf(s, MAT.solid));
+  for (const [x, z] of [[-0.16, 0.42], [0.16, 0.42], [-0.16, -0.42], [0.16, -0.42]]) {
+    const leg = new THREE.Group(), ls = new Shape();
+    ls.box(0.11 * k, 0.75 * k * tall, 0.11 * k, c, 0, -0.37 * k * tall, 0);
+    ls.box(0.12 * k, 0.08 * k, 0.14 * k, 0x2a2018, 0, -0.74 * k * tall, 0.02 * k);
+    leg.add(meshOf(ls, MAT.solid));
+    leg.position.set(x * k, 0.78 * k * tall, z * k);
+    root.add(leg); legs.push(leg);
+  }
+  return { root, legs };
+}
+
+class Wildlife {
+  constructor(game) {
+    this.game = game;
+    this.animals = [];
+    this.spawnT = 1;
+    this.carcasses = [];
+  }
+
+  dispose() {
+    for (const a of [...this.animals]) this.remove(a);
+    for (const c of this.carcasses) this.game.levelGroup?.remove(c.model.root);
+    this.carcasses = [];
+  }
+
+  spawn(kind, x, z) {
+    const g = this.game, def = SPECIES[kind];
+    const model = buildModel(def);
+    model.root.position.set(x, 0, z);
+    g.levelGroup.add(model.root);
+    const cap = g.physics.kinematicCapsule(x, z, T.player.halfHeight, def.radius, GROUPS.enemy, null);
+    const a = {
+      kind, def, model, x, z, px: x, pz: z, yaw: Math.random() * 6.28, prevYaw: 0, hp: def.hp, alive: true, animal: true,
+      state: 'graze', stateT: Math.random() * 3, tx: x, tz: z, speed: 0, phase: Math.random() * 6, biteT: 0, hurt: false,
+      body: cap.body, collider: cap.collider, bodyY: cap.y, flash: 0,
+    };
+    a.onHit = (dmg, dx, dz, knock, zone) => this.hit(a, dmg * (zone === 'head' ? 1.6 : 1), dx, dz);
+    // The collider's owner lets player shots find the animal.
+    g.physics.setOwner(cap.collider, a);
+    this.animals.push(a);
+    return a;
+  }
+
+  remove(a) {
+    const g = this.game;
+    if (a.body) { g.physics.removeBody(a.body); a.body = null; }
+    g.levelGroup?.remove(a.model.root);
+    const i = this.animals.indexOf(a);
+    if (i >= 0) this.animals.splice(i, 1);
+  }
+
+  /** Gunfire nearby sends every animal running, and makes hunters come. */
+  hear(x, z, range = 45) {
+    for (const a of this.animals) {
+      if (!a.alive || Math.hypot(a.x - x, a.z - z) > range) continue;
+      if (a.def.temper === 'hunt') a.state = 'charge';
+      else this.flee(a, x, z);
+    }
+  }
+
+  flee(a, fx, fz) {
+    const dx = a.x - fx, dz = a.z - fz, d = Math.hypot(dx, dz) || 1;
+    a.state = 'flee'; a.stateT = 6 + Math.random() * 3;
+    a.tx = a.x + dx / d * 60; a.tz = a.z + dz / d * 60;
+  }
+
+  hit(a, dmg, dx, dz) {
+    if (!a.alive) return { killed: false, crit: false };
+    a.hp -= dmg;
+    a.flash = 0.08;
+    const g = this.game;
+    g.audio.at('enemyHurt', a.x, a.z, { vol: 0.4, pitch: a.def.size < 0.5 ? 1.8 : a.def.legend ? 0.6 : 1.2 });
+    if (a.hp <= 0) { this.kill(a, dx, dz); return { killed: true, crit: false }; }
+    a.hurt = true;
+    if (a.def.temper) a.state = 'charge';
+    else { const P = g.player; this.flee(a, P.x, P.z); }
+    return { killed: false, crit: false };
+  }
+
+  kill(a, dx, dz) {
+    const g = this.game;
+    a.alive = false;
+    if (a.body) { g.physics.removeBody(a.body); a.body = null; }
+    a.model.root.rotation.z = Math.PI / 2 * (dx > 0 ? 1 : -1);
+    a.model.root.position.y = a.def.size * 0.3;
+    for (const leg of a.model.legs) leg.rotation.x = 0.2;
+    g.audio.at('bodyFall', a.x, a.z, { vol: a.def.size, delay: 0.2 });
+    this.animals.splice(this.animals.indexOf(a), 1);
+    this.carcasses.push({ ...a, t: 0, id: `skin-${Math.random().toString(36).slice(2)}` });
+    if (a.def.legend) {
+      g.ui.toast('Old Scar falls. The forest goes quiet.', 5);
+      g.audio.cue?.('victory');
+      g.questEvent({ type: 'hunt', animal: 'bear' });
+    }
+  }
+
+  /** Carcasses the player can skin. */
+  points() {
+    return this.carcasses.map((c) => ({ id: c.id, kind: 'skin', label: `Skin the ${c.kind === 'bear' ? 'great bear' : c.kind}`, x: c.x, z: c.z, carcass: c }));
+  }
+
+  skin(point) {
+    const g = this.game, c = point.carcass, run = g.run, pelt = c.def.pelt;
+    if ((run.items[pelt] ?? 0) >= 9) { g.ui.toast('You cannot carry more of those.'); return; }
+    run.items[pelt] = (run.items[pelt] ?? 0) + 1;
+    g.levelGroup.remove(c.model.root);
+    this.carcasses.splice(this.carcasses.indexOf(c), 1);
+    g.audio.play('bandage', { vol: 0.5, pitch: 0.7 });
+    g.ui.questNote(`${PELTS[pelt].name} · ${run.items[pelt]} carried. Hank or Otto will buy it.`);
+    g.save();
+  }
+
+  // ---------- per tick ----------
+
+  tick(dt) {
+    const g = this.game, P = g.player;
+    if (!P || g.frontier?.inside) return;
+    this.spawnT -= dt;
+    if (this.spawnT <= 0) { this.spawnT = 1.5; this.populate(P); }
+    for (const a of [...this.animals]) {
+      a.px = a.x; a.pz = a.z; a.prevYaw = a.yaw;
+      const d = Math.hypot(a.x - P.x, a.z - P.z);
+      if (d > SPAWN.despawn && !a.def.legend) { this.remove(a); continue; }
+      this.think(a, P, d, dt);
+    }
+    for (const c of [...this.carcasses]) {
+      c.t += dt;
+      if (c.t > 150 || Math.hypot(c.x - P.x, c.z - P.z) > SPAWN.despawn * 1.3) { g.levelGroup.remove(c.model.root); this.carcasses.splice(this.carcasses.indexOf(c), 1); }
+    }
+  }
+
+  populate(P) {
+    const g = this.game, world = g.run.world, green = forestAt(P.x, P.z);
+    const cap = green > 0.5 ? 9 : 6, near = this.animals.filter((a) => Math.hypot(a.x - P.x, a.z - P.z) < 130).length;
+    // Old Scar keeps to his den until he is killed.
+    const den = world.sites?.find((s) => s.kind === 'den');
+    if (den && !g.run.questFlags?.['hunt:bear'] && !this.animals.some((a) => a.def.legend) && Math.hypot(den.x - P.x, den.z - P.z) < 90 && Math.hypot(den.x - P.x, den.z - P.z) > 30) {
+      this.spawn('bear', den.x, den.z + 6);
+    }
+    if (near >= cap || g.inTown()) return;
+    const angle = Math.random() * Math.PI * 2, dist = SPAWN.min + Math.random() * (SPAWN.max - SPAWN.min);
+    const x = P.x + Math.cos(angle) * dist, z = P.z + Math.sin(angle) * dist;
+    if (Math.abs(x) > world.half - 10 || Math.abs(z) > world.half - 10 || inRiver(x, z, 3)) return;
+    if (townsOf(world).some((t) => Math.hypot(x - t.x, z - t.z) < t.radius + 30)) return;
+    if (world.camps.some((c) => Math.hypot(x - c.x, z - c.z) < 45)) return;
+    const kind = speciesFor(forestAt(x, z), Math.random()), [lo, hi] = SPECIES[kind].herd;
+    const n = lo + Math.floor(Math.random() * (hi - lo + 1));
+    for (let i = 0; i < n; i++) this.spawn(kind, x + (Math.random() - 0.5) * 6, z + (Math.random() - 0.5) * 6);
+  }
+
+  think(a, P, d, dt) {
+    const g = this.game, def = a.def;
+    a.stateT -= dt;
+    const sense = def.sense * (P.sneaking ? 0.55 : P.moveFraction > 0.75 ? 1.15 : 1) * (g.horse?.mounted ? 1.2 : 1);
+    if (P.alive && !g.inTown()) {
+      if (def.temper === 'hunt' && d < sense && a.state !== 'charge') a.state = 'charge';
+      else if (!def.temper && d < sense && a.state !== 'flee') this.flee(a, P.x, P.z);
+      else if (def.temper === 'hurt' && a.hurt && a.state !== 'charge') a.state = 'charge';
+    } else if (a.state === 'charge') a.state = 'graze';
+    let want = 0, tx = a.tx, tz = a.tz;
+    if (a.state === 'charge') {
+      tx = P.x; tz = P.z; want = def.speed * (def.legend ? 0.95 : 1);
+      if (d > 60) { a.state = 'graze'; a.hurt = false; }
+      a.biteT -= dt;
+      if (d < def.radius + 1.3 && a.biteT <= 0) { a.biteT = def.legend ? 1.4 : 1.1; this.bite(a, P); }
+      if (d < def.radius + 0.9) want = 0;
+    } else if (a.state === 'flee') {
+      want = def.speed;
+      if (a.stateT <= 0) a.state = 'graze';
+    } else {
+      if (a.stateT <= 0) { a.stateT = 3 + Math.random() * 5; const r = Math.random() * 8; a.tx = a.x + Math.cos(r) * 6; a.tz = a.z + Math.sin(r) * 6; a.walk = Math.random() < 0.5; }
+      want = a.walk ? def.speed * 0.18 : 0;
+    }
+    const dx = tx - a.x, dz = tz - a.z, l = Math.hypot(dx, dz);
+    if (l < 0.5) want = 0;
+    if (want > 0) a.yaw = turnToward(a.yaw, Math.atan2(dx, dz), dt * (a.state === 'graze' ? 2 : 6));
+    a.speed += (want - a.speed) * Math.min(1, dt * 4);
+    const mx = Math.sin(a.yaw) * a.speed * dt, mz = Math.cos(a.yaw) * a.speed * dt;
+    if (a.body && (mx || mz)) {
+      const cc = g.enemyController;
+      cc.computeColliderMovement(a.collider, { x: mx, y: 0, z: mz }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, GROUPS.enemyMove);
+      const mv = cc.computedMovement();
+      a.x += mv.x; a.z += mv.z;
+      if (Math.hypot(mv.x, mv.z) < Math.hypot(mx, mz) * 0.3 && a.state !== 'charge') a.yaw += 1.2;
+      a.body.setNextKinematicTranslation({ x: a.x, y: a.bodyY, z: a.z });
+    }
+  }
+
+  bite(a, P) {
+    const g = this.game, dx = P.x - a.x, dz = P.z - a.z, d = Math.hypot(dx, dz) || 1;
+    g.audio.at('enemyHurt', a.x, a.z, { vol: 0.8, pitch: a.def.legend ? 0.45 : 0.75 });
+    if (P.invulnerable || g.inTown()) return;
+    if (g.net) g.net.act('animal', { dmg: a.def.bite, dx: dx / d, dz: dz / d });
+    else P.damage(a.def.bite, dx / d, dz / d);
+  }
+
+  render(alpha, dt) {
+    for (const a of this.animals) {
+      const m = a.model;
+      m.root.position.set(a.px + (a.x - a.px) * alpha, 0, a.pz + (a.z - a.pz) * alpha);
+      m.root.rotation.y = a.prevYaw + angleDelta(a.prevYaw, a.yaw) * alpha;
+      a.phase += dt * (2 + a.speed * 1.6);
+      const swing = Math.min(1, a.speed / 3) * 0.7;
+      m.legs.forEach((leg, i) => { leg.rotation.x = Math.sin(a.phase + (i === 0 || i === 3 ? 0 : Math.PI)) * swing; });
+      m.root.position.y = Math.abs(Math.sin(a.phase)) * Math.min(0.12, a.speed * 0.012) * a.def.size;
+      if (a.state === 'graze' && a.speed < 0.3) m.root.children[0].rotation.x = Math.sin(a.phase * 0.2) > 0.3 ? 0.18 : 0;
+      else m.root.children[0].rotation.x = 0;
+    }
+  }
+}
+
+return { SPECIES, Wildlife };
+})();
+
+// ---- src/ui-boss.js ----
+__m.ui_boss = (() => {
+// A health bar across the top of the screen while a boss or gang captain is
+// fighting the player, with the name from the wanted poster.
+const RANGE = 45;
+
+class BossBar {
+  constructor() {
+    this.el = null;
+    this.shown = null;
+  }
+
+  build() {
+    const hud = globalThis.document?.getElementById?.('hud');
+    if (!hud) return false;
+    const el = document.createElement('div');
+    if (typeof el.querySelector !== 'function') return false;
+    this.el = el;
+    this.el.className = 'boss-bar';
+    this.el.hidden = true;
+    this.el.innerHTML = '<div class="boss-name"></div><div class="boss-track"><div class="boss-fill"></div></div>';
+    this.name = this.el.querySelector('.boss-name');
+    this.fill = this.el.querySelector('.boss-fill');
+    hud.appendChild(this.el);
+    return true;
+  }
+
+  update(game) {
+    if (!this.el && !this.build()) return;
+    const p = game.player;
+    let boss = null;
+    if (p?.alive && !game.frontier?.inside) {
+      for (const e of game.enemies) {
+        if (!e.alive || !(e.def.boss || e.def.armor) || !e.knows) continue;
+        if (Math.hypot(e.x - p.x, e.z - p.z) < RANGE) { boss = e; if (e.def.boss) break; }
+      }
+    }
+    this.el.hidden = !boss;
+    if (!boss) { this.shown = null; return; }
+    if (this.shown !== boss) {
+      this.shown = boss;
+      const title = boss.def.boss ? 'Leader of the Iron Gang' : 'Gang captain';
+      this.name.innerHTML = `<b>${boss.encounter.targetName ?? 'Outlaw'}</b> <span>${title}</span>`;
+    }
+    this.fill.style.width = `${Math.max(0, Math.min(1, boss.hp / boss.maxHp)) * 100}%`;
+    this.el.classList.toggle('enraged', !!boss.enraged);
+  }
+}
+
+return { BossBar };
+})();
+
+// ---- src/sky.js ----
+__m.sky = (() => {
+// Time of day and weather. A day lasts twenty minutes of world time: warm
+// mornings, white noon, a red dusk and a blue night lit by the rider's lantern.
+// Rain sweeps through now and then, mostly over the pine country. Online, the
+// server's clock drives it, so every rider sees the same sky.
+
+const { SKY } = __m.render;
+const { forestAt } = __m.terrain;
+const DAY_LENGTH = 1200;
+const DROPS = 900;
+const KEYS = [
+  // phase, sky, sun color, sun, hemi sky, hemi ground, hemi, rim
+  [0.0, 0x141a2c, 0x8fa4d8, 0.35, 0x5a6c9c, 0x1c1820, 0.42, 0.15],
+  [0.2, 0x1c2238, 0x9aa8d8, 0.3, 0x5a6c9c, 0x1c1820, 0.42, 0.15],
+  [0.27, 0xd88a5a, 0xffb07a, 1.4, 0xffc89a, 0x5a3a2f, 0.75, 0.6],
+  [0.36, SKY, 0xffefd1, 2.5, 0xffdfad, 0x65412f, 1.0, 0.65],
+  [0.5, 0xf0c896, 0xfff4e0, 2.9, 0xffe6bd, 0x6a4632, 1.1, 0.6],
+  [0.64, SKY, 0xffe6c0, 2.5, 0xffdfad, 0x65412f, 1.0, 0.65],
+  [0.73, 0xc8603e, 0xff8a52, 1.3, 0xffa070, 0x4a2a24, 0.7, 0.8],
+  [0.8, 0x26243a, 0x9aa8d8, 0.35, 0x5a6c9c, 0x1c1820, 0.45, 0.2],
+  [1.0, 0x141a2c, 0x8fa4d8, 0.35, 0x5a6c9c, 0x1c1820, 0.42, 0.15],
+];
+const _a = new THREE.Color(), _b = new THREE.Color();
+
+function mix(i, t, out, j) {
+  _a.setHex(KEYS[i][j]); _b.setHex(KEYS[i + 1][j]);
+  return out.copy(_a).lerp(_b, t);
+}
+
+class Sky {
+  constructor(render) {
+    this.render = render;
+    this.lantern = new THREE.PointLight(0xffb45e, 0, 18, 1.4);
+    this.lantern.position.y = 2.4;
+    render.scene.add(this.lantern);
+    this.rain = 0;
+    const geo = new THREE.BufferGeometry();
+    this.drops = new Float32Array(DROPS * 6);
+    geo.setAttribute('position', new THREE.BufferAttribute(this.drops, 3));
+    this.rainMesh = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xbcc8d8, transparent: true, opacity: 0.45, depthWrite: false }));
+    this.rainMesh.frustumCulled = false;
+    this.rainMesh.visible = false;
+    render.scene.add(this.rainMesh);
+    for (let i = 0; i < DROPS; i++) this.seedDrop(i, 0, 0, Math.random() * 24);
+    this.label = '';
+  }
+
+  seedDrop(i, cx, cz, y = 22 + Math.random() * 4) {
+    const x = cx + (Math.random() - 0.5) * 70, z = cz + (Math.random() - 0.5) * 70, o = i * 6;
+    this.drops[o] = x; this.drops[o + 1] = y; this.drops[o + 2] = z;
+    this.drops[o + 3] = x + 0.12; this.drops[o + 4] = y + 0.9; this.drops[o + 5] = z + 0.05;
+  }
+
+  /** Back to plain daylight, for the title screen. */
+  reset() {
+    const r = this.render, k = KEYS[4];
+    r.scene.background.setHex(SKY); r.scene.fog.color.setHex(SKY); r.scene.fog.near = 48; r.scene.fog.far = 105;
+    r.sun.color.setHex(0xffefd1); r.sun.intensity = 2.7; r.hemi.color.setHex(k[4]); r.hemi.groundColor.setHex(k[5]); r.hemi.intensity = 1.05;
+    r.sunOffset.set(-14, 26, 9);
+    this.lantern.intensity = 0; this.rainMesh.visible = false; this.rain = 0;
+  }
+
+  /** Outlaws see less far at night. */
+  static sightScale(time) {
+    const ph = Sky.phase(time);
+    return ph < 0.22 || ph > 0.8 ? 0.7 : ph < 0.27 || ph > 0.73 ? 0.85 : 1;
+  }
+
+  /** Where in the day a world time falls: 0 midnight, 0.25 dawn, 0.5 noon, 0.75 dusk. */
+  static phase(time) { return ((time / DAY_LENGTH) + 0.3) % 1; }
+
+  /** How hard it rains at a time and place, 0 to 1. Same answer on every machine. */
+  static rainAt(time, x, z) {
+    const wave = Math.sin(time / 310) + Math.sin(time / 173 + 1.7) * 0.6 + Math.sin(time / 97) * 0.25;
+    const local = 0.3 + forestAt(x, z) * 0.7;
+    return Math.max(0, Math.min(1, (wave - 0.75) * 1.8)) * local;
+  }
+
+  update(game, dt) {
+    const r = this.render, scene = r.scene;
+    const time = game.worldClock ?? game.time;
+    const focus = game.rig.target;
+    if (r.interior) { this.lantern.intensity = 0; this.rainMesh.visible = false; return; }
+    const phase = Sky.phase(time);
+    let i = 0;
+    while (i < KEYS.length - 2 && phase > KEYS[i + 1][0]) i++;
+    const t = (phase - KEYS[i][0]) / (KEYS[i + 1][0] - KEYS[i][0]);
+    const lerp = (j) => KEYS[i][j] + (KEYS[i + 1][j] - KEYS[i][j]) * t;
+    const target = Sky.rainAt(time, focus.x, focus.z);
+    this.rain += (target - this.rain) * Math.min(1, dt * 0.5);
+    const wet = this.rain;
+    mix(i, t, scene.background, 1).lerp(_b.setHex(0x5a6470), wet * 0.6);
+    scene.fog.color.copy(scene.background);
+    scene.fog.near = 48 - wet * 22; scene.fog.far = 105 - wet * 35;
+    mix(i, t, r.sun.color, 2);
+    r.sun.intensity = lerp(3) * (1 - wet * 0.55);
+    mix(i, t, r.hemi.color, 4);
+    mix(i, t, r.hemi.groundColor, 5);
+    r.hemi.intensity = lerp(6) * (1 - wet * 0.2);
+    r.rim.intensity = lerp(7);
+    // The sun swings across the sky; at night the "sun" is the moon from the other side.
+    const day = phase > 0.25 && phase < 0.75, arc = day ? (phase - 0.25) / 0.5 : ((phase + 0.25) % 1) / 0.5;
+    r.sunOffset.set(-26 + arc * 52, 26, 9 - Math.sin(arc * Math.PI) * 6);
+    // The rider's lantern from dusk to dawn.
+    const dark = Math.max(0, 1 - r.sun.intensity / 1.2);
+    const p = game.player;
+    this.lantern.intensity = p?.alive ? dark * 9 : 0;
+    if (p) this.lantern.position.set(p.model.root.position.x, 2.4, p.model.root.position.z);
+    this.night = dark > 0.6;
+    this.label = phase < 0.22 || phase > 0.8 ? 'Night' : phase < 0.33 ? 'Dawn' : phase < 0.45 ? 'Morning' : phase < 0.58 ? 'Noon' : phase < 0.7 ? 'Afternoon' : 'Dusk';
+    this.updateRain(focus.x, focus.z, dt);
+  }
+
+  updateRain(cx, cz, dt) {
+    const on = this.rain > 0.03;
+    this.rainMesh.visible = on;
+    if (!on) return;
+    const count = Math.floor(DROPS * this.rain), d = this.drops;
+    for (let i = 0; i < DROPS; i++) {
+      const o = i * 6;
+      if (i >= count) { d[o + 1] = d[o + 4] = -50; continue; }
+      d[o + 1] -= 28 * dt; d[o + 4] -= 28 * dt; d[o] += 1.5 * dt; d[o + 3] += 1.5 * dt;
+      if (d[o + 1] < 0 || Math.abs(d[o] - cx) > 40 || Math.abs(d[o + 2] - cz) > 40) this.seedDrop(i, cx, cz);
+    }
+    this.rainMesh.geometry.attributes.position.needsUpdate = true;
+    this.rainMesh.material.opacity = 0.25 + this.rain * 0.3;
+  }
+}
+
+return { DAY_LENGTH, Sky };
+})();
+
 // ---- src/game.js ----
 __m.game = (() => {
 // Game state and the run: camps, permadeath, saving, Dead Eye, hit-stop,
@@ -10852,6 +12617,12 @@ const { buildEncounters, captureEncounters, rebuildCampNav } = __m.encounters;
 const { TownActions } = __m.town_actions;
 const { randomSeed } = __m.rng;
 const { MapView } = __m.map;
+const { NetWorld } = __m.net_world;
+const { townAt } = __m.towns;
+const { drunkScreen } = __m.vices;
+const { Wildlife } = __m.wildlife;
+const { BossBar } = __m.ui_boss;
+const { Sky } = __m.sky;
 const scorchGeo = new THREE.CircleGeometry(1, 9).rotateX(-Math.PI / 2);
 const scorchMat = new THREE.MeshLambertMaterial({ color: 0x3a2a20, transparent: true, opacity: 0.55, depthWrite: false });
 
@@ -10903,6 +12674,12 @@ class Game {
     this.navDirty = true;
     this.flanker = null;
     this.camp = { x: 0, z: 0, t: 0 };
+    /** The shared server, when riding online (see game-online.js). */
+    this.net = null;
+    this.netWorld = null;
+    this.bossBar = new BossBar();
+    this.sky = render.sun ? new Sky(render) : null;
+    this.worldClock = null;
 
     this.deadEye = {
       meter: 0, active: false,
@@ -10926,6 +12703,8 @@ class Game {
   // ---------- run lifecycle ----------
 
   newRun() {
+    // Online, the server deals the next life; it arrives as a 'life' message.
+    if (this.net) { this.net.act('newLife'); this.ui.show('loading'); return; }
     this.run = createLife(randomSeed());
     writeLife(this.run, undefined, true);
     this.saveFailed = false;
@@ -10966,6 +12745,8 @@ class Game {
     for (const shot of run.projectiles ?? []) this.projectiles.spawn(shot.x, shot.z, shot.dx, shot.dz, shot.speed, shot.dmg, shot.left);
     this.corpses = [];
     this.rebuildNav();
+    this.wildlife = new Wildlife(this);
+    if (this.net) this.netWorld = new NetWorld(this, this.net);
 
     this.deadEye.meter = run.deadEye ?? 0;
     this.deadEye.active = false;
@@ -10987,6 +12768,10 @@ class Game {
 
   unload() {
     if (!this.levelGroup) return;
+    this.netWorld?.dispose();
+    this.netWorld = null;
+    this.wildlife?.dispose();
+    this.wildlife = null;
     this.horse?.dispose();
     this.horse = null;
     this.worldPoints = null;
@@ -11003,6 +12788,7 @@ class Game {
       for (const m of mats) if (m !== MAT.solid && m !== MAT.glow && m !== scorchMat) m.dispose();
     });
     this.scene.remove(this.levelGroup);
+    this.ui.el.app.style?.setProperty('--vice-filter', 'none'); if (this.ui.el.app.dataset) delete this.ui.el.app.dataset.vice;
     this.levelGroup = null;
     this.physics.free();
     this.physics = null;
@@ -11018,6 +12804,7 @@ class Game {
   save() {
     if (!this.run || !this.player || !this.player.alive) return;
     this.capturePlayer();
+    if (this.net) { this.run.simTime = this.time; this.net.markLife(); return; }
     captureEncounters(this);
     this.run.simTime = this.time;
     this.run.projectiles = this.projectiles.items.filter((p) => p.active).map(({ x, z, dx, dz, speed, dmg, left }) => ({ x, z, dx, dz, speed, dmg, left }));
@@ -11047,8 +12834,15 @@ class Game {
     }
   }
 
+  sightScale() { return Sky.sightScale(this.worldClock ?? this.time); }
+
   inTown() {
-    return !!this.player && (this.frontier?.inside || Math.hypot(this.player.x, this.player.z) < this.run.world.town.radius);
+    return !!this.player && (this.frontier?.inside || !!townAt(this.run.world, this.player.x, this.player.z));
+  }
+
+  /** Guns come out outside town, or anywhere during an agreed duel. */
+  gunsAllowed() {
+    return !this.inTown() || !!this.net?.dueling;
   }
 
   nearestLoot() {
@@ -11140,6 +12934,9 @@ class Game {
   quitToTitle() {
     this.save();
     this.unload();
+    if (this.net) { this.net.close(); this.net = null; }
+    this.worldClock = null;
+    this.sky?.reset();
     this.state = 'title';
     this.ui.setContinue(loadSave());
     this.ui.show('title');
@@ -11179,7 +12976,8 @@ class Game {
   onPlayerDied() {
     // Write death before effects or menus. A reload must not revive this life.
     this.capturePlayer();
-    if (!endLife(this.run)) this.ui.toast('The life has ended. Browser storage could not save this change.', 8);
+    if (this.net) this.run.status = 'dead';
+    else if (!endLife(this.run)) this.ui.toast('The life has ended. Browser storage could not save this change.', 8);
     this.state = 'dying';
     this.deathT = 1.8;
     this.slowmo = { scale: T.run.deathSlowmo, t: 1.2, target: T.run.deathSlowmo };
@@ -11269,7 +13067,14 @@ class Game {
     scorch.scale.setScalar(1.8);
     scorch.rotation.y = Math.random() * 6;
     this.levelGroup.add(scorch);
+    // Online the server already dealt the blast's damage; only the push is shown here.
+    if (this.net) this.pushBodies(x, z);
+    else this.blast(x, z);
+    this.navDirty = true;
+  }
 
+  blast(x, z) {
+    const E = T.explosion;
     for (const e of this.enemies) {
       if (!e.alive) continue;
       const dx = e.x - x, dz = e.z - z, d = Math.hypot(dx, dz) || 0.01;
@@ -11294,6 +13099,11 @@ class Game {
       const f = Math.max(0, 1 - d / (E.radius * 1.15));
       p.damage(E.damage * f, p.x - dx / d * 0.3, 0.5, p.z - dz / d * 0.3, dx / d, dz / d, E.impulse * f, 'chain');
     }
+    this.pushBodies(x, z);
+  }
+
+  pushBodies(x, z) {
+    const E = T.explosion;
     const push = (body) => {
       const t = body.translation();
       const dx = t.x - x, dz = t.z - z, d = Math.hypot(dx, dz) || 0.01;
@@ -11303,11 +13113,12 @@ class Game {
     };
     for (const it of this.debris.items) push(it.body);
     for (const c of this.corpses) push(c.body);
-    this.navDirty = true;
   }
 
   /** Gunfire: bandits in range hear it. */
   noise(x, z, range) {
+    this.wildlife?.hear(x, z, Math.max(range, 45));
+    if (this.net) return; // the server hears shots online
     for (const e of this.enemies) if (e.alive && Math.hypot(e.x - x, e.z - z) < range) e.hear(x, z, true);
   }
 
@@ -11357,6 +13168,8 @@ class Game {
 
   /** The sim time scale for this frame. */
   timeScale() {
+    // A shared world cannot slow down for one rider: online time always runs.
+    if (this.net) return this.player ? 1 : 0;
     if (this.state !== 'playing' && this.state !== 'dying') return 0;
     if (this.hitStopT > 0) return 0;
     const de = this.deadEye.active ? T.deadEye.timeScale : 1;
@@ -11370,6 +13183,7 @@ class Game {
     if (this.navDirty || this.navT <= 0) this.rebuildNav();
 
     const p = this.player;
+    if (this.net && this.state !== 'playing') Object.assign(this.intent, { move: { x: 0, z: 0 }, fireHeld: false, firePressed: false });
     this.frontier.beforePlayer(this.intent);
     p.tick(dt, gunDt, this.intent);
     this.frontier.tick(dt);
@@ -11384,7 +13198,8 @@ class Game {
         else this.camp.t += dt;
       }
     }
-    for (const e of this.enemies) {
+    if (this.netWorld) this.netWorld.tick(dt);
+    else for (const e of this.enemies) {
       if (this.frontier.inside) {
         if (this.flanker === e) this.flanker = null;
         if (e.token) e.releaseToken();
@@ -11399,10 +13214,12 @@ class Game {
     }
     this.spotT -= dt;
     if (this.spotT <= 0) { this.spotT = 0.2; this.updateSpotting(); }
+    this.wildlife.tick(dt);
     this.projectiles.tick(dt);
     for (const pr of this.props) pr.tick(dt);
     this.debris.tick(dt);
     this.physics.step();
+    this.net?.tick(dt);
   }
 
   /** Real-time updates and rendering. */
@@ -11435,14 +13252,18 @@ class Game {
     const p = this.player;
     if (p) {
       const near = this.encounters.find((c) => Math.hypot(c.x - p.x, c.z - p.z) < 34);
-      this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? 'Mercy Crossing' : (near?.name ?? 'The frontier');
+      this.locationName = this.frontier.inside ? this.frontier.locationLabel() : this.inTown() ? townAt(this.run.world, p.x, p.z)?.name ?? 'Mercy Crossing' : (near?.name ?? 'The frontier');
       this.interactionHint = this.horse?.mounted
         ? (this.horse.showDismountHint(this.realTime) ? 'Hold [E] to get off' : '')
         : (this.townActions.hint() || this.lootHint());
       this.frontier.render(alpha);
-      const simDt = this.state === 'playing' || this.state === 'dying' ? dt : 0;
+      drunkScreen(this.ui.el.app, this.run, this.realTime);
+      const simDt = this.net || this.state === 'playing' || this.state === 'dying' ? dt : 0;
       p.render(alpha, simDt);
       this.horse?.render(dt);
+      this.netWorld?.render(alpha, simDt);
+      if (this.wildlife) for (const a of [...this.wildlife.animals, ...this.wildlife.carcasses]) a.model.root.visible = !this.frontier.inside;
+      if (!this.frontier.inside) this.wildlife?.render(alpha, simDt);
       if (this.frontier.inside) {
         for (const e of this.enemies) { e.model.root.visible = false; e.hideAimLine(); }
         for (const pr of this.props) {
@@ -11467,11 +13288,13 @@ class Game {
       }
       const focus = this.frontier.viewFocus() ?? (p.alive || !p.corpse ? p.model.root.position : p.corpse.mesh.position);
       this.rig.update(dt, focus, p.alive && !this.frontier.inside ? this.intent.aim : null);
+      this.sky?.update(this, dt);
       this.render.focusShadow(this.rig.target.x, this.rig.target.z);
       this.audio.setListener(this.rig.target.x, this.rig.target.z);
-      const fxScale = (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
-      if (this.state === 'playing' || this.state === 'dying') this.fx.update(dt * fxScale);
+      const fxScale = this.net ? 1 : (de.active ? T.deadEye.timeScale : 1) * this.slowmo.scale;
+      if (this.state === 'playing' || this.state === 'dying' || this.net) this.fx.update(dt * fxScale);
       this.ui.update(this, dt);
+      this.bossBar.update(this);
     } else {
       // Title backdrop: slow drift over empty desert.
       this.rig.target.x = Math.sin(this.realTime * 0.05) * 6;
@@ -11483,6 +13306,541 @@ class Game {
 }
 
 return { loadSave, Game };
+})();
+
+// ---- src/net.js ----
+__m.net = (() => {
+// The browser side of the shared server: connecting, sending the rider's
+// position and shots, saving the life, and handing server messages to the
+// world sync (net-world.js) and the online interface (net-ui.js).
+const { PROTOCOL_VERSION, STATE_HZ, PF, GUN_CODES, ROOMS, q2, q3 } = __m.protocol;
+const { T } = __m.tuning;
+const TOKEN_KEY = 'dustiron.online.token';
+const NAME_KEY = 'dustiron.online.name';
+
+function storage() { try { return globalThis.localStorage ?? null; } catch { return null; } }
+
+/** Where the game server lives: ?server=, a page global, or the page's own host. */
+function serverUrl(loc = globalThis.location) {
+  const param = loc ? new URLSearchParams(loc.search).get('server') : null;
+  const base = param || globalThis.DUSTIRON_SERVER || (loc ? `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}` : 'ws://127.0.0.1:8080');
+  return base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws';
+}
+
+function savedIdentity() {
+  const s = storage();
+  return { token: s?.getItem(TOKEN_KEY) ?? null, name: s?.getItem(NAME_KEY) ?? null };
+}
+
+function forgetIdentity() {
+  const s = storage();
+  try { s?.removeItem(TOKEN_KEY); s?.removeItem(NAME_KEY); } catch { /* storage blocked */ }
+}
+
+class Net {
+  constructor(game, { url = serverUrl(), WebSocketImpl = globalThis.WebSocket } = {}) {
+    this.game = game;
+    this.url = url;
+    this.WebSocketImpl = WebSocketImpl;
+    this.ws = null;
+    this.id = null;
+    this.name = null;
+    this.open = false;
+    this.stateT = 0;
+    this.saveT = 0;
+    this.lifeDirty = true;
+    this.lastLife = '';
+    this.ack = 0;
+    this.pendingHits = [];
+    this.roster = new Map();
+    this.duel = null;
+    this.ping = 0;
+    this.pingT = 0;
+    this.handlers = new Map();
+  }
+
+  on(type, fn) { this.handlers.set(type, fn); }
+
+  /** Opens the connection and resolves with the welcome message (or rejects with the server's reason). */
+  connect(name) {
+    const { token } = savedIdentity();
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const ws = new this.WebSocketImpl(this.url);
+      this.ws = ws;
+      const fail = (text) => { if (!settled) { settled = true; reject(new Error(text)); } };
+      ws.onopen = () => { this.open = true; this.send({ t: 'hello', v: PROTOCOL_VERSION, name, token }); };
+      ws.onerror = () => fail('Cannot reach the frontier server.');
+      ws.onclose = () => {
+        const was = this.open;
+        this.open = false;
+        fail('The server closed the connection.');
+        if (was && settled) this.handlers.get('disconnect')?.();
+      };
+      ws.onmessage = (event) => {
+        let msg;
+        try { msg = JSON.parse(event.data); } catch { return; }
+        if (msg.t === 'err') { this.lastError = msg.text; if (msg.text.includes('Pick') || msg.text.includes('already rides')) forgetIdentity(); fail(msg.text); return; }
+        if (msg.t === 'welcome') {
+          this.id = msg.id;
+          this.name = msg.name;
+          const s = storage();
+          try { if (msg.token) s?.setItem(TOKEN_KEY, msg.token); s?.setItem(NAME_KEY, msg.name); } catch { /* storage blocked */ }
+          for (const [id, rname, coat] of msg.roster) this.roster.set(id, { name: rname, coat });
+          settled = true;
+          resolve(msg);
+          return;
+        }
+        this.receive(msg);
+      };
+    });
+  }
+
+  close() {
+    this.open = false;
+    this.handlers.clear();
+    try { this.ws?.close(); } catch { /* already closed */ }
+  }
+
+  send(msg) {
+    if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(msg));
+  }
+
+  receive(msg) {
+    if (msg.t === 'roster') {
+      this.roster.clear();
+      for (const [id, name, coat] of msg.list) this.roster.set(id, { name, coat });
+    }
+    if (msg.t === 'pong') { this.ping = Math.round(performance.now() - msg.c); return; }
+    if (msg.t === 'adj') { this.ack = Math.max(this.ack, msg.rev); this.lifeDirty = true; }
+    if (msg.t === 'duel') {
+      if (msg.phase === 'start') this.duel = { a: msg.a, b: msg.b, names: msg.names, mode: msg.mode, wager: msg.wager, drawn: false };
+      else if (msg.phase === 'draw' && this.duel) this.duel.drawn = true;
+      else if (msg.phase === 'end') this.duel = null;
+    }
+    this.handlers.get(msg.t)?.(msg);
+  }
+
+  /** The other rider in my duel, once the count has finished. */
+  get dueling() { return this.duel?.drawn ? (this.duel.a === this.id ? this.duel.b : this.duel.a) : null; }
+
+  // ---------- outgoing ----------
+
+  /** Sends position and pose at 20 Hz and a copy of the life every few seconds. */
+  tick(dt) {
+    if (!this.open) return;
+    const g = this.game, p = g.player;
+    this.stateT -= dt;
+    if (p?.alive && this.stateT <= 0) {
+      this.stateT = 1 / STATE_HZ;
+      const room = g.frontier?.inside ? g.run.interior?.id ?? '' : '';
+      const armed = !g.inTown() || !!this.dueling;
+      const flags = (armed ? PF.ARMED | PF.AIM : 0) | (p.rolling ? PF.ROLL : 0) | (g.horse?.mounted ? PF.MOUNT : 0)
+        | (g.frontier?.seated ? PF.SEAT : 0) | (p.bandaging ? PF.BANDAGE : 0) | (p.sneaking ? PF.SNEAK : 0)
+        | (p.coat ? PF.COAT : 0) | (p.invulnerable ? PF.IFRAME : 0);
+      this.send({
+        t: 'st', x: q2(p.x), z: q2(p.z), yaw: q3(p.yaw), vx: q2(p.vx), vz: q2(p.vz), sp: q2(p.speedNow),
+        f: flags, g: Math.max(0, GUN_CODES.indexOf(p.gun.def.key)), r: Math.max(0, ROOMS.indexOf(room)),
+        rf: p.rolling ? q2(p.rollT / T.dodge.duration) : -1,
+      });
+    }
+    this.saveT -= dt;
+    if (this.saveT <= 0 && this.lifeDirty && g.run?.status === 'alive') {
+      this.saveT = 2;
+      this.lifeDirty = false;
+      this.send({ t: 'life', life: lifeForServer(g.run), ack: this.ack });
+    }
+    this.pingT -= dt;
+    if (this.pingT <= 0) { this.pingT = 5; this.send({ t: 'ping', c: performance.now() }); }
+  }
+
+  markLife() { this.lifeDirty = true; }
+
+  /** Hits found while tracing a shot wait until the shot itself has been sent. */
+  queueHit(kind, id, zone, dx, dz) {
+    this.pendingHits.push({ t: 'hit', k: kind, id, z: zone, dx: q3(dx), dz: q3(dz), de: this.game.deadEye.active ? 1 : 0 });
+  }
+
+  shot(x, z, gunKey, ends) {
+    this.send({ t: 'shot', x: q2(x), z: q2(z), g: Math.max(0, GUN_CODES.indexOf(gunKey)), e: ends.map(q2) });
+    for (const hit of this.pendingHits) this.send(hit);
+    this.pendingHits.length = 0;
+  }
+
+  act(a, extra = {}) { this.send({ t: 'act', a, ...extra }); }
+  chat(text) { this.send({ t: 'chat', text }); }
+}
+
+/** A copy of the life without the parts the server keeps itself. */
+function lifeForServer(run) {
+  const copy = { ...run, camps: {}, projectiles: [] };
+  for (const id of Object.keys(run.camps ?? {})) copy.camps[id] = {};
+  delete copy.migrated;
+  delete copy.world; // rebuilt from the world seed on the server
+  return copy;
+}
+
+return { serverUrl, savedIdentity, forgetIdentity, Net, lifeForServer };
+})();
+
+// ---- src/poker-dice.js ----
+__m.poker_dice = (() => {
+// Poker dice: five dice each, scored like a poker hand. Shared by the server,
+// which throws the dice, and the browser, which names the hands.
+const DICE_WAGERS = [5, 10, 25, 50, 100];
+const DICE_RANGE = 8;
+
+const NAMES = ['Nothing', 'A pair', 'Two pair', 'Three of a kind', 'A straight', 'Full house', 'Four of a kind', 'Five of a kind'];
+
+/** Scores a throw: [rank, ...tiebreak values], higher is better. */
+function scoreDice(dice) {
+  const counts = new Map();
+  for (const d of dice) counts.set(d, (counts.get(d) ?? 0) + 1);
+  const groups = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+  const shape = groups.map(([, n]) => n).join('');
+  const sorted = [...dice].sort((a, b) => a - b).join('');
+  let rank = 0;
+  if (shape === '5') rank = 7;
+  else if (shape === '41') rank = 6;
+  else if (shape === '32') rank = 5;
+  else if (sorted === '12345' || sorted === '23456') rank = 4;
+  else if (shape === '311') rank = 3;
+  else if (shape === '221') rank = 2;
+  else if (shape === '2111') rank = 1;
+  return [rank, ...groups.map(([v]) => v)];
+}
+
+function handName(dice) { return NAMES[scoreDice(dice)[0]]; }
+
+/** 1 when a beats b, -1 when b wins, 0 for a tie. */
+function compareDice(a, b) {
+  const sa = scoreDice(a), sb = scoreDice(b);
+  for (let i = 0; i < Math.max(sa.length, sb.length); i++) {
+    const d = (sa[i] ?? 0) - (sb[i] ?? 0);
+    if (d) return Math.sign(d);
+  }
+  return 0;
+}
+
+return { DICE_WAGERS, DICE_RANGE, scoreDice, handName, compareDice };
+})();
+
+// ---- src/net-ui.js ----
+__m.net_ui = (() => {
+// The online parts of the interface: joining from the title, the rider count,
+// chat, calling someone out for a duel, and answering a call. Also swaps in a
+// new life when the server deals one.
+const { Net, savedIdentity } = __m.net;
+const { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE, cleanChat } = __m.protocol;
+const { DICE_WAGERS } = __m.poker_dice;
+const FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+const MODE_NAMES = { blood: 'First blood', death: 'To the death' };
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function el(tag, cls, html) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html !== undefined) node.innerHTML = html;
+  return node;
+}
+
+class NetUI {
+  constructor(game) {
+    this.game = game;
+    this.lines = [];
+    this.ask = null;
+    this.duelCount = -1;
+    game.netUI = this;
+    this.buildTitle();
+    this.buildHud();
+    addEventListener('keydown', (e) => this.key(e), true);
+  }
+
+  // ---------- title ----------
+
+  buildTitle() {
+    const menu = document.querySelector('.title-menu');
+    if (!menu) return;
+    const box = el('div', 'online-join');
+    const { name } = savedIdentity();
+    box.innerHTML = `
+      <h2 class="guide-title">Ride online</h2>
+      <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
+      <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
+      <button id="btn-online" class="btn primary" type="button">Ride online</button>
+      <p class="online-status" id="online-status" aria-live="polite"></p>`;
+    menu.appendChild(box);
+    this.nameInput = box.querySelector('#online-name');
+    this.status = box.querySelector('#online-status');
+    if (name) this.nameInput.value = name;
+    box.querySelector('#btn-online').addEventListener('click', () => this.join());
+    this.nameInput.addEventListener('keydown', (e) => { if (e.code === 'Enter') { e.preventDefault(); this.join(); } });
+  }
+
+  async join() {
+    const g = this.game;
+    if (this.joining || g.net) return;
+    g.audio.unlock();
+    g.audio.play('uiClick', { bus: 'ui' });
+    const name = this.nameInput.value.trim();
+    const { token } = savedIdentity();
+    if (!token && name.length < 2) { this.status.textContent = 'Pick a name of 2 to 16 letters.'; return; }
+    this.joining = true;
+    this.status.textContent = 'Riding out…';
+    const net = new Net(g);
+    try {
+      const welcome = await net.connect(name);
+      this.start(net, welcome);
+      this.status.textContent = '';
+    } catch (e) {
+      net.close();
+      this.status.textContent = e.message;
+    } finally {
+      this.joining = false;
+    }
+  }
+
+  start(net, welcome) {
+    const g = this.game;
+    g.net = net;
+    this.lines = [];
+    this.renderChat();
+    net.on('chat', (m) => this.addLine(m.from ? `<b>${esc(m.name)}</b> ${esc(m.text)}` : `<i>${esc(m.text)}</i>`));
+    net.on('life', (m) => this.onLife(m));
+    net.on('duelAsk', (m) => this.onAsk(m));
+    net.on('duel', (m) => this.onDuel(m));
+    net.on('diceAsk', (m) => this.onDiceAsk(m));
+    net.on('dice', (m) => this.onDice(m));
+    net.on('disconnect', () => this.lost());
+    g.continueRun({ ...welcome.life, camps: welcome.camps ?? {} });
+    this.renderRoster();
+    if (welcome.ended) this.addLine(`<i>Your last rider fell with $${welcome.ended.bounty}. This is a new life.</i>`);
+    g.ui.toast(`Welcome to the frontier, ${welcome.name}. Press T to talk, G to call someone out.`, 6);
+  }
+
+  onLife(m) {
+    const g = this.game;
+    const fresh = { ...m.life, camps: m.camps ?? {} };
+    g.continueRun(fresh);
+    if (m.fresh) g.ui.toast('A new rider comes to Mercy Crossing.', 4);
+    else g.ui.toast('The server could not accept that change. Your last good save is back.', 6);
+  }
+
+  lost() {
+    const g = this.game;
+    if (!g.net) return;
+    g.net = null;
+    g.unload();
+    g.state = 'title';
+    g.ui.show('title');
+    this.status.textContent = 'Lost the connection to the server.';
+    this.hide();
+  }
+
+  // ---------- HUD ----------
+
+  buildHud() {
+    const hud = document.getElementById('hud');
+    if (!hud) return;
+    this.rosterEl = el('div', 'online-roster');
+    this.chatLog = el('div', 'chat-log');
+    this.chatForm = el('form', 'chat-form');
+    this.chatForm.hidden = true;
+    this.chatForm.innerHTML = '<input id="chat-input" maxlength="140" autocomplete="off" spellcheck="false" placeholder="Say something · Enter to send · Esc to cancel">';
+    this.chatInput = this.chatForm.querySelector('input');
+    this.chatForm.addEventListener('submit', (e) => { e.preventDefault(); this.sendChat(); });
+    this.banner = el('div', 'duel-banner');
+    this.banner.hidden = true;
+    this.offer = el('div', 'duel-offer panel');
+    this.offer.hidden = true;
+    let tags = document.getElementById('rider-tags');
+    if (!tags) { tags = el('div'); tags.id = 'rider-tags'; document.getElementById('app').appendChild(tags); }
+    hud.append(this.rosterEl, this.chatLog, this.chatForm, this.banner, this.offer);
+  }
+
+  hide() {
+    for (const n of [this.rosterEl, this.chatLog, this.banner, this.offer]) if (n) n.textContent = '';
+    if (this.offer) this.offer.hidden = true;
+    if (this.banner) this.banner.hidden = true;
+    if (this.chatForm) this.chatForm.hidden = true;
+  }
+
+  renderRoster() {
+    const net = this.game.net;
+    if (!net || !this.rosterEl) return;
+    const names = [...net.roster.values()].map((r) => esc(r.name));
+    this.rosterEl.innerHTML = `<b>${net.roster.size}/20 riders</b> · ${net.ping} ms<div class="roster-names">${names.join(' · ')}</div>`;
+  }
+
+  addLine(html) {
+    this.lines.push({ html, t: performance.now() });
+    if (this.lines.length > 8) this.lines.shift();
+    this.renderChat();
+  }
+
+  renderChat() {
+    if (!this.chatLog) return;
+    const now = performance.now(), open = !this.chatForm.hidden;
+    this.chatLog.innerHTML = this.lines.filter((l) => open || now - l.t < 12000).map((l) => `<div>${l.html}</div>`).join('');
+  }
+
+  openChat() {
+    this.chatForm.hidden = false;
+    this.chatInput.value = '';
+    this.game.input.clear();
+    this.renderChat();
+    setTimeout(() => this.chatInput.focus(), 0);
+  }
+
+  closeChat() {
+    this.chatForm.hidden = true;
+    this.chatInput.blur();
+    this.game.input.clear();
+    this.renderChat();
+  }
+
+  sendChat() {
+    const text = cleanChat(this.chatInput.value);
+    if (text) this.game.net?.chat(text);
+    this.closeChat();
+  }
+
+  // ---------- duels ----------
+
+  /** Calls out the nearest rider in reach. */
+  openOffer() {
+    const g = this.game, p = g.player;
+    if (!p?.alive || g.net.duel) return;
+    const room = g.frontier?.inside ? g.run.interior?.id ?? '' : '';
+    const near = g.netWorld.remote.near(p.x, p.z, DUEL_RANGE, room).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+    if (!near) { g.ui.toast('Nobody close enough to call out.', 2.5); return; }
+    this.offerTo = near.id;
+    this.offerGame = g.inTown() ? 'dice' : 'duel';
+    this.offerMode = 'blood';
+    this.offerWager = this.offerGame === 'dice' ? DICE_WAGERS[0] : 0;
+    this.drawOffer(near.name);
+  }
+
+  drawOffer(name) {
+    const dice = this.offerGame === 'dice';
+    const games = [['duel', 'Duel'], ['dice', 'Poker dice']].map(([k, label]) => `<button class="btn ${k === this.offerGame ? 'primary' : ''}" data-game="${k}" type="button">${label}</button>`).join('');
+    const modes = dice ? '' : Object.keys(DUEL_MODES).map((m) => `<button class="btn ${m === this.offerMode ? 'primary' : ''}" data-mode="${m}" type="button">${MODE_NAMES[m]}</button>`).join('');
+    const wagers = (dice ? DICE_WAGERS : DUEL_WAGERS).map((w) => `<button class="btn ${w === this.offerWager ? 'primary' : ''}" data-wager="${w}" type="button">${w ? `$${w}` : 'No bet'}</button>`).join('');
+    const note = dice ? 'Five dice each, best poker hand takes the pot. Stand close, in town.'
+      : this.offerMode === 'death' ? 'Whoever falls loses that life for good.' : 'The first rider hurt badly loses. Nobody dies.';
+    this.offer.innerHTML = `<h3>${dice ? 'Dice with' : 'Call out'} ${esc(name)}</h3>
+      <div class="actions">${games}</div>
+      <p class="fine">${note}</p>
+      ${modes ? `<div class="actions">${modes}</div>` : ''}<div class="actions">${wagers}</div>
+      <div class="actions"><button class="btn primary" data-send type="button">${dice ? 'Offer the game' : 'Send the challenge'}</button><button class="btn" data-cancel type="button">Never mind</button></div>`;
+    this.offer.hidden = false;
+    this.offer.onclick = (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      e.stopPropagation();
+      this.game.audio.play('uiClick', { bus: 'ui' });
+      if (b.dataset.game) { this.offerGame = b.dataset.game; this.offerWager = b.dataset.game === 'dice' ? DICE_WAGERS[0] : 0; this.drawOffer(name); }
+      else if (b.dataset.mode) { this.offerMode = b.dataset.mode; this.drawOffer(name); }
+      else if (b.dataset.wager) { this.offerWager = Number(b.dataset.wager); this.drawOffer(name); }
+      else if (b.hasAttribute('data-send')) {
+        if (this.offerGame === 'dice') this.game.net.act('dice', { to: this.offerTo, wager: this.offerWager });
+        else { this.game.net.act('duel', { to: this.offerTo, mode: this.offerMode, wager: this.offerWager }); this.game.ui.toast(`You call out ${name}.`, 3); }
+        this.offer.hidden = true;
+      } else this.offer.hidden = true;
+    };
+  }
+
+  onDiceAsk(m) {
+    this.ask = { kind: 'dice', from: m.from, until: performance.now() + m.s * 1000 };
+    this.showBanner(`<b>${esc(m.name)}</b> offers a game of poker dice · $${m.wager} each<br><kbd>Y</kbd> play · <kbd>X</kbd> pass`);
+    this.game.audio.play('chips', { bus: 'ui', vol: 0.7 });
+  }
+
+  onDice(m) {
+    const net = this.game.net, me = net.id, other = m.a === me ? m.b : m.a;
+    const row = (id, label) => `<div class="dice-row"><span>${esc(label)}</span><span class="dice-faces">${m.rolls[id].map((d) => FACES[d]).join('')}</span><span>${esc(m.hands[id])}</span></div>`;
+    const verdict = !m.winner ? 'A tie. Stakes returned.' : m.winner === me ? `You win $${m.wager * 2}.` : `${esc(m.names[other])} takes the pot.`;
+    this.showBanner(`${row(me, 'You')}${row(other, m.names[other])}<div class="dice-verdict">${verdict}</div>`, 6);
+    const a = this.game.audio;
+    for (let i = 0; i < 5; i++) a.play('card', { bus: 'ui', vol: 0.5, delay: i * 0.08, pitch: 0.6 });
+    if (m.winner === me) a.play('coin', { bus: 'ui', vol: 0.7, delay: 0.5 });
+  }
+
+  onAsk(m) {
+    this.ask = { kind: 'duel', from: m.from, until: performance.now() + m.s * 1000 };
+    this.showBanner(`<b>${esc(m.name)}</b> calls you out · ${MODE_NAMES[m.mode] ?? m.mode}${m.wager ? ` · $${m.wager} each` : ''}<br><kbd>Y</kbd> accept · <kbd>X</kbd> refuse`);
+    this.game.audio.play('quillNote', { bus: 'ui', vol: 0.8 });
+  }
+
+  answer(yes) {
+    if (!this.ask) return;
+    this.game.net.act(this.ask.kind === 'dice' ? 'diceAnswer' : 'duelAnswer', { from: this.ask.from, yes });
+    this.ask = null;
+    this.banner.hidden = true;
+  }
+
+  onDuel(m) {
+    const g = this.game, net = g.net;
+    if (m.phase === 'start') {
+      const other = m.names[m.a === net.id ? m.b : m.a] ?? 'a rider';
+      this.duelCount = m.count;
+      this.duelOther = other;
+      this.showBanner(`Duel with <b>${esc(other)}</b> · ${MODE_NAMES[m.mode]}${m.wager ? ` · $${m.wager * 2} pot` : ''}<div class="duel-count">${Math.ceil(m.count)}</div>`);
+      g.audio.cue?.('duel');
+    } else if (m.phase === 'draw') {
+      this.duelCount = -1;
+      this.showBanner('<div class="duel-count draw">Draw!</div>', 1.2);
+      g.audio.play('uiClick', { bus: 'ui', pitch: 1.6 });
+    } else if (m.phase === 'end') {
+      this.duelCount = -1;
+      const won = m.winner === net.id;
+      const text = !m.winner ? 'The duel is off.' : won ? 'You win the duel.' : 'You lose the duel.';
+      this.showBanner(`<b>${text}</b>${m.reason ? `<div class="fine">${esc(m.reason)}</div>` : ''}`, 3);
+    }
+  }
+
+  showBanner(html, seconds = 0) {
+    this.banner.innerHTML = html;
+    this.banner.hidden = false;
+    this.bannerUntil = seconds ? performance.now() + seconds * 1000 : 0;
+  }
+
+  // ---------- input and per-frame ----------
+
+  key(e) {
+    const g = this.game;
+    if (!g.net || e.repeat) return;
+    const typing = document.activeElement === this.chatInput;
+    if (typing) {
+      if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeChat(); }
+      return;
+    }
+    if (g.state !== 'playing' || e.target?.closest?.('input, textarea')) return;
+    if (e.code === 'KeyT') { e.preventDefault(); e.stopPropagation(); this.openChat(); }
+    else if (e.code === 'KeyG') { e.stopPropagation(); this.openOffer(); }
+    else if (e.code === 'KeyY' && this.ask) { e.stopPropagation(); this.answer(true); }
+    else if (e.code === 'KeyX' && this.ask) { e.stopPropagation(); this.answer(false); }
+    else if (e.code === 'Escape' && !this.offer.hidden) { e.stopPropagation(); this.offer.hidden = true; }
+  }
+
+  update(dt) {
+    const g = this.game;
+    if (!g.net) return;
+    const now = performance.now();
+    if (this.ask && now > this.ask.until) { this.ask = null; this.banner.hidden = true; }
+    if (this.duelCount > 0) {
+      this.duelCount -= dt;
+      const n = this.banner.querySelector('.duel-count');
+      if (n) n.textContent = String(Math.max(1, Math.ceil(this.duelCount)));
+    }
+    if (this.bannerUntil && now > this.bannerUntil) { this.bannerUntil = 0; this.banner.hidden = true; }
+    this.rosterT = (this.rosterT ?? 0) - dt;
+    if (this.rosterT <= 0) { this.rosterT = 2; this.renderRoster(); this.renderChat(); }
+  }
+}
+
+return { NetUI };
 })();
 
 // ---- src/main.js ----
@@ -11497,6 +13855,7 @@ const { Input } = __m.input;
 const { Audio } = __m.audio;
 const { UI } = __m.ui;
 const { Game, loadSave } = __m.game;
+const { NetUI } = __m.net_ui;
 async function openDebug(game) {
   if (game.gui) { game.gui.show(game.gui._hidden); return; }
   try {
@@ -11528,6 +13887,7 @@ async function boot() {
   const audio = new Audio();
   const game = new Game({ render, rig, input, audio, ui });
   window.dustiron = game;
+  const netUI = new NetUI(game);
 
   const resize = () => { render.resize(rig.camera); if (game.state === 'map') game.mapView.draw(game); };
   resize();
@@ -11549,7 +13909,7 @@ async function boot() {
   addEventListener('keydown', firstGesture, { once: true });
 
   addEventListener('keydown', (e) => {
-    if (e.repeat) return;
+    if (e.repeat || e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
     else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
@@ -11582,6 +13942,7 @@ async function boot() {
         if (n === T.sim.maxTicksPerFrame) acc = 0;
       }
       game.frame(dt, acc / step);
+      netUI.update(dt);
       input.endFrame();
     } catch (e) {
       failed = true;

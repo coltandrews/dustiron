@@ -108,6 +108,8 @@ export const LOOKS = {
   rusher: { shirt: PAL.bShirtB, vest: PAL.poncho, hat: PAL.woodDark, band: PAL.red, pants: PAL.woodDark, bandana: PAL.bandanaB, poncho: true },
   sharpshooter: { shirt: PAL.bShirtC, vest: PAL.black, hat: PAL.black, band: PAL.bone, pants: PAL.black, bandana: PAL.bandanaB, tall: true },
   leader: { shirt: 0x6a2a24, vest: 0x1e1814, hat: 0x2a1e18, band: PAL.brass, pants: 0x2a2624, scarf: 0xb9a06a, tall: true },
+  captain: { shirt: 0x3a4a3a, vest: 0x2a1e18, hat: 0x1e1814, band: 0xb0b0b0, pants: 0x2a2624, scarf: 0x6a2a24, tall: true },
+  boss: { shirt: 0x2a2a2e, vest: 0x5a6068, hat: 0x111111, band: 0xb0b0b0, pants: 0x1e1e22, scarf: 0x8a1c1c, tall: true, poncho: true },
   scout: { shirt: 0xb58e58, vest: 0x5a4a32, hat: 0x8a7a5a, band: PAL.woodDark, pants: 0x4a4740, bandana: 0x5d6b3a },
 };
 

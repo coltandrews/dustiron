@@ -1,0 +1,36 @@
+# Fly.io config for the Dust & Iron server. Change `app` to a name of your own.
+# The machine sleeps when nobody is connected and wakes on the next visit.
+app = "dustiron"
+primary_region = "ord"
+
+[build]
+
+[env]
+  PORT = "8080"
+  DATA_DIR = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 40
+    hard_limit = 60
+
+[[http_service.checks]]
+  grace_period = "20s"
+  interval = "30s"
+  method = "GET"
+  path = "/health"
+  timeout = "5s"
+
+[mounts]
+  source = "dustiron_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

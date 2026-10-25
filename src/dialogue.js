@@ -6,6 +6,7 @@ export const ROLES = {
   sheriff: 'Sheriff', doctor: 'Town doctor', maps: 'Map maker', guns: 'Gunsmith', clothes: 'Clothier', saloon: 'Saloon keeper',
   stable: 'Livery', silas: 'Rancher', martha: 'Hears every rumor', clara: 'Doctor Finch\'s cousin', nora: 'Postmistress',
   amos: 'Homesteader', eli: 'Wounded traveler', juan: 'Trail merchant',
+  hale: 'Deputy of Pine Hollow', ruby: 'Runs the Timber Wolf', hank: 'Trading post', lacey: 'Pine Hollow doctor', otto: 'Trapper',
 };
 
 /** Shop kinds in town map to the person behind the counter. */
@@ -26,6 +27,11 @@ const FIRST = {
   amos: 'Strangers don\'t come out this far by accident. State your business.',
   eli: 'Water... and a bandage, if you have one. My horse threw me and the leg won\'t hold.',
   juan: 'Juan Ortega. Rounds, bandages, coffee. Town prices are cheaper, but town is far.',
+  hale: 'Hale. Deputy, jailer and gravedigger, since the Iron Gang came. The board is short on lawmen and long on names.',
+  ruby: 'Ruby Tate. This is the Timber Wolf. Beer is cold, whiskey is honest, and the dice are on the house.',
+  hank: 'Hank Morrow. Rifle rounds, oil, tobacco. I buy skins, too. The forest feeds those who can shoot.',
+  lacey: 'Doc Lacey. Sit down before you fall down.',
+  otto: 'Otto Brandt. Thirty winters in these woods. You have the look of someone who could hunt. Can you?',
 };
 const LATER = {
   sheriff: 'Back again. The board changes when men die or hang.',
@@ -42,6 +48,11 @@ const LATER = {
   amos: 'Back again.',
   eli: 'Still here.',
   juan: 'Prices are the same as last time.',
+  hale: 'Any news from the woods?',
+  ruby: 'Back for another?',
+  hank: 'Brought me skins?',
+  lacey: 'Let me look at you.',
+  otto: 'The bear was seen again. Wagon-sized, I tell you.',
 };
 
 /** Opening speech and the small amount of job information needed beside it. */
@@ -72,6 +83,8 @@ function completionLine(def, state) {
   if (def.type === 'survey') return 'You got the bearing? Good. Here is your pay.';
   if (def.type === 'traveler') return 'You found Eli. Here is your pay.';
   if (def.type === 'delivery') return 'Amos got the parcel. Here is your pay.';
+  if (def.id === 'iron-gang') return 'Kell is dead? Then Pine Hollow can sleep tonight. Here. The town owes you more than this.';
+  if (def.id === 'trapper') return 'Old Scar\'s hide! I will tell this one until I die. Here is your pay, hunter.';
   return 'You finished it. Here is your pay.';
 }
 

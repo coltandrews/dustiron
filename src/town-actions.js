@@ -5,12 +5,16 @@ import { CATALOGUE, SHOPS, buy, cannotBuy, priceOf } from './items.js';
 import {
   BETS, canDoubleBlackjack, canSplitBlackjack, doubleBlackjack, hitBlackjack, splitBlackjack, standBlackjack, startBlackjack,
 } from './blackjack.js';
-import { accept, NPCS, quest, sellMedicine, turnIn } from './quests.js';
+import { accept, bringStep, NPCS, quest, sellMedicine, turnIn } from './quests.js';
+import { PELTS, CATALOGUE as ITEMS } from './items.js';
+import { drink } from './vices.js';
 import { KEEPER_NPC, greeting, offerText, rumorLine } from './dialogue.js';
 import { lootSite, readGrave, takeMedicine } from './progress.js';
 import { captivePoint, restrain } from './enemy-captive.js';
 
-const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant' };
+const SHOP_OF = { guns: 'guns', doctor: 'doctor', mae: 'saloon', clothes: 'clothes', maps: 'maps', stable: 'stable', juan: 'merchant', ruby: 'pineSaloon', hank: 'trading', lacey: 'pineDoctor' };
+const PELT_BUYERS = new Set(['hank', 'otto']);
+const BARKEEPS = new Set(['mae', 'ruby']);
 const BROWSE_LABEL = {
   guns: 'Show me your weapons',
   doctor: 'I need medicine',
@@ -19,6 +23,9 @@ const BROWSE_LABEL = {
   maps: 'Show me your maps',
   stable: 'Show me the horses',
   merchant: 'Show me your goods',
+  pineSaloon: 'What are you pouring?',
+  trading: 'Let me see the shelves',
+  pineDoctor: 'I need patching up',
 };
 const LEAD_PRICE = 5, RUMOR_PRICE = 3;
 
@@ -51,6 +58,7 @@ export class TownActions {
       for (const e of g.enemies) { const p = captivePoint(e); if (p) list.push(p); }
       const horse = g.horse?.point();
       if (horse) list.push(horse);
+      if (g.wildlife) list.push(...g.wildlife.points());
     }
     return list;
   }
@@ -101,13 +109,18 @@ export class TownActions {
     const quick = { cache: lootSite, loot: lootSite, medicine: takeMedicine };
     if (quick[point.kind]) { g.ui.questNote(quick[point.kind](g, point)); g.audio.play('coin', { bus: 'ui', vol: 0.6 }); g.save(); return; }
     if (point.kind === 'grave') { g.ui.toast(readGrave(g, point), 7); g.save(); return; }
+    if (point.kind === 'skin') { g.wildlife.skin(point); return; }
     if (point.kind === 'proof') {
       g.worldPoints.remove(point);
       g.questEvent({ type: 'proof', targetId: point.enemy.id });
       if (!g.questDefs.some((q) => q.targetId === point.enemy.id && g.run.quests[q.id].status !== 'offered')) g.ui.questNote('You take the red hat. The sheriff pays for proof like this.');
       return;
     }
-    if (point.kind === 'restrain') { if (restrain(point.enemy)) g.save(); return; }
+    if (point.kind === 'restrain') {
+      if (g.net) g.net.act('restrain', { id: point.enemy.id });
+      else if (restrain(point.enemy)) g.save();
+      return;
+    }
     this.current = point;
     this.view = null;
     this.cameraDistance = g.rig.targetDistance;
@@ -171,8 +184,8 @@ export class TownActions {
       text = offerText(life, def);
       actions = [{ id: `accept:${def.id}`, label: 'Take the job' }, { id: 'back', label: 'Not now' }];
     } else if (this.view?.posters) {
-      text = defs.filter((d) => d.type === 'bounty').map((d) => `${d.title.replace('Wanted: ', '')} · ${d.threat} threat · ${d.want === 'either' ? 'dead or alive' : d.want} · $${d.reward.money}${d.want === 'either' ? ` ($${d.aliveReward} alive)` : ''} · ${statusWord(life.quests[d.id].status)}`).join('\n');
-      actions = defs.filter((d) => d.type === 'bounty' && life.quests[d.id].status === 'offered').map((d) => ({ id: `offer:${d.id}`, label: `Read: ${d.title.replace('Wanted: ', '')}` }));
+      text = defs.filter((d) => d.type === 'bounty' && d.giver === npc).map((d) => `${d.title.replace('Wanted: ', '')} · ${d.threat} threat · ${d.want === 'either' ? 'dead or alive' : d.want} · $${d.reward.money}${d.want === 'either' ? ` ($${d.aliveReward} alive)` : ''} · ${statusWord(life.quests[d.id].status)}`).join('\n');
+      actions = defs.filter((d) => d.type === 'bounty' && d.giver === npc && life.quests[d.id].status === 'offered').map((d) => ({ id: `offer:${d.id}`, label: `Read: ${d.title.replace('Wanted: ', '')}` }));
       actions.push({ id: 'back', label: 'Step back from the board' });
     } else {
       if (npc) {
@@ -189,9 +202,21 @@ export class TownActions {
         }
         if (def.giver === npc && s === 'offered' && def.type !== 'bounty') actions.push({ id: `offer:${def.id}`, label: `Ask about work: ${def.title}` });
       }
-      if (npc === 'sheriff') {
-        actions.push({ id: 'posters', label: 'Read the wanted board' });
-        actions.push({ id: 'work', label: 'Ask for a day of town work' });
+      if (npc === 'sheriff' || npc === 'hale') actions.push({ id: 'posters', label: 'Read the wanted board' });
+      if (npc === 'sheriff') actions.push({ id: 'work', label: 'Ask for a day of town work' });
+      if (BARKEEPS.has(npc)) {
+        actions.push({ id: 'drink:beer', label: `Have a beer at the bar · $${ITEMS.beer.price}`, disabled: life.bounty < ITEMS.beer.price });
+        actions.push({ id: 'drink:whiskey', label: `Knock back a whiskey · $${ITEMS.whiskey.price}`, disabled: life.bounty < ITEMS.whiskey.price });
+      }
+      if (PELT_BUYERS.has(npc)) {
+        const worth = Object.entries(PELTS).reduce((sum, [id, p]) => sum + (life.items[id] ?? 0) * p.price, 0);
+        if (worth) actions.push({ id: 'sell-pelts', label: `Sell your hides and pelts · $${worth}` });
+      }
+      for (const def of defs) {
+        const s = life.quests[def.id], step = def.steps?.[s.step ?? 0];
+        if (def.type === 'chain' && def.turnIn === npc && s.status === 'active' && step?.kind === 'bring') {
+          actions.push({ id: `bring:${def.id}`, label: `Hand over ${step.count} ${PELTS[step.item].name.toLowerCase()}s (${life.items[step.item] ?? 0} carried)`, disabled: (life.items[step.item] ?? 0) < step.count });
+        }
       }
       if (npc === 'martha') {
         for (const def of defs) {
@@ -257,6 +282,7 @@ export class TownActions {
       const item = id.slice(4);
       result = buy(life, item, shop);
       if (result.ok && CATALOGUE[item].kind === 'horse') g.spawnHorse();
+      if (result.ok && item === 'heal') g.net?.act('heal', { src: 'treat' });
     } else if (id === 'work' && npc === 'sheriff') result = work(life);
     else if (id.startsWith('lead:') && npc === 'martha') {
       resultIsSpeech = true;
@@ -281,6 +307,17 @@ export class TownActions {
       result = { ok: true, message: 'Take this letter to Clara. Please.' };
     } else if (id === 'amos:parcel') { resultIsSpeech = true; g.questEvent({ type: 'talk', npc: 'amos' }); result = { ok: true, message: 'Tell Nora thanks.' }; }
     else if (id === 'sell-medicine') result = sellMedicine(life, defs);
+    else if (id.startsWith('drink:') && BARKEEPS.has(npc)) {
+      const what = id.slice(6), price = ITEMS[what].price;
+      if (life.bounty < price) result = { ok: false, message: `You need $${price}.` };
+      else { life.bounty -= price; life.items[what] = (life.items[what] ?? 0) + 1; result = drink(g, what); resultIsSpeech = false; }
+    } else if (id === 'sell-pelts' && PELT_BUYERS.has(npc)) {
+      let paid = 0;
+      for (const [pid, p] of Object.entries(PELTS)) { paid += (life.items[pid] ?? 0) * p.price; life.items[pid] = 0; }
+      life.bounty += paid;
+      result = { ok: paid > 0, message: paid ? `Paid $${paid} for your skins.` : 'You have nothing to sell.' };
+      if (paid) g.audio.play('coin', { bus: 'ui', vol: 0.7 });
+    } else if (id.startsWith('bring:')) { resultIsSpeech = true; result = bringStep(life, defs, id.slice(6)); }
     else if (id.startsWith('blackjack:') && this.current.kind === 'blackjack') {
       const [, move, bet] = id.split(':');
       const moves = { hit: hitBlackjack, stand: standBlackjack, double: doubleBlackjack, split: splitBlackjack };

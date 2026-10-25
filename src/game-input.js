@@ -1,5 +1,6 @@
 // Reads keyboard and mouse into the game's intent once per frame, and opens
 // menus. Riding, sneaking, the journal and interactions start here.
+import { smoke } from './vices.js';
 import { T } from './tuning.js';
 
 export function updateIntent(game) {
@@ -36,6 +37,7 @@ export function updateIntent(game) {
     if (g.lootNearest()) return;
   }
   if (g.state === 'playing' && inp.pressed('bandage')) g.useBandage();
+  if (g.state === 'playing' && inp.pressed('smoke') && p) smoke(p);
   if (g.state === 'playing' && inp.pressed('mount') && g.horse) {
     if (g.horse.mounted) g.ui.toast('Hold E to get off');
     else if (Math.hypot(g.horse.x - p.x, g.horse.z - p.z) < 2.6) g.horse.mount();

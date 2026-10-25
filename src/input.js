@@ -20,6 +20,7 @@ export const BINDINGS = {
   mount: ['KeyF'],
   whistle: ['KeyV'],
   sneak: ['KeyC'],
+  smoke: ['KeyB'],
   pause: ['Escape', 'KeyP'],
   map: ['KeyM', 'Tab'],
   debug: ['Backquote'],
@@ -39,6 +40,8 @@ export class Input {
     this.lastActivity = performance.now();
 
     addEventListener('keydown', (e) => {
+      // Typing a name or a chat line is not playing.
+      if (e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
       if (BLOCK_DEFAULT.has(e.code)) e.preventDefault();
       if (!e.repeat) this.edges.add(e.code);
       this.down.add(e.code);

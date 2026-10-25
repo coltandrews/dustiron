@@ -73,7 +73,7 @@ export function tickProgress(game) {
   if (!p?.alive) return;
   if (!game.frontier.inside) {
     for (const site of run.world.sites) {
-      if (site.kind !== 'landmark' || Math.hypot(site.x - p.x, site.z - p.z) > 14) continue;
+      if (!['landmark', 'mill', 'den'].includes(site.kind) || Math.hypot(site.x - p.x, site.z - p.z) > 14) continue;
       questEvent(game, { type: 'visit', siteId: site.id });
     }
   }

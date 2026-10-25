@@ -14,7 +14,51 @@ const LOOKS = {
   amos: { shirt: 0x8a7a5a, vest: 0x5b4127, hat: 0x6b5236, band: PAL.woodDark, pants: 0x3f4a5a },
   eli: { shirt: 0xd9c9a6, vest: 0x4b5a4a, hat: 0x9a7447, band: PAL.woodDark, pants: 0x514338, scarf: 0x8e3f39 },
   juan: { shirt: 0xb85c3a, vest: 0x2f2a27, hat: 0xc9a273, band: 0x8e3f39, pants: 0x3a3330, scarf: 0xe0b450 },
+  otto: { shirt: 0x7a3a2a, vest: 0x5a4632, hat: 0x6a5a42, band: 0x2e2420, pants: 0x4a4436, scarf: 0xb79b70 },
 };
+
+function lodge(s, x, z, game) {
+  for (let y = 0.2; y < 2.8; y += 0.36) {
+    for (const side of [-1, 1]) s.cyl(0.18, 0.18, 6.4, 6, 0x6a4a32, x, y, z + side * 2.5, 0, 0, Math.PI / 2);
+    for (const side of [-1, 1]) s.cyl(0.18, 0.18, 5.4, 6, 0x7a5638, x + side * 3, y + 0.18, z, Math.PI / 2);
+  }
+  s.box(6, 2.8, 5, 0x5a3f2b, x, 1.4, z);
+  for (const side of [-1, 1]) s.box(6.8, 0.2, 3.4, 0x4a4038, x, 3.5, z + side * 1.4, side * 0.6);
+  s.box(1.1, 2.1, 0.1, PAL.woodDark, x, 1.05, z + 2.7);
+  s.box(0.6, 3.8, 0.6, PAL.rockDark, x - 2.4, 1.9, z - 1.2);
+  // Drying racks with stretched hides and a pile of antlers.
+  for (let i = 0; i < 3; i++) {
+    const rx = x + 4.2 + i * 1.5;
+    s.box(0.1, 1.8, 0.1, PAL.woodDark, rx - 0.6, 0.9, z + 1.5); s.box(0.1, 1.8, 0.1, PAL.woodDark, rx + 0.6, 0.9, z + 1.5);
+    s.box(1.3, 0.08, 0.08, PAL.woodDark, rx, 1.75, z + 1.5);
+    s.box(1, 1.1, 0.05, [0xa0805a, 0x8a6a48, 0x6a5a4a][i], rx, 1.15, z + 1.5);
+  }
+  for (let i = 0; i < 4; i++) s.cyl(0.03, 0.05, 0.8, 4, PAL.bone, x - 3.5 + i * 0.2, 0.35, z + 2.4, 0.6, i, 0.4);
+  game.physics.fixedBox(x, 1.4, z, 3.1, 1.4, 2.6, 0, GROUPS.world);
+}
+
+function mill(s, x, z, game) {
+  // Charred posts and beams, a fallen saw blade and the stacked logs nobody took.
+  for (const [dx, dz, h] of [[-4, -3, 3.2], [0, -3, 1.6], [4, -3, 2.6], [-4, 3, 2.2], [4, 3, 3.4], [0, 3, 0.9]]) s.box(0.35, h, 0.35, 0x2c2420, x + dx, h / 2, z + dz);
+  s.box(8.6, 0.3, 0.35, 0x2c2420, x, 3.1, z - 3, 0, 0, 0.08);
+  s.box(9, 0.2, 7, 0x3a2e28, x, 0.1, z);
+  s.cyl(1.3, 1.3, 0.06, 16, 0x8a8a90, x + 1.2, 0.15, z + 0.4, Math.PI / 2 - 0.08, 0.3, 0);
+  for (let i = 0; i < 5; i++) s.cyl(0.32, 0.32, 5, 7, 0x6a4a32, x - 7, 0.32 + Math.floor(i / 3) * 0.55, z - 1.4 + (i % 3) * 0.66 + Math.floor(i / 3) * 0.33, 0, 0, Math.PI / 2);
+  for (let i = 0; i < 8; i++) s.box(0.5, 0.06, 0.5, 0x1e1a18, x - 3 + i * 0.9, 0.22, z + Math.sin(i) * 2, 0, i, 0);
+  game.physics.fixedBox(x - 7, 0.6, z - 0.7, 2.5, 0.6, 1.1, 0, GROUPS.world);
+}
+
+function den(s, x, z, game) {
+  // A dark hollow under a heap of mossy boulders, with bones at the mouth.
+  s.rock(5, 0x6f6c62, x, 2.2, z - 2, 0.8, 0.25, 41);
+  s.rock(3.4, 0x7d7a70, x - 4, 1.4, z, 0.9, 0.3, 42);
+  s.rock(3, 0x5b7a40, x + 3.6, 1.3, z - 0.5, 0.7, 0.3, 43);
+  s.box(2.6, 1.8, 0.1, 0x14100e, x, 0.9, z + 2.4);
+  for (let i = 0; i < 5; i++) s.box(0.06, 0.06, 0.6, PAL.bone, x - 1 + i * 0.5, 0.04, z + 3.4 + Math.sin(i) * 0.4, 0, i, 0);
+  game.physics.fixedCylinder(x, 2, z - 2, 2, 4.2, GROUPS.world);
+  game.physics.fixedCylinder(x - 4, 1.4, z, 1.4, 2.8, GROUPS.world);
+  game.physics.fixedCylinder(x + 3.6, 1.3, z - 0.5, 1.3, 2.4, GROUPS.world);
+}
 export const VISIT_RANGE = 14;
 
 function homestead(s, x, z, game) {
@@ -68,13 +112,13 @@ function merchantCamp(s, x, z, game) {
 /** Camp positions for objects that sit inside a camp, such as the medicine chest. */
 export function campFire(game, camp) {
   const index = game.run.world.camps.indexOf(camp);
-  const layout = generateCamp(game.run.seed + index * 104729, camp.difficulty);
+  const layout = generateCamp((game.run.world.seed ?? game.run.seed) + index * 104729, camp.difficulty);
   return { x: camp.x + layout.campfire.x, z: camp.z + layout.campfire.z };
 }
 
 export function buildWorldPoints(game, group) {
   const run = game.run, world = run.world, s = new Shape(), shade = [], npcs = [], points = [];
-  const rng = createRng(run.seed ^ 0x706f696e);
+  const rng = createRng((world.seed ?? run.seed) ^ 0x706f696e);
   const state = (id) => run.known[id];
   const npc = (id, name, x, z, yaw, seated = false) => {
     const model = townsperson(LOOKS[id]);
@@ -110,6 +154,15 @@ export function buildWorldPoints(game, group) {
       game.physics.fixedBox(x, 0.8, z, 1.4, 0.8, 1.8, 0, GROUPS.world);
       shade.push(blot(x, z, 3, 2.4, 0x7a5a3a, 0.35));
       if (state(site.id) !== 'looted') points.push({ id: site.id, kind: 'loot', label: 'Search the wagon', x: x + 1.8, z: z + 0.6, site });
+    } else if (site.kind === 'lodge') {
+      lodge(s, x, z, game);
+      const otto = npc('otto', 'Otto Brandt', x + 1.2, z + 3.6, 0.2);
+      points.push({ id: 'otto', kind: 'npc', npc: 'otto', name: otto.name, x: otto.x, z: otto.z, site });
+    } else if (site.kind === 'mill') {
+      mill(s, x, z, game);
+      shade.push(blot(x, z, 7, 5.5, 0x1e1a18, 0.45));
+    } else if (site.kind === 'den') {
+      den(s, x, z, game);
     } else if (site.kind === 'grave') {
       grave(s, x, z);
       points.push({ id: site.id, kind: 'grave', label: 'Read the marker', x, z: z + 0.4, site });

@@ -8,6 +8,7 @@ import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Game, loadSave } from './game.js';
+import { NetUI } from './net-ui.js';
 
 async function openDebug(game) {
   if (game.gui) { game.gui.show(game.gui._hidden); return; }
@@ -40,6 +41,7 @@ async function boot() {
   const audio = new Audio();
   const game = new Game({ render, rig, input, audio, ui });
   window.dustiron = game;
+  const netUI = new NetUI(game);
 
   const resize = () => { render.resize(rig.camera); if (game.state === 'map') game.mapView.draw(game); };
   resize();
@@ -61,7 +63,7 @@ async function boot() {
   addEventListener('keydown', firstGesture, { once: true });
 
   addEventListener('keydown', (e) => {
-    if (e.repeat) return;
+    if (e.repeat || e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
     else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
@@ -94,6 +96,7 @@ async function boot() {
         if (n === T.sim.maxTicksPerFrame) acc = 0;
       }
       game.frame(dt, acc / step);
+      netUI.update(dt);
       input.endFrame();
     } catch (e) {
       failed = true;

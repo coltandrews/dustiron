@@ -190,6 +190,19 @@ export function bankJobs(ctx) {
       return (t) => { let v = 0; for (const [at, d] of rips) if (t >= at && t < at + d) v += h(l(N(), 5000), 1200) * Math.sin(Math.PI * (t - at) / d) * (0.7 + 0.3 * Math.sin(t * 900)); return v * 0.8; };
     })],
     ['heal', () => make(0.9, () => { const a = OSC(), b = OSC(); return (t) => (a(523) * env(t, 0.01, 4) + (t > 0.12 ? b(784) * env(t - 0.12, 0.01, 4) : 0)) * 0.3; })],
+    // A match strike and flare, then a soft draw on the cigarette.
+    ['match', () => make(1.2, () => {
+      const h = HP(), l = LP();
+      return (t) => (t < 0.09 ? h(N(), 2500) * Math.sin(Math.PI * t / 0.09) * 0.9 : 0)
+        + (t > 0.08 && t < 0.5 ? l(N(), 1800) * Math.exp(-(t - 0.08) * 7) * 0.5 : 0)
+        + (t > 0.6 ? l(N(), 900) * Math.sin(Math.PI * Math.min(1, (t - 0.6) / 0.6)) * 0.35 : 0);
+    })],
+    // Two swallows from a glass.
+    ['gulp', () => make(0.7, () => {
+      const a = OSC(), l = LP();
+      const g = (t, at) => (t >= at && t < at + 0.14 ? a(sweep(t - at, 180, 90, 0.14)) * Math.sin(Math.PI * (t - at) / 0.14) : 0);
+      return (t) => (g(t, 0.05) + g(t, 0.32)) * 0.6 + l(N(), 600) * 0.05 * Math.exp(-t * 3);
+    })],
   );
   return jobs.concat(worldJobs(k, ctx));
 }

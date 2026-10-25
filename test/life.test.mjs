@@ -4,10 +4,10 @@ import { WORLD_HALF, createLife, normalizeLife, migrateLife, discover, isDiscove
 import { buy } from '../src/items.js';
 import { BRIDGES, RIVER_MAX_X, RIVER_MIN_X, inRiver, riverCenter, riverTangent, riverWidth } from '../src/terrain.js';
 
-test('the river crosses the full land and has three valid bridges', () => {
+test('the river crosses the full land and has five valid bridges', () => {
   assert.ok(RIVER_MIN_X < -WORLD_HALF);
   assert.ok(RIVER_MAX_X > WORLD_HALF);
-  assert.equal(BRIDGES.length, 3);
+  assert.equal(BRIDGES.length, 5);
   assert.ok(Math.abs(riverTangent(0)) < 0.01);
   for (const bridge of BRIDGES) {
     const center = riverCenter(bridge.x);

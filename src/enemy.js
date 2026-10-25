@@ -37,6 +37,19 @@ export const BANDIT_TYPES = {
     mag: 5, reload: 1.8, bounty: 40, usesCover: true, sight: 20, flanks: true,
   },
   // Watches the approaches, shouts the camp awake and keeps his distance.
+  // A gang's second: hard to drop, three-round bursts, flanks.
+  captain: {
+    look: 'captain', hp: 280, speed: 4.0, gun: 'heavy', aim: 0.4, burst: 3, burstGap: 0.26, pellets: 1,
+    dmg: 18, bulletSpeed: 46, spreadDeg: 3.2, cooldown: [0.9, 1.6], range: [5, 13], fireRange: 22,
+    mag: 6, reload: 1.6, bounty: 60, usesCover: true, sight: 22, flanks: true, armor: 0.8, stagger: 0.5, noFlee: true, scale: 1.08,
+  },
+  // Iron Jack Kell: an iron-plated coat, long bursts, and a rage at half health.
+  boss: {
+    look: 'boss', hp: 700, speed: 3.5, gun: 'heavy', aim: 0.5, burst: 4, burstGap: 0.2, pellets: 1,
+    dmg: 17, bulletSpeed: 48, spreadDeg: 4, cooldown: [1.2, 1.9], range: [6, 15], fireRange: 24,
+    mag: 8, reload: 2.2, bounty: 150, usesCover: true, sight: 26, armor: 0.55, stagger: 0.15, noFlee: true, boss: true, scale: 1.2,
+    enraged: { burst: 7, burstGap: 0.13, cooldown: [0.6, 1.0], speed: 4.6, aim: 0.36, reload: 1.4, pellets: 2, spreadDeg: 6 },
+  },
   scout: {
     look: 'scout', hp: 55, speed: 5.0, gun: 'repeater', aim: 0.55, burst: 1, burstGap: 0, pellets: 1,
     dmg: 12, bulletSpeed: 48, spreadDeg: 3, cooldown: [1.4, 2.4], range: [12, 19], fireRange: 26,
@@ -105,7 +118,9 @@ export class Bandit {
     this.bodyY = cap.y;
 
     const look = LOOKS[this.def.look];
-    this.model = addRollPivot(makeCharacter(target ? { ...look, hat: 0x9d302b, band: 0xe4bf6c } : look));
+    this.model = addRollPivot(makeCharacter(target && !this.def.boss ? { ...look, hat: 0x9d302b, band: 0xe4bf6c } : look));
+    if (this.def.scale) this.model.root.scale.setScalar(this.def.scale);
+    this.enraged = false;
     showGun(this.model, this.def.gun);
     this.model.root.position.set(x, 0, z);
     game.levelGroup.add(this.model.root);
@@ -127,7 +142,7 @@ export class Bandit {
     const d = Math.hypot(dx, dz);
     let see = false;
     // Walking slowly keeps the player harder to spot; running draws the eye.
-    const sight = this.def.sight * (P.sneaking ? 0.6 : P.moveFraction > 0.75 ? 1.1 : 1);
+    const sight = this.def.sight * (this.game.sightScale?.() ?? 1) * (P.sneaking ? 0.6 : P.moveFraction > 0.75 ? 1.1 : 1);
     if (d < sight) {
       const off = Math.abs(angleDelta(this.yaw, Math.atan2(dx, dz)));
       if (d < T.enemy.closeSense || this.knows || off < (T.enemy.sightFovDeg * DEG) / 2) {
@@ -327,24 +342,39 @@ export class Bandit {
   /** @returns {{killed:boolean, crit:boolean}} */
   onHit(dmg, dirX, dirZ, knock) {
     if (!this.alive) return { killed: false, crit: false };
-    const crit = !this.knows && !this.surrendered;
+    const crit = !this.knows && !this.surrendered && !this.def.armor;
+    dmg *= this.def.armor ?? 1;
+    knock *= this.def.stagger ?? 1;
     this.hp -= crit ? dmg * 2 : dmg;
+    if (this.def.enraged && !this.enraged && this.hp > 0 && this.hp < this.maxHp * 0.5) this.enrage();
     if (this.hp > 0 && !this.surrendered && this.shouldSurrender()) { surrender(this); return { killed: false, crit }; }
     this.flash = 0.06;
     this.kx += dirX * knock * 2.2;
     this.kz += dirZ * knock * 2.2;
     const P = this.game.player;
-    this.lastSeenX = P.x; this.lastSeenZ = P.z; this.lastSeenT = this.game.time;
+    if (P) { this.lastSeenX = P.x; this.lastSeenZ = P.z; this.lastSeenT = this.game.time; }
     if (this.hp <= 0) { this.die(dirX, dirZ, 3 + knock * 1.5); return { killed: true, crit }; }
     if (!this.knows) { this.knows = true; this.engageAfterAlert(); this.game.shout(this); }
     this.game.audio.at('enemyHurt', this.x, this.z, { vol: 0.6 });
-    if (!this.fleeing && this.hp < this.maxHp * 0.25 && this.game.aliveFraction(this.encounter) <= 0.5 && this.type !== 'rusher') {
+    if (!this.fleeing && !this.def.noFlee && this.hp < this.maxHp * 0.25 && this.game.aliveFraction(this.encounter) <= 0.5 && this.type !== 'rusher') {
       this.fleeing = true;
       this.releaseToken();
       this.cover = null;
       this.setState('toCover');
     }
     return { killed: false, crit };
+  }
+
+  /** Half dead, the boss throws off caution: faster, longer bursts and the whole camp called in. */
+  enrage() {
+    if (this.enraged || !this.def.enraged) return;
+    this.enraged = true;
+    this.def = { ...this.def, ...this.def.enraged };
+    const g = this.game;
+    g.audio.at('enemyHurt', this.x, this.z, { vol: 1.2, pitch: 0.5 });
+    g.addTrauma?.(0.25);
+    if (g.player && Math.hypot(g.player.x - this.x, g.player.z - this.z) < 60) g.ui?.toast?.(`${this.encounter.targetName ?? 'The boss'} roars and comes for you!`, 3);
+    for (const e of this.encounter.enemies) if (e !== this && e.alive && !e.knows) e.hear(this.x, this.z, true);
   }
 
   /** A wounded bounty target gives up so they can be taken alive. */
