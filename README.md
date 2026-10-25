@@ -1,6 +1,6 @@
 # Dust & Iron
 
-A western with one life: two towns, a desert and a pine forest, outlaw camps, a gang boss, hunting, saloons and dice. Play alone in the browser, or ride online in one shared world with up to 20 people. Built with Three.js, Rapier, and plain JavaScript modules.
+A western with one life: two towns, a desert and a pine forest, outlaw camps, a gang boss, hunting, saloons and dice, in one shared online world for up to 20 people. Pick a name and spawn in; next time, continue as that rider. Built with Three.js, Rapier, and plain JavaScript modules.
 
 Play at [dustiron.vercel.app](https://dustiron.vercel.app/).
 

@@ -527,7 +527,8 @@ kbd {
 }
 
 /* ---------- online ---------- */
-.online-join { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(233, 214, 178, 0.18); }
+.online-join { display: grid; gap: 10px; }
+.join-who { margin: 0; font-size: 17px; color: #f2dfbd; }
 .online-join .guide-title { margin: 0; }
 .online-join .fine { margin: 0; }
 .online-name { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
@@ -691,13 +692,8 @@ kbd {
       <div class="title-brand">
         <h1>Dust <span>&amp;</span> Iron</h1>
       </div>
-      <div class="title-menu panel">
-        <div class="actions stack">
-          <button id="btn-start" class="btn primary" type="button">Start a new life</button>
-          <button id="btn-continue" class="btn" type="button" hidden>Continue life</button>
-        </div>
-        <p class="continue-info" id="continue-info" hidden></p>
-      </div>
+      <!-- The join form (name, Spawn in / Continue) is built by net-ui.js. -->
+      <div class="title-menu panel"></div>
       <div class="title-guide panel">
         <h2 class="guide-title">Controls</h2>
         <dl class="controls">
@@ -5089,9 +5085,7 @@ class UI {
   }
 
   bind(handlers) {
-    const on = (id, fn) => $(id).addEventListener('click', (e) => { e.stopPropagation(); fn(); });
-    on('btn-start', handlers.newRun);
-    on('btn-continue', handlers.continueRun);
+    const on = (id, fn) => $(id)?.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
     on('btn-resume', handlers.resume);
     on('btn-quit', handlers.quitToTitle);
     on('btn-restart', handlers.newRun);
@@ -5135,7 +5129,9 @@ class UI {
     this.show('journal');
   }
 
+  /** Offline saves are no longer offered on the title; kept for the test harness. */
   setContinue(save) {
+    if (!this.el.continueBtn || !this.el.continueInfo) return;
     this.el.continueBtn.hidden = !save;
     this.el.continueInfo.hidden = !save;
     if (save) this.el.continueInfo.textContent = `${save.bounty} · ${Math.round(save.hp)} HP · ${save.camp} camps cleared`;
@@ -14090,14 +14086,14 @@ class NetUI {
   drawJoin(message = '') {
     const box = this.joinBox, { name, token } = savedIdentity(), known = !!(token && name);
     box.innerHTML = `
-      <h2 class="guide-title">Ride online</h2>
-      <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
       ${known ? `
-        <button id="btn-online" class="btn primary" type="button">Ride online as ${esc(name)}</button>
+        <p class="join-who">Welcome back, <b>${esc(name)}</b>.</p>
+        <button id="btn-online" class="btn primary" type="button">Continue as ${esc(name)}</button>
         <button id="btn-new-rider" class="btn link-btn" type="button">Start a different rider</button>`
       : `
         <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
-        <button id="btn-online" class="btn primary" type="button">Create rider and ride</button>`}
+        <button id="btn-online" class="btn primary" type="button">Spawn in</button>`}
+      <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
       <p class="online-status" id="online-status" aria-live="polite"></p>`;
     this.nameInput = box.querySelector('#online-name');
     this.status = box.querySelector('#online-status');
@@ -14354,7 +14350,7 @@ const { CameraRig } = __m.camera;
 const { Input } = __m.input;
 const { Audio } = __m.audio;
 const { UI } = __m.ui;
-const { Game, loadSave } = __m.game;
+const { Game } = __m.game;
 const { NetUI } = __m.net_ui;
 async function openDebug(game) {
   if (game.gui) { game.gui.show(game.gui._hidden); return; }
@@ -14395,12 +14391,10 @@ async function boot() {
 
   ui.bind({
     newRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); game.newRun(); },
-    continueRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); },
     resume: () => game.pause(false),
     closeMap: () => game.closeMap(),
     quitToTitle: () => game.quitToTitle(),
   });
-  ui.setContinue(loadSave());
   ui.bindSound(audio);
   ui.show('title');
   // Browsers only allow sound after a gesture: the first click or key starts the title theme.
@@ -14411,7 +14405,7 @@ async function boot() {
   addEventListener('keydown', (e) => {
     if (e.repeat || e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
-    else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
+    else if (game.state === 'title' && e.code === 'Enter') netUI.join();
     else if (e.code === 'F2' || e.code === 'KeyI') { e.preventDefault(); fps.hidden = !fps.hidden; }
     else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
   });

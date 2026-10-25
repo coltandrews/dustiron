@@ -515,7 +515,8 @@ kbd {
 }
 
 /* ---------- online ---------- */
-.online-join { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(233, 214, 178, 0.18); }
+.online-join { display: grid; gap: 10px; }
+.join-who { margin: 0; font-size: 17px; color: #f2dfbd; }
 .online-join .guide-title { margin: 0; }
 .online-join .fine { margin: 0; }
 .online-name { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }

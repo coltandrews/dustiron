@@ -77,9 +77,7 @@ export class UI {
   }
 
   bind(handlers) {
-    const on = (id, fn) => $(id).addEventListener('click', (e) => { e.stopPropagation(); fn(); });
-    on('btn-start', handlers.newRun);
-    on('btn-continue', handlers.continueRun);
+    const on = (id, fn) => $(id)?.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
     on('btn-resume', handlers.resume);
     on('btn-quit', handlers.quitToTitle);
     on('btn-restart', handlers.newRun);
@@ -123,7 +121,9 @@ export class UI {
     this.show('journal');
   }
 
+  /** Offline saves are no longer offered on the title; kept for the test harness. */
   setContinue(save) {
+    if (!this.el.continueBtn || !this.el.continueInfo) return;
     this.el.continueBtn.hidden = !save;
     this.el.continueInfo.hidden = !save;
     if (save) this.el.continueInfo.textContent = `$${save.bounty} · ${Math.round(save.hp)} HP · ${save.camp} camps cleared`;

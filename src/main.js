@@ -7,7 +7,7 @@ import { CameraRig } from './camera.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { UI } from './ui.js';
-import { Game, loadSave } from './game.js';
+import { Game } from './game.js';
 import { NetUI } from './net-ui.js';
 
 async function openDebug(game) {
@@ -49,12 +49,10 @@ async function boot() {
 
   ui.bind({
     newRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); game.newRun(); },
-    continueRun: () => { audio.unlock(); audio.play('uiClick', { bus: 'ui' }); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); },
     resume: () => game.pause(false),
     closeMap: () => game.closeMap(),
     quitToTitle: () => game.quitToTitle(),
   });
-  ui.setContinue(loadSave());
   ui.bindSound(audio);
   ui.show('title');
   // Browsers only allow sound after a gesture: the first click or key starts the title theme.
@@ -65,7 +63,7 @@ async function boot() {
   addEventListener('keydown', (e) => {
     if (e.repeat || e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
-    else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
+    else if (game.state === 'title' && e.code === 'Enter') netUI.join();
     else if (e.code === 'F2' || e.code === 'KeyI') { e.preventDefault(); fps.hidden = !fps.hidden; }
     else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
   });

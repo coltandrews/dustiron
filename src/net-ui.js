@@ -47,14 +47,14 @@ export class NetUI {
   drawJoin(message = '') {
     const box = this.joinBox, { name, token } = savedIdentity(), known = !!(token && name);
     box.innerHTML = `
-      <h2 class="guide-title">Ride online</h2>
-      <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
       ${known ? `
-        <button id="btn-online" class="btn primary" type="button">Ride online as ${esc(name)}</button>
+        <p class="join-who">Welcome back, <b>${esc(name)}</b>.</p>
+        <button id="btn-online" class="btn primary" type="button">Continue as ${esc(name)}</button>
         <button id="btn-new-rider" class="btn link-btn" type="button">Start a different rider</button>`
       : `
         <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
-        <button id="btn-online" class="btn primary" type="button">Create rider and ride</button>`}
+        <button id="btn-online" class="btn primary" type="button">Spawn in</button>`}
+      <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
       <p class="online-status" id="online-status" aria-live="polite"></p>`;
     this.nameInput = box.querySelector('#online-name');
     this.status = box.querySelector('#online-status');
