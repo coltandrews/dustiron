@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 dist/
 dist-single/game.js
 .DS_Store
