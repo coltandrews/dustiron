@@ -45,7 +45,7 @@ Open http://localhost:8080 in two browser windows (one private window works), ty
 - One persistent world everyone shares. Each rider still has one life: death is permanent and the next life starts fresh in Mercy Crossing.
 - Towns and shop rooms are safe. Outside town, riders can shoot each other.
 - Press **G** near another rider to call them out. A duel can be to first blood (nobody dies) or to the death, with an optional wager held by the server. In town, G also offers a game of **poker dice** for a stake.
-- **T** opens chat. The rider list and ping are under the money.
+- **Enter** opens chat, in an MMO-style chat frame at the lower left with All, World and Whispers tabs. Say (nearby, shown in a speech bubble over your head), `/y` yell, `/g` world, `/w Name` whisper, `/r` reply; click a name to whisper. The rider list and ping are under the money.
 - Camps cleared by anyone come back after twelve minutes. Everyone near a kill gets quest credit.
 - Animals are shared too: the server runs the herds, so everyone sees the same deer and the same wolves, and a carcass can be skinned once. Horses left standing show for everyone nearby.
 
@@ -91,7 +91,7 @@ The machine stops when nobody is connected and starts again on the next visit (a
 | Talk or use a shop | E or Enter |
 | Use a bandage | H |
 | Smoke a cigarette or cigar | B |
-| Chat (online) | T |
+| Chat (online) | Enter or T; `/s` say, `/y` yell, `/g` world, `/w Name` whisper, `/r` reply |
 | Duel or dice with a rider (online) | G, then Y / X to answer |
 | Map | M or Tab (pauses the fight) |
 | Pause | Esc |

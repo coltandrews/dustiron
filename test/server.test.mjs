@@ -64,10 +64,16 @@ test('riders join one shared world, see each other and chat', async (t) => {
   const snap = await a.wait((m) => m.t === 's' && m.p.some((row) => row[0] === wb.id && row[1] === 3));
   const row = snap.p.find((r) => r[0] === wb.id);
   assert.equal(row[2], 12);
-  await a.send({ t: 'chat', text: 'Howdy' });
+  await a.send({ t: 'chat', ch: 'say', text: 'Howdy' });
   const line = await b.wait((m) => m.t === 'chat' && m.from === wa.id);
   assert.equal(line.text, 'Howdy');
   assert.equal(line.name, 'Ada');
+  assert.equal(line.ch, 'say');
+  await sleep(750);
+  await b.send({ t: 'chat', ch: 'whisper', to: 'ada', text: 'psst' });
+  const whisper = await a.wait((m) => m.t === 'chat' && m.ch === 'whisper');
+  assert.equal(whisper.text, 'psst');
+  assert.equal(whisper.to, 'Ada');
   const taken = await enter(port, 'ada');
   assert.equal(taken.welcome.t, 'err', 'names are unique');
   a.close(); b.close();
@@ -288,4 +294,21 @@ test('on Cloudflare the world is saved to remote storage and survives a restart'
   assert.ok(again.welcome.life.world?.camps?.length > 0, 'world data is rebuilt on load');
   again.r.close();
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('saying something only reaches riders nearby; the world channel reaches everyone', async (t) => {
+  const { port } = await withServer(t);
+  const { r: a, welcome: wa } = await enter(port, 'Oz');
+  const { r: b } = await enter(port, 'Pip');
+  await a.send({ t: 'st', x: 0, z: 12, yaw: 0, vx: 0, vz: 0, sp: 0, f: 0, g: 0, r: 0 });
+  // Pip walks far away in legal steps.
+  for (let x = 0; x <= 90; x += 2) { await b.send({ t: 'st', x, z: 12, yaw: 0, vx: 0, vz: 0, sp: 5, f: 0, g: 0, r: 0 }); await sleep(30); }
+  await sleep(60);
+  await a.send({ t: 'chat', ch: 'say', text: 'anyone?' });
+  await assert.rejects(b.wait((m) => m.t === 'chat' && m.from === wa.id, 600), 'too far to hear a say');
+  await sleep(750);
+  await a.send({ t: 'chat', ch: 'world', text: 'hello world' });
+  const line = await b.wait((m) => m.t === 'chat' && m.ch === 'world');
+  assert.equal(line.text, 'hello world');
+  a.close(); b.close();
 });

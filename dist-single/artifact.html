@@ -524,11 +524,11 @@ kbd {
 .online-join .fine { margin: 0; }
 .online-name { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
 .online-name span { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; opacity: 0.8; }
-.online-name input, .chat-form input {
+.online-name input {
   font: inherit; color: #f3e6cc; background: rgba(20, 14, 10, 0.72); border: 1px solid rgba(233, 214, 178, 0.35);
   border-radius: 6px; padding: 8px 10px; min-width: 0; width: 100%; box-sizing: border-box;
 }
-.online-name input:focus, .chat-form input:focus { outline: 2px solid #d9a35a; outline-offset: 1px; }
+.online-name input:focus { outline: 2px solid #d9a35a; outline-offset: 1px; }
 .online-status { min-height: 1.2em; margin: 0; color: #f0c27a; font-size: 14px; }
 .online-roster {
   position: absolute; top: 104px; right: 18px; text-align: right; font-size: 13px; color: #f3e6cc;
@@ -536,13 +536,6 @@ kbd {
 }
 .online-roster:empty { display: none; }
 .roster-names { opacity: 0.75; font-size: 12px; margin-top: 2px; }
-.chat-log {
-  position: absolute; left: 18px; bottom: 120px; width: min(420px, calc(100vw - 36px)); display: grid; gap: 3px;
-  font-size: 14px; color: #f3e6cc; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.6); pointer-events: none;
-}
-.chat-log b { color: #f0c27a; margin-right: 4px; }
-.chat-log i { opacity: 0.8; }
-.chat-form { position: absolute; left: 18px; bottom: 82px; width: min(420px, calc(100vw - 36px)); pointer-events: auto; }
 .duel-banner {
   position: absolute; top: 18%; left: 50%; transform: translateX(-50%); text-align: center; padding: 12px 20px;
   background: rgba(24, 16, 11, 0.82); border: 1px solid rgba(233, 214, 178, 0.35); border-radius: 8px;
@@ -578,6 +571,47 @@ kbd {
 .fps-meter { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 3px 8px; font: 600 12px/1.2 monospace; color: #f3e6cc; background: rgba(0, 0, 0, 0.55); border-radius: 3px; pointer-events: none; z-index: 6; }
 .link-btn { background: none; border-color: transparent; color: #cdb894; font-size: 14px; padding: 4px 2px; text-decoration: underline; justify-content: center; }
 .link-btn:hover { background: none; border-color: transparent; color: #f0c978; }
+
+/* ---------- chat frame (lower left) and speech bubbles ---------- */
+.chat-frame {
+  position: absolute; left: var(--edge-l); bottom: var(--edge-b); width: min(440px, calc(100vw - 32px));
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 220px; pointer-events: auto;
+  font: 500 14px/1.35 var(--body); text-shadow: 0 1px 1px #000, 0 0 3px rgba(0, 0, 0, 0.8); transition: opacity 0.4s;
+}
+.chat-frame.idle { opacity: 0.55; }
+.chat-frame:hover, .chat-frame.active { opacity: 1; }
+.chat-tabs { display: flex; gap: 2px; opacity: 0; transition: opacity 0.2s; }
+.chat-frame:hover .chat-tabs, .chat-frame.active .chat-tabs { opacity: 1; }
+.chat-tabs button {
+  appearance: none; border: 1px solid rgba(201, 161, 92, 0.45); border-bottom: 0; border-radius: 4px 4px 0 0; padding: 3px 10px;
+  background: rgba(20, 13, 9, 0.7); color: #cdb894; font: 600 12px/1.2 var(--body); cursor: pointer;
+}
+.chat-tabs button.on { background: rgba(60, 38, 24, 0.9); color: #f3e6cc; }
+.chat-lines {
+  overflow-y: auto; padding: 6px 8px; border-radius: 0 4px 4px 4px; background: transparent; transition: background 0.2s;
+  scrollbar-width: thin; scrollbar-color: rgba(201, 161, 92, 0.5) transparent; overscroll-behavior: contain;
+}
+.chat-frame:hover .chat-lines, .chat-frame.active .chat-lines { background: rgba(14, 9, 6, 0.55); }
+.chat-line { color: #fff; overflow-wrap: anywhere; }
+.chat-line.ch-yell { color: #ff5a4a; font-weight: 700; }
+.chat-line.ch-world { color: #f6c08a; }
+.chat-line.ch-whisper { color: #ff86e6; }
+.chat-line.ch-system { color: #f2e05a; }
+.chat-name { cursor: pointer; }
+.chat-name:hover { text-decoration: underline; }
+.chat-entry { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding: 4px 8px; background: rgba(14, 9, 6, 0.85); border: 1px solid #8a6234; border-radius: 3px; }
+.chat-channel { flex: none; font-weight: 700; color: #fff; }
+.chat-entry[data-ch="yell"] .chat-channel, .chat-entry[data-ch="yell"] input { color: #ff5a4a; }
+.chat-entry[data-ch="world"] .chat-channel, .chat-entry[data-ch="world"] input { color: #f6c08a; }
+.chat-entry[data-ch="whisper"] .chat-channel, .chat-entry[data-ch="whisper"] input { color: #ff86e6; }
+.chat-entry input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #fff; font: inherit; text-shadow: inherit; padding: 2px 0; }
+.chat-bubble {
+  position: absolute; left: 0; top: 0; max-width: 220px; padding: 5px 9px; margin-top: -14px;
+  background: rgba(250, 244, 230, 0.95); color: #21160f; border-radius: 10px; border: 1px solid #8a6234;
+  font: 600 13px/1.3 var(--body); text-shadow: none; overflow-wrap: anywhere; white-space: normal; will-change: transform;
+}
+.chat-bubble::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(250, 244, 230, 0.95); border-bottom: 0; }
+.chat-bubble.yell { border: 2px solid #c0301e; font-weight: 800; color: #7a1a10; }
 
 </style>
 <script type="importmap">
@@ -669,7 +703,7 @@ kbd {
         <div><dt><kbd>J</kbd></dt><dd>Journal</dd></div>
         <div><dt><kbd>C</kbd></dt><dd>Walk quietly</dd></div>
         <div><dt><kbd>B</kbd></dt><dd>Smoke</dd></div>
-        <div><dt><kbd>T</kbd></dt><dd>Chat (online)</dd></div>
+        <div><dt><kbd>Enter</kbd></dt><dd>Chat (online)</dd></div>
         <div><dt><kbd>G</kbd></dt><dd>Duel or dice (online)</dd></div>
         <div><dt><kbd>F</kbd> <kbd>V</kbd></dt><dd>Mount · whistle</dd></div>
         <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
@@ -13752,6 +13786,207 @@ function lifeForServer(run) {
 return { serverUrl, savedIdentity, forgetIdentity, Net, lifeForServer };
 })();
 
+// ---- src/chat.js ----
+__m.chat = (() => {
+// Online chat, in the style of an MMO chat frame: a log in the lower left that
+// keeps its history, colored channels, slash commands, tabs, and speech
+// bubbles over the heads of riders who talk nearby.
+//
+//   Enter or T     open the chat line (/ opens it with a slash)
+//   /s  /say       nearby riders (default)       /y  /yell   everyone within shouting range
+//   /g  /world     everyone on the server        /w Name     whisper    /r  reply
+const { cleanChat } = __m.protocol;
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const HISTORY = 200;
+const TABS = { all: 'All', world: 'World', whisper: 'Whispers' };
+const CHANNEL_LABEL = { say: 'Say', yell: 'Yell', world: 'World', whisper: 'Whisper' };
+const _v = { x: 0, y: 0, z: 0 };
+
+class ChatBox {
+  constructor(game, hud, tagLayer) {
+    this.game = game;
+    this.lines = [];
+    this.tab = 'all';
+    this.channel = 'say';
+    this.whisperTo = null;
+    this.replyTo = null;
+    this.bubbles = new Map();
+    this.lastActivity = 0;
+    this.tagLayer = tagLayer;
+    this.frame = document.createElement('div');
+    this.frame.className = 'chat-frame';
+    this.frame.hidden = true;
+    this.frame.innerHTML = `
+      <div class="chat-tabs">${Object.entries(TABS).map(([k, v]) => `<button type="button" data-tab="${k}" class="${k === 'all' ? 'on' : ''}">${v}</button>`).join('')}</div>
+      <div class="chat-lines" role="log" aria-live="polite"></div>
+      <form class="chat-entry" hidden><span class="chat-channel"></span><input maxlength="140" autocomplete="off" spellcheck="false" aria-label="Chat message"></form>`;
+    hud.appendChild(this.frame);
+    this.list = this.frame.querySelector('.chat-lines');
+    this.form = this.frame.querySelector('.chat-entry');
+    this.input = this.form.querySelector('input');
+    this.label = this.form.querySelector('.chat-channel');
+    this.frame.querySelector('.chat-tabs').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      this.tab = b.dataset.tab;
+      for (const x of this.frame.querySelectorAll('.chat-tabs button')) x.classList.toggle('on', x === b);
+      this.render(true);
+    });
+    // Clicking a name starts a whisper to that rider.
+    this.list.addEventListener('click', (e) => {
+      const name = e.target.closest('[data-name]')?.dataset.name;
+      if (name && name !== this.game.net?.name) this.open(`/w ${name} `);
+    });
+    this.form.addEventListener('submit', (e) => { e.preventDefault(); this.send(); });
+    this.input.addEventListener('input', () => this.parseLive());
+    this.input.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); this.close(); }
+      e.stopPropagation();
+    });
+  }
+
+  get typing() { return document.activeElement === this.input; }
+
+  show(on) {
+    this.frame.hidden = !on;
+    if (!on) { this.close(); this.lines = []; this.render(true); this.clearBubbles(); }
+  }
+
+  // ---------- incoming ----------
+
+  /** A chat message from the server: {ch, from, name, text, to}. System lines have no sender. */
+  receive(m) {
+    const ch = m.from ? (m.ch ?? 'world') : 'system';
+    const me = this.game.net?.id;
+    if (ch === 'whisper' && m.from !== me) this.replyTo = m.name;
+    this.add({ ch, from: m.from, name: m.name, to: m.to, text: m.text, mine: m.from === me });
+    if ((ch === 'say' || ch === 'yell') && m.from) this.bubble(m.from, m.text, ch === 'yell');
+    if (ch === 'whisper' && m.from !== me) this.game.audio.play('quillNote', { bus: 'ui', vol: 0.5, pitch: 1.4 });
+  }
+
+  /** A line written here, not sent by the server. */
+  system(text) { this.add({ ch: 'system', text }); }
+
+  add(line) {
+    line.t = performance.now();
+    this.lines.push(line);
+    if (this.lines.length > HISTORY) this.lines.shift();
+    this.lastActivity = line.t;
+    this.render();
+  }
+
+  format(l) {
+    const who = (name) => `<span class="chat-name" data-name="${esc(name)}">[${esc(name)}]</span>`;
+    switch (l.ch) {
+      case 'say': return `${who(l.name)} says: ${esc(l.text)}`;
+      case 'yell': return `${who(l.name)} yells: ${esc(l.text.toUpperCase())}`;
+      case 'world': return `[World] ${who(l.name)}: ${esc(l.text)}`;
+      case 'whisper': return l.mine ? `To ${who(l.to)}: ${esc(l.text)}` : `${who(l.name)} whispers: ${esc(l.text)}`;
+      default: return esc(l.text);
+    }
+  }
+
+  render(force = false) {
+    const shown = this.lines.filter((l) => this.tab === 'all' || l.ch === this.tab || (this.tab === 'world' && l.ch === 'system'));
+    const atBottom = force || this.list.scrollHeight - this.list.scrollTop - this.list.clientHeight < 30;
+    this.list.innerHTML = shown.map((l) => `<div class="chat-line ch-${l.ch}">${this.format(l)}</div>`).join('');
+    if (atBottom) this.list.scrollTop = this.list.scrollHeight;
+  }
+
+  // ---------- typing ----------
+
+  open(prefill = '') {
+    if (!this.game.net) return;
+    this.form.hidden = false;
+    this.frame.classList.add('active');
+    this.input.value = prefill;
+    this.game.input.clear();
+    this.parseLive();
+    setTimeout(() => { this.input.focus(); this.input.setSelectionRange(this.input.value.length, this.input.value.length); }, 0);
+  }
+
+  close() {
+    this.form.hidden = true;
+    this.frame.classList.remove('active');
+    this.input.blur();
+    this.game.input?.clear();
+  }
+
+  /** Switches channel as soon as a command is typed, like "/y " or "/w Rae ". */
+  parseLive() {
+    const v = this.input.value;
+    const m = v.match(/^\/(s|say|y|yell|g|world|1|r|reply)\s/i) || v.match(/^\/(w|whisper|tell)\s+(\S+)\s/i);
+    if (m) {
+      const cmd = m[1].toLowerCase();
+      if (cmd === 'w' || cmd === 'whisper' || cmd === 'tell') { this.channel = 'whisper'; this.whisperTo = m[2]; }
+      else if (cmd === 'r' || cmd === 'reply') { if (this.replyTo) { this.channel = 'whisper'; this.whisperTo = this.replyTo; } }
+      else this.channel = { s: 'say', say: 'say', y: 'yell', yell: 'yell', g: 'world', world: 'world', 1: 'world' }[cmd];
+      this.input.value = v.slice(m[0].length);
+    }
+    this.label.textContent = this.channel === 'whisper' ? `To ${this.whisperTo}:` : `${CHANNEL_LABEL[this.channel]}:`;
+    this.form.dataset.ch = this.channel;
+  }
+
+  send() {
+    const text = cleanChat(this.input.value);
+    const net = this.game.net;
+    if (text && net) {
+      if (text === '/help') this.system('Chat: /s say (nearby) · /y yell · /g world · /w Name whisper · /r reply. Click a name to whisper.');
+      else net.send({ t: 'chat', ch: this.channel, to: this.channel === 'whisper' ? this.whisperTo : undefined, text });
+    }
+    this.close();
+  }
+
+  // ---------- speech bubbles ----------
+
+  bubble(id, text, yell) {
+    if (!this.tagLayer) return;
+    let b = this.bubbles.get(id);
+    if (!b) {
+      b = { el: document.createElement('div') };
+      b.el.className = 'chat-bubble';
+      this.tagLayer.appendChild(b.el);
+      this.bubbles.set(id, b);
+    }
+    b.el.classList.toggle('yell', yell);
+    b.el.textContent = yell ? text.toUpperCase() : text;
+    b.until = performance.now() + 5000 + text.length * 60;
+  }
+
+  clearBubbles() {
+    for (const b of this.bubbles.values()) b.el.remove();
+    this.bubbles.clear();
+  }
+
+  /** Keeps each bubble over its speaker's head; called every frame. */
+  update() {
+    const g = this.game, now = performance.now();
+    this.frame.classList.toggle('idle', !this.typing && now - this.lastActivity > 30000);
+    if (!this.bubbles.size) return;
+    const camera = g.rig?.camera, w = innerWidth, h = innerHeight, me = g.net?.id;
+    const myRoom = g.frontier?.inside ? g.run?.interior?.id ?? '' : '';
+    for (const [id, b] of this.bubbles) {
+      if (now > b.until) { b.el.remove(); this.bubbles.delete(id); continue; }
+      let pos = null, mounted = false;
+      if (id === me && g.player?.alive) { pos = g.player.model.root.position; mounted = !!g.horse?.mounted; }
+      else {
+        const r = g.netWorld?.remote.get(id);
+        if (r && r.alive && !r.stale && r.room === myRoom) { pos = r.model.root.position; mounted = !!(r.flags & 4); }
+      }
+      if (!pos || !camera) { b.el.hidden = true; continue; }
+      _v.x = pos.x; _v.y = (mounted ? 3.6 : 2.5) + 0.55; _v.z = pos.z;
+      const v = camera.position.clone().set(_v.x, _v.y, _v.z).project(camera);
+      const on = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+      b.el.hidden = !on;
+      if (on) b.el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -100%)`;
+      b.el.style.opacity = String(Math.min(1, (b.until - now) / 600));
+    }
+  }
+}
+
+return { ChatBox };
+})();
+
 // ---- src/poker-dice.js ----
 __m.poker_dice = (() => {
 // Poker dice: five dice each, scored like a poker hand. Shared by the server,
@@ -13800,7 +14035,8 @@ __m.net_ui = (() => {
 // chat, calling someone out for a duel, and answering a call. Also swaps in a
 // new life when the server deals one.
 const { Net, forgetIdentity, savedIdentity } = __m.net;
-const { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE, cleanChat } = __m.protocol;
+const { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE } = __m.protocol;
+const { ChatBox } = __m.chat;
 const { DICE_WAGERS } = __m.poker_dice;
 const FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
@@ -13897,9 +14133,8 @@ class NetUI {
   start(net, welcome) {
     const g = this.game;
     g.net = net;
-    this.lines = [];
-    this.renderChat();
-    net.on('chat', (m) => this.addLine(m.from ? `<b>${esc(m.name)}</b> ${esc(m.text)}` : `<i>${esc(m.text)}</i>`));
+    this.chat?.show(true);
+    net.on('chat', (m) => this.chat?.receive(m));
     net.on('life', (m) => this.onLife(m));
     net.on('duelAsk', (m) => this.onAsk(m));
     net.on('duel', (m) => this.onDuel(m));
@@ -13908,8 +14143,9 @@ class NetUI {
     net.on('disconnect', () => this.lost());
     g.continueRun({ ...welcome.life, camps: welcome.camps ?? {} });
     this.renderRoster();
-    if (welcome.ended) this.addLine(`<i>Your last rider fell with $${welcome.ended.bounty}. This is a new life.</i>`);
-    g.ui.toast(`Welcome to the frontier, ${welcome.name}. Press T to talk, G to call someone out.`, 6);
+    if (welcome.ended) this.chat?.system(`Your last rider fell with $${welcome.ended.bounty}. This is a new life.`);
+    this.chat?.system(`Welcome to the frontier, ${welcome.name}. Enter to chat (/s say · /y yell · /g world · /w name whisper). G near a rider to duel or play dice.`);
+    g.ui.toast(`Welcome to the frontier, ${welcome.name}.`, 4);
   }
 
   onLife(m) {
@@ -13937,26 +14173,21 @@ class NetUI {
     const hud = document.getElementById('hud');
     if (!hud) return;
     this.rosterEl = el('div', 'online-roster');
-    this.chatLog = el('div', 'chat-log');
-    this.chatForm = el('form', 'chat-form');
-    this.chatForm.hidden = true;
-    this.chatForm.innerHTML = '<input id="chat-input" maxlength="140" autocomplete="off" spellcheck="false" placeholder="Say something · Enter to send · Esc to cancel">';
-    this.chatInput = this.chatForm.querySelector('input');
-    this.chatForm.addEventListener('submit', (e) => { e.preventDefault(); this.sendChat(); });
     this.banner = el('div', 'duel-banner');
     this.banner.hidden = true;
     this.offer = el('div', 'duel-offer panel');
     this.offer.hidden = true;
     let tags = document.getElementById('rider-tags');
     if (!tags) { tags = el('div'); tags.id = 'rider-tags'; document.getElementById('app').appendChild(tags); }
-    hud.append(this.rosterEl, this.chatLog, this.chatForm, this.banner, this.offer);
+    hud.append(this.rosterEl, this.banner, this.offer);
+    this.chat = new ChatBox(this.game, hud, tags);
   }
 
   hide() {
-    for (const n of [this.rosterEl, this.chatLog, this.banner, this.offer]) if (n) n.textContent = '';
+    for (const n of [this.rosterEl, this.banner, this.offer]) if (n) n.textContent = '';
     if (this.offer) this.offer.hidden = true;
     if (this.banner) this.banner.hidden = true;
-    if (this.chatForm) this.chatForm.hidden = true;
+    this.chat?.show(false);
   }
 
   renderRoster() {
@@ -13964,39 +14195,6 @@ class NetUI {
     if (!net || !this.rosterEl) return;
     const names = [...net.roster.values()].map((r) => esc(r.name));
     this.rosterEl.innerHTML = `<b>${net.roster.size}/20 riders</b> · ${net.ping} ms<div class="roster-names">${names.join(' · ')}</div>`;
-  }
-
-  addLine(html) {
-    this.lines.push({ html, t: performance.now() });
-    if (this.lines.length > 8) this.lines.shift();
-    this.renderChat();
-  }
-
-  renderChat() {
-    if (!this.chatLog) return;
-    const now = performance.now(), open = !this.chatForm.hidden;
-    this.chatLog.innerHTML = this.lines.filter((l) => open || now - l.t < 12000).map((l) => `<div>${l.html}</div>`).join('');
-  }
-
-  openChat() {
-    this.chatForm.hidden = false;
-    this.chatInput.value = '';
-    this.game.input.clear();
-    this.renderChat();
-    setTimeout(() => this.chatInput.focus(), 0);
-  }
-
-  closeChat() {
-    this.chatForm.hidden = true;
-    this.chatInput.blur();
-    this.game.input.clear();
-    this.renderChat();
-  }
-
-  sendChat() {
-    const text = cleanChat(this.chatInput.value);
-    if (text) this.game.net?.chat(text);
-    this.closeChat();
   }
 
   // ---------- duels ----------
@@ -14104,13 +14302,10 @@ class NetUI {
   key(e) {
     const g = this.game;
     if (!g.net || e.repeat) return;
-    const typing = document.activeElement === this.chatInput;
-    if (typing) {
-      if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeChat(); }
-      return;
-    }
+    if (this.chat?.typing) return;
     if (g.state !== 'playing' || e.target?.closest?.('input, textarea')) return;
-    if (e.code === 'KeyT') { e.preventDefault(); e.stopPropagation(); this.openChat(); }
+    if (e.code === 'KeyT' || e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); e.stopPropagation(); this.chat?.open(); }
+    else if (e.code === 'Slash') { e.preventDefault(); e.stopPropagation(); this.chat?.open('/'); }
     else if (e.code === 'KeyG') { e.stopPropagation(); this.openOffer(); }
     else if (e.code === 'KeyY' && this.ask) { e.stopPropagation(); this.answer(true); }
     else if (e.code === 'KeyX' && this.ask) { e.stopPropagation(); this.answer(false); }
@@ -14129,7 +14324,8 @@ class NetUI {
     }
     if (this.bannerUntil && now > this.bannerUntil) { this.bannerUntil = 0; this.banner.hidden = true; }
     this.rosterT = (this.rosterT ?? 0) - dt;
-    if (this.rosterT <= 0) { this.rosterT = 2; this.renderRoster(); this.renderChat(); }
+    if (this.rosterT <= 0) { this.rosterT = 2; this.renderRoster(); }
+    this.chat?.update();
   }
 }
 

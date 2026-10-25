@@ -15,6 +15,9 @@ import {
 import { Sim } from './sim.js';
 import { Duels } from './duels.js';
 import { Dice } from './dice.js';
+
+/** How far a spoken line carries, in meters. */
+const CHAT_RANGE = { say: 40, yell: 150 };
 import { restrain } from '../src/enemy-captive.js';
 
 const START = { x: 0, z: 12 };
@@ -326,11 +329,33 @@ export class Hub {
     }
   }
 
+  /**
+   * Chat channels: say reaches riders nearby (and in the same room), yell
+   * reaches farther, world reaches everyone, whisper reaches one rider by name.
+   */
   onChat(session, m) {
     const text = cleanChat(m.text), now = this.now();
-    if (!text || now - session.lastChat < 900) return;
+    if (!text || now - session.lastChat < 700) return;
     session.lastChat = now;
-    this.broadcast({ t: 'chat', from: session.id, name: session.account.name, text });
+    const ch = CHAT_RANGE[m.ch] !== undefined || m.ch === 'world' || m.ch === 'whisper' ? m.ch : 'say';
+    const line = { t: 'chat', ch, from: session.id, name: session.account.name, text };
+    if (ch === 'world') { this.broadcast(line); return; }
+    if (ch === 'whisper') {
+      const wanted = String(m.to ?? '').toLowerCase();
+      const target = [...this.sessions.values()].find((o) => o.ready && o.account?.name.toLowerCase() === wanted);
+      if (!target) { this.send(session, { t: 'chat', from: null, text: `No rider named ${String(m.to ?? '').slice(0, 16)} is online.` }); return; }
+      line.to = target.account.name;
+      this.send(target, line);
+      if (target !== session) this.send(session, line);
+      return;
+    }
+    const s = session.state, range = CHAT_RANGE[ch];
+    for (const other of this.sessions.values()) {
+      const o = other.state;
+      if (!other.ready || !o) continue;
+      const near = other === session || (o.room === s.room && (o.room || Math.hypot(o.x - s.x, o.z - s.z) <= range));
+      if (near) this.send(other, line);
+    }
   }
 
   onPing(session, m) {

@@ -2,7 +2,8 @@
 // chat, calling someone out for a duel, and answering a call. Also swaps in a
 // new life when the server deals one.
 import { Net, forgetIdentity, savedIdentity } from './net.js';
-import { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE, cleanChat } from './protocol.js';
+import { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE } from './protocol.js';
+import { ChatBox } from './chat.js';
 import { DICE_WAGERS } from './poker-dice.js';
 
 const FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -100,9 +101,8 @@ export class NetUI {
   start(net, welcome) {
     const g = this.game;
     g.net = net;
-    this.lines = [];
-    this.renderChat();
-    net.on('chat', (m) => this.addLine(m.from ? `<b>${esc(m.name)}</b> ${esc(m.text)}` : `<i>${esc(m.text)}</i>`));
+    this.chat?.show(true);
+    net.on('chat', (m) => this.chat?.receive(m));
     net.on('life', (m) => this.onLife(m));
     net.on('duelAsk', (m) => this.onAsk(m));
     net.on('duel', (m) => this.onDuel(m));
@@ -111,8 +111,9 @@ export class NetUI {
     net.on('disconnect', () => this.lost());
     g.continueRun({ ...welcome.life, camps: welcome.camps ?? {} });
     this.renderRoster();
-    if (welcome.ended) this.addLine(`<i>Your last rider fell with $${welcome.ended.bounty}. This is a new life.</i>`);
-    g.ui.toast(`Welcome to the frontier, ${welcome.name}. Press T to talk, G to call someone out.`, 6);
+    if (welcome.ended) this.chat?.system(`Your last rider fell with $${welcome.ended.bounty}. This is a new life.`);
+    this.chat?.system(`Welcome to the frontier, ${welcome.name}. Enter to chat (/s say · /y yell · /g world · /w name whisper). G near a rider to duel or play dice.`);
+    g.ui.toast(`Welcome to the frontier, ${welcome.name}.`, 4);
   }
 
   onLife(m) {
@@ -140,26 +141,21 @@ export class NetUI {
     const hud = document.getElementById('hud');
     if (!hud) return;
     this.rosterEl = el('div', 'online-roster');
-    this.chatLog = el('div', 'chat-log');
-    this.chatForm = el('form', 'chat-form');
-    this.chatForm.hidden = true;
-    this.chatForm.innerHTML = '<input id="chat-input" maxlength="140" autocomplete="off" spellcheck="false" placeholder="Say something · Enter to send · Esc to cancel">';
-    this.chatInput = this.chatForm.querySelector('input');
-    this.chatForm.addEventListener('submit', (e) => { e.preventDefault(); this.sendChat(); });
     this.banner = el('div', 'duel-banner');
     this.banner.hidden = true;
     this.offer = el('div', 'duel-offer panel');
     this.offer.hidden = true;
     let tags = document.getElementById('rider-tags');
     if (!tags) { tags = el('div'); tags.id = 'rider-tags'; document.getElementById('app').appendChild(tags); }
-    hud.append(this.rosterEl, this.chatLog, this.chatForm, this.banner, this.offer);
+    hud.append(this.rosterEl, this.banner, this.offer);
+    this.chat = new ChatBox(this.game, hud, tags);
   }
 
   hide() {
-    for (const n of [this.rosterEl, this.chatLog, this.banner, this.offer]) if (n) n.textContent = '';
+    for (const n of [this.rosterEl, this.banner, this.offer]) if (n) n.textContent = '';
     if (this.offer) this.offer.hidden = true;
     if (this.banner) this.banner.hidden = true;
-    if (this.chatForm) this.chatForm.hidden = true;
+    this.chat?.show(false);
   }
 
   renderRoster() {
@@ -167,39 +163,6 @@ export class NetUI {
     if (!net || !this.rosterEl) return;
     const names = [...net.roster.values()].map((r) => esc(r.name));
     this.rosterEl.innerHTML = `<b>${net.roster.size}/20 riders</b> · ${net.ping} ms<div class="roster-names">${names.join(' · ')}</div>`;
-  }
-
-  addLine(html) {
-    this.lines.push({ html, t: performance.now() });
-    if (this.lines.length > 8) this.lines.shift();
-    this.renderChat();
-  }
-
-  renderChat() {
-    if (!this.chatLog) return;
-    const now = performance.now(), open = !this.chatForm.hidden;
-    this.chatLog.innerHTML = this.lines.filter((l) => open || now - l.t < 12000).map((l) => `<div>${l.html}</div>`).join('');
-  }
-
-  openChat() {
-    this.chatForm.hidden = false;
-    this.chatInput.value = '';
-    this.game.input.clear();
-    this.renderChat();
-    setTimeout(() => this.chatInput.focus(), 0);
-  }
-
-  closeChat() {
-    this.chatForm.hidden = true;
-    this.chatInput.blur();
-    this.game.input.clear();
-    this.renderChat();
-  }
-
-  sendChat() {
-    const text = cleanChat(this.chatInput.value);
-    if (text) this.game.net?.chat(text);
-    this.closeChat();
   }
 
   // ---------- duels ----------
@@ -307,13 +270,10 @@ export class NetUI {
   key(e) {
     const g = this.game;
     if (!g.net || e.repeat) return;
-    const typing = document.activeElement === this.chatInput;
-    if (typing) {
-      if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeChat(); }
-      return;
-    }
+    if (this.chat?.typing) return;
     if (g.state !== 'playing' || e.target?.closest?.('input, textarea')) return;
-    if (e.code === 'KeyT') { e.preventDefault(); e.stopPropagation(); this.openChat(); }
+    if (e.code === 'KeyT' || e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); e.stopPropagation(); this.chat?.open(); }
+    else if (e.code === 'Slash') { e.preventDefault(); e.stopPropagation(); this.chat?.open('/'); }
     else if (e.code === 'KeyG') { e.stopPropagation(); this.openOffer(); }
     else if (e.code === 'KeyY' && this.ask) { e.stopPropagation(); this.answer(true); }
     else if (e.code === 'KeyX' && this.ask) { e.stopPropagation(); this.answer(false); }
@@ -332,6 +292,7 @@ export class NetUI {
     }
     if (this.bannerUntil && now > this.bannerUntil) { this.bannerUntil = 0; this.banner.hidden = true; }
     this.rosterT = (this.rosterT ?? 0) - dt;
-    if (this.rosterT <= 0) { this.rosterT = 2; this.renderRoster(); this.renderChat(); }
+    if (this.rosterT <= 0) { this.rosterT = 2; this.renderRoster(); }
+    this.chat?.update();
   }
 }
