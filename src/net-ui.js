@@ -1,7 +1,7 @@
 // The online parts of the interface: joining from the title, the rider count,
 // chat, calling someone out for a duel, and answering a call. Also swaps in a
 // new life when the server deals one.
-import { Net, savedIdentity } from './net.js';
+import { Net, forgetIdentity, savedIdentity } from './net.js';
 import { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE, cleanChat } from './protocol.js';
 import { DICE_WAGERS } from './poker-dice.js';
 
@@ -34,20 +34,43 @@ export class NetUI {
   buildTitle() {
     const menu = document.querySelector('.title-menu');
     if (!menu) return;
-    const box = el('div', 'online-join');
-    const { name } = savedIdentity();
+    this.joinBox = el('div', 'online-join');
+    menu.appendChild(this.joinBox);
+    this.drawJoin();
+  }
+
+  /**
+   * A returning rider gets one button with their name on it. Someone new (or
+   * someone starting a different rider) types a name first.
+   */
+  drawJoin(message = '') {
+    const box = this.joinBox, { name, token } = savedIdentity(), known = !!(token && name);
     box.innerHTML = `
       <h2 class="guide-title">Ride online</h2>
       <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
-      <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
-      <button id="btn-online" class="btn primary" type="button">Ride online</button>
+      ${known ? `
+        <button id="btn-online" class="btn primary" type="button">Ride online as ${esc(name)}</button>
+        <button id="btn-new-rider" class="btn link-btn" type="button">Start a different rider</button>`
+      : `
+        <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
+        <button id="btn-online" class="btn primary" type="button">Create rider and ride</button>`}
       <p class="online-status" id="online-status" aria-live="polite"></p>`;
-    menu.appendChild(box);
     this.nameInput = box.querySelector('#online-name');
     this.status = box.querySelector('#online-status');
-    if (name) this.nameInput.value = name;
+    this.status.textContent = message;
     box.querySelector('#btn-online').addEventListener('click', () => this.join());
-    this.nameInput.addEventListener('keydown', (e) => { if (e.code === 'Enter') { e.preventDefault(); this.join(); } });
+    this.nameInput?.addEventListener('keydown', (e) => { if (e.code === 'Enter') { e.preventDefault(); this.join(); } });
+    box.querySelector('#btn-new-rider')?.addEventListener('click', () => {
+      if (!this.confirmNew) {
+        this.confirmNew = true;
+        this.status.textContent = `${name} stays on the server, but this browser will forget them. Click again to start someone new.`;
+        return;
+      }
+      this.confirmNew = false;
+      forgetIdentity();
+      this.drawJoin();
+      this.nameInput?.focus();
+    });
   }
 
   async join() {
@@ -55,19 +78,20 @@ export class NetUI {
     if (this.joining || g.net) return;
     g.audio.unlock();
     g.audio.play('uiClick', { bus: 'ui' });
-    const name = this.nameInput.value.trim();
-    const { token } = savedIdentity();
-    if (!token && name.length < 2) { this.status.textContent = 'Pick a name of 2 to 16 letters.'; return; }
+    const saved = savedIdentity();
+    const name = this.nameInput ? this.nameInput.value.trim() : saved.name;
+    if (!saved.token && (!name || name.length < 2)) { this.status.textContent = 'Pick a name of 2 to 16 letters.'; return; }
     this.joining = true;
-    this.status.textContent = 'Riding out…';
+    this.status.textContent = 'Riding out… a sleeping server takes a few seconds to wake.';
     const net = new Net(g);
     try {
       const welcome = await net.connect(name);
       this.start(net, welcome);
-      this.status.textContent = '';
+      this.drawJoin();
     } catch (e) {
       net.close();
-      this.status.textContent = e.message;
+      // A token the server no longer knows was forgotten by net.js; show the name form again.
+      this.drawJoin(e.message);
     } finally {
       this.joining = false;
     }
@@ -106,7 +130,7 @@ export class NetUI {
     g.unload();
     g.state = 'title';
     g.ui.show('title');
-    this.status.textContent = 'Lost the connection to the server.';
+    this.drawJoin('Lost the connection to the server.');
     this.hide();
   }
 

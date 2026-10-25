@@ -49,6 +49,23 @@ Open http://localhost:8080 in two browser windows (one private window works), ty
 - Camps cleared by anyone come back after twelve minutes. Everyone near a kill gets quest credit.
 - Animals are shared too: the server runs the herds, so everyone sees the same deer and the same wolves, and a carcass can be skinned once. Horses left standing show for everyone nearby.
 
+**Deploy to Cloudflare (one shared world, sleeps when nobody plays, about $5–7 a month):**
+
+Needs the Workers Paid plan ($5/month), which includes Containers. The Worker serves the game page from Cloudflare's edge, and starts the game server container only when someone rides online; the server shuts itself down after 15 minutes with nobody online. The world is saved in the Worker's Durable Object storage, so it survives sleep and redeploys.
+
+From GitHub (no Docker needed on your machine): in the Cloudflare dashboard, **Workers & Pages → Create → Import a repository**, pick this repo and branch, then set
+- Build command: `npm run build:web`
+- Deploy command: `npx wrangler deploy`
+
+From your own machine (needs Docker Desktop running):
+
+```sh
+npx wrangler login
+npm run deploy
+```
+
+The game is then at `https://dustiron.<your-subdomain>.workers.dev`. The first rider after a quiet spell waits a few seconds while the server wakes. `instance_type` in `wrangler.jsonc` sets the server size (`basic` is 1/4 CPU and 1 GiB; `standard-1` doubles the CPU if the world lags).
+
 **Deploy to Fly.io (sleeps when nobody plays, about $3–5 a month):**
 
 ```sh

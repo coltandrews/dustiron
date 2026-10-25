@@ -1,7 +1,11 @@
 // Dust & Iron game server: serves the game files, accepts riders over a
-// WebSocket at /ws, runs the shared world at 60 Hz and saves it to disk.
+// WebSocket at /ws, runs the shared world at 60 Hz and saves it.
 //
 //   node server/index.js            (PORT=8080, DATA_DIR=./data)
+//
+// On Cloudflare the Worker passes WORLD_URL and WORLD_KEY (save the world
+// there instead of on disk) and IDLE_EXIT_MINUTES (shut down when nobody has
+// been online that long, so the container stops and stops costing money).
 //
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -38,9 +42,12 @@ function fileFor(urlPath) {
   try { return statSync(file).isFile() ? file : null; } catch { return null; }
 }
 
-export async function startServer({ port = PORT, dataDir = DATA_DIR, quiet = false } = {}) {
+const REMOTE = process.env.WORLD_URL && process.env.WORLD_KEY ? { url: process.env.WORLD_URL, key: process.env.WORLD_KEY } : null;
+const IDLE_EXIT = Number(process.env.IDLE_EXIT_MINUTES ?? 0) * 60;
+
+export async function startServer({ port = PORT, dataDir = DATA_DIR, quiet = false, remote = REMOTE, idleExit = IDLE_EXIT, onIdle = null } = {}) {
   await initPhysics();
-  const store = new Store(dataDir);
+  const store = await Store.open(dataDir, remote);
   const hub = new Hub(store);
   const log = (...args) => { if (!quiet) console.log(...args); };
 
@@ -69,12 +76,18 @@ export async function startServer({ port = PORT, dataDir = DATA_DIR, quiet = fal
 
   // Fixed 60 Hz world; snapshots at 15 Hz; the world file is saved every 10 seconds.
   const step = 1 / 60;
-  let last = performance.now(), acc = 0, snapAcc = 0, saveAcc = 0;
+  let last = performance.now(), acc = 0, snapAcc = 0, saveAcc = 0, idleT = 0;
   const loop = setInterval(() => {
     const now = performance.now();
     let dt = Math.min(0.25, (now - last) / 1000);
     last = now;
-    if (hub.playerCount === 0) { saveAcc += dt; if (saveAcc > 10) { saveAcc = 0; hub.persist(); } return; }
+    if (hub.playerCount === 0) {
+      saveAcc += dt; if (saveAcc > 10) { saveAcc = 0; hub.persist(); }
+      idleT += dt;
+      if (idleExit > 0 && idleT > idleExit && onIdle) { idleT = -Infinity; onIdle(); }
+      return;
+    }
+    idleT = 0;
     acc += dt;
     let n = 0;
     while (acc >= step && n < 8) { hub.tick(step); acc -= step; n++; }
@@ -87,11 +100,12 @@ export async function startServer({ port = PORT, dataDir = DATA_DIR, quiet = fal
 
   await new Promise((done) => server.listen(port, done));
   const address = server.address();
-  log(`Dust & Iron server on port ${address.port} · world ${store.worldSeed} · data ${dataDir}${built ? ' · serving dist/' : ''}`);
+  log(`Dust & Iron server on port ${address.port} · world ${store.worldSeed} · ${remote ? 'saving remotely' : `data ${dataDir}`}${built ? ' · serving dist/' : ''}`);
 
   const stop = async () => {
     clearInterval(loop);
     hub.persist();
+    await store.flush();
     for (const session of hub.sessions.values()) session.conn.close(1001, 'Server stopping');
     await new Promise((done) => server.close(done));
   };
@@ -99,12 +113,15 @@ export async function startServer({ port = PORT, dataDir = DATA_DIR, quiet = fal
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const running = await startServer();
+  let stopping = false;
   const shutdown = async (signal) => {
+    if (stopping) return;
+    stopping = true;
     console.log(`${signal}: saving the world`);
     await running.stop();
     process.exit(0);
   };
+  const running = await startServer({ onIdle: () => shutdown('idle') });
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 }

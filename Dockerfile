@@ -1,5 +1,6 @@
 # Dust & Iron game server: serves the game and runs the shared world.
-FROM node:22-slim
+# Cloudflare runs containers on linux/amd64.
+FROM --platform=linux/amd64 node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./

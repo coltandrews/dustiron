@@ -255,3 +255,37 @@ test('animals are shared: one rider shoots a deer and skins it for a pelt', asyn
   assert.equal(hub.sim.wildlife.carcasses.length, 0, 'a carcass is skinned once');
   r.close();
 });
+
+test('on Cloudflare the world is saved to remote storage and survives a restart', async (t) => {
+  const { createServer } = await import('node:http');
+  let saved = null, puts = 0;
+  const storage = createServer((req, res) => {
+    if (req.headers['x-world-key'] !== 'secret') { res.writeHead(403); res.end(); return; }
+    if (req.method === 'GET') { if (!saved) { res.writeHead(404); res.end(); } else { res.writeHead(200); res.end(saved); } return; }
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => { saved = body; puts++; res.writeHead(204); res.end(); });
+  });
+  await new Promise((done) => storage.listen(0, done));
+  t.after(() => storage.close());
+  const remote = { url: `http://127.0.0.1:${storage.address().port}/__world`, key: 'secret' };
+  const dir = mkdtempSync(pathJoin(tmpdir(), 'dustiron-'));
+  const first = await startServer({ port: 0, dataDir: dir, quiet: true, remote });
+  const { r, welcome } = await enter(first.port, 'Nell');
+  r.close();
+  await sleep(100);
+  await first.stop();
+  assert.ok(puts >= 1, 'the world was sent to storage');
+  const disk = JSON.parse(saved);
+  assert.equal(disk.accounts[welcome.id].name, 'Nell');
+  assert.equal(disk.accounts[welcome.id].life.world, undefined, 'lives are saved without world data');
+  const second = await startServer({ port: 0, dataDir: dir, quiet: true, remote });
+  t.after(() => second.stop());
+  assert.equal(second.store.worldSeed, welcome.worldSeed, 'the same world comes back');
+  const again = await enter(second.port, null, welcome.token);
+  assert.equal(again.welcome.name, 'Nell');
+  assert.equal(again.welcome.life.seed, welcome.life.seed);
+  assert.ok(again.welcome.life.world?.camps?.length > 0, 'world data is rebuilt on load');
+  again.r.close();
+  rmSync(dir, { recursive: true, force: true });
+});

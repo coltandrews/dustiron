@@ -144,6 +144,12 @@ export class Net {
     }
     this.pingT -= dt;
     if (this.pingT <= 0) { this.pingT = 5; this.send({ t: 'ping', c: performance.now() }); }
+    // On Cloudflare an ordinary request now and then tells the host the server is still in use.
+    this.aliveT = (this.aliveT ?? 240) - dt;
+    if (this.aliveT <= 0) {
+      this.aliveT = 240;
+      try { globalThis.fetch?.(this.url.replace(/^ws/, 'http').replace(/\/ws$/, '/health'), { cache: 'no-store' }).catch(() => {}); } catch { /* offline */ }
+    }
   }
 
   markLife() { this.lifeDirty = true; }

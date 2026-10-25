@@ -1,0 +1,28 @@
+// Cloudflare deployment: one Worker serves the game files and fronts a single
+// game server container shared by every rider. See README "Deploy to Cloudflare".
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dustiron",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "directory": "./dist-web",
+    "binding": "ASSETS",
+    "run_worker_first": ["/ws", "/health", "/__world"]
+  },
+  "containers": [
+    {
+      "class_name": "GameServer",
+      "image": "./Dockerfile",
+      // One world for everyone for now. Raise this (and route by world) to scale out.
+      "max_instances": 1,
+      // 1/4 vCPU and 1 GiB. Use "standard-1" if the world lags with many riders.
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "class_name": "GameServer", "name": "GAME_SERVER" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameServer"] }],
+  "observability": { "enabled": true }
+}

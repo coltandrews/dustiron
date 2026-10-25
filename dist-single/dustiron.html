@@ -584,6 +584,8 @@ kbd {
 .dice-faces { font-size: 30px; letter-spacing: 2px; line-height: 1; color: #f3e6cc; }
 .dice-verdict { margin-top: 6px; font-weight: 700; color: #f0c27a; }
 .fps-meter { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 3px 8px; font: 600 12px/1.2 monospace; color: #f3e6cc; background: rgba(0, 0, 0, 0.55); border-radius: 3px; pointer-events: none; z-index: 6; }
+.link-btn { background: none; border-color: transparent; color: #cdb894; font-size: 14px; padding: 4px 2px; text-decoration: underline; justify-content: center; }
+.link-btn:hover { background: none; border-color: transparent; color: #f0c978; }
 
 </style>
 <!-- Lets the game run from any static server without a build step. Vite ignores it. -->
@@ -13724,6 +13726,12 @@ class Net {
     }
     this.pingT -= dt;
     if (this.pingT <= 0) { this.pingT = 5; this.send({ t: 'ping', c: performance.now() }); }
+    // On Cloudflare an ordinary request now and then tells the host the server is still in use.
+    this.aliveT = (this.aliveT ?? 240) - dt;
+    if (this.aliveT <= 0) {
+      this.aliveT = 240;
+      try { globalThis.fetch?.(this.url.replace(/^ws/, 'http').replace(/\/ws$/, '/health'), { cache: 'no-store' }).catch(() => {}); } catch { /* offline */ }
+    }
   }
 
   markLife() { this.lifeDirty = true; }
@@ -13802,7 +13810,7 @@ __m.net_ui = (() => {
 // The online parts of the interface: joining from the title, the rider count,
 // chat, calling someone out for a duel, and answering a call. Also swaps in a
 // new life when the server deals one.
-const { Net, savedIdentity } = __m.net;
+const { Net, forgetIdentity, savedIdentity } = __m.net;
 const { DUEL_MODES, DUEL_WAGERS, DUEL_RANGE, cleanChat } = __m.protocol;
 const { DICE_WAGERS } = __m.poker_dice;
 const FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -13834,20 +13842,43 @@ class NetUI {
   buildTitle() {
     const menu = document.querySelector('.title-menu');
     if (!menu) return;
-    const box = el('div', 'online-join');
-    const { name } = savedIdentity();
+    this.joinBox = el('div', 'online-join');
+    menu.appendChild(this.joinBox);
+    this.drawJoin();
+  }
+
+  /**
+   * A returning rider gets one button with their name on it. Someone new (or
+   * someone starting a different rider) types a name first.
+   */
+  drawJoin(message = '') {
+    const box = this.joinBox, { name, token } = savedIdentity(), known = !!(token && name);
     box.innerHTML = `
       <h2 class="guide-title">Ride online</h2>
       <p class="fine">One shared frontier, up to 20 riders. Towns are safe unless you agree to a duel. One life.</p>
-      <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
-      <button id="btn-online" class="btn primary" type="button">Ride online</button>
+      ${known ? `
+        <button id="btn-online" class="btn primary" type="button">Ride online as ${esc(name)}</button>
+        <button id="btn-new-rider" class="btn link-btn" type="button">Start a different rider</button>`
+      : `
+        <label class="online-name"><span>Name</span><input id="online-name" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="Your rider's name"></label>
+        <button id="btn-online" class="btn primary" type="button">Create rider and ride</button>`}
       <p class="online-status" id="online-status" aria-live="polite"></p>`;
-    menu.appendChild(box);
     this.nameInput = box.querySelector('#online-name');
     this.status = box.querySelector('#online-status');
-    if (name) this.nameInput.value = name;
+    this.status.textContent = message;
     box.querySelector('#btn-online').addEventListener('click', () => this.join());
-    this.nameInput.addEventListener('keydown', (e) => { if (e.code === 'Enter') { e.preventDefault(); this.join(); } });
+    this.nameInput?.addEventListener('keydown', (e) => { if (e.code === 'Enter') { e.preventDefault(); this.join(); } });
+    box.querySelector('#btn-new-rider')?.addEventListener('click', () => {
+      if (!this.confirmNew) {
+        this.confirmNew = true;
+        this.status.textContent = `${name} stays on the server, but this browser will forget them. Click again to start someone new.`;
+        return;
+      }
+      this.confirmNew = false;
+      forgetIdentity();
+      this.drawJoin();
+      this.nameInput?.focus();
+    });
   }
 
   async join() {
@@ -13855,19 +13886,20 @@ class NetUI {
     if (this.joining || g.net) return;
     g.audio.unlock();
     g.audio.play('uiClick', { bus: 'ui' });
-    const name = this.nameInput.value.trim();
-    const { token } = savedIdentity();
-    if (!token && name.length < 2) { this.status.textContent = 'Pick a name of 2 to 16 letters.'; return; }
+    const saved = savedIdentity();
+    const name = this.nameInput ? this.nameInput.value.trim() : saved.name;
+    if (!saved.token && (!name || name.length < 2)) { this.status.textContent = 'Pick a name of 2 to 16 letters.'; return; }
     this.joining = true;
-    this.status.textContent = 'Riding out…';
+    this.status.textContent = 'Riding out… a sleeping server takes a few seconds to wake.';
     const net = new Net(g);
     try {
       const welcome = await net.connect(name);
       this.start(net, welcome);
-      this.status.textContent = '';
+      this.drawJoin();
     } catch (e) {
       net.close();
-      this.status.textContent = e.message;
+      // A token the server no longer knows was forgotten by net.js; show the name form again.
+      this.drawJoin(e.message);
     } finally {
       this.joining = false;
     }
@@ -13906,7 +13938,7 @@ class NetUI {
     g.unload();
     g.state = 'title';
     g.ui.show('title');
-    this.status.textContent = 'Lost the connection to the server.';
+    this.drawJoin('Lost the connection to the server.');
     this.hide();
   }
 

@@ -11,7 +11,9 @@
     "single": "node tools/bundle.mjs",
     "test": "node --test test/*.test.mjs",
     "server": "node server/index.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "build:web": "node tools/web.mjs",
+    "deploy": "node tools/web.mjs && npx wrangler deploy"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.19.3",

@@ -494,6 +494,7 @@ export class Hub {
   }
 
   persist() {
+    if (this.sessions.size === 0 && !this.store.dirty) return false;
     this.store.data.time = this.sim.time;
     for (const session of this.sessions.values()) {
       const s = session.state, life = session.account.life;
