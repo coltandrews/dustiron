@@ -66,12 +66,19 @@ async function boot() {
     if (e.repeat || e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
+    else if (e.code === 'F2' || e.code === 'KeyI') { e.preventDefault(); fps.hidden = !fps.hidden; }
     else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));
   addEventListener('pagehide', () => game.save());
 
+  // F2 or I shows frame rate, draw calls and triangles.
+  const fps = document.createElement('div');
+  fps.className = 'fps-meter';
+  fps.hidden = true;
+  document.getElementById('app').appendChild(fps);
+  let frames = 0, fpsT = 0;
   const step = 1 / T.sim.hz;
   let acc = 0;
   let last = performance.now();
@@ -96,6 +103,12 @@ async function boot() {
         if (n === T.sim.maxTicksPerFrame) acc = 0;
       }
       game.frame(dt, acc / step);
+      frames++; fpsT += dt;
+      if (fpsT >= 1) {
+        const info = render.renderer.info.render;
+        if (!fps.hidden) fps.textContent = `${Math.round(frames / fpsT)} fps · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris`;
+        frames = 0; fpsT = 0;
+      }
       netUI.update(dt);
       input.endFrame();
     } catch (e) {

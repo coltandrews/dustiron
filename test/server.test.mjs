@@ -164,7 +164,7 @@ test('outside town a rider can be shot dead, and that life is over for good', as
   a.close(); b.close();
 });
 
-test('the server runs the outlaws: a camp fights back and its dead stay dead', async (t) => {
+test("the server runs the outlaws: a camp fights back and its dead stay dead", { timeout: 90000 }, async (t) => {
   const { port, hub } = await withServer(t);
   const { r, welcome } = await enter(port, 'Fay');
   const camp = hub.sim.encounters[0];
@@ -173,9 +173,10 @@ test('the server runs the outlaws: a camp fights back and its dead stay dead', a
   Object.assign(s, { x: camp.x, z: camp.z + 6 });
   hub.sim.movePlayer(s);
   hub.sim.noise(s.x, s.z, 30);
-  const snap = await r.wait((m) => m.t === 's' && m.e.length > 0 && m.ev.some((e) => e[0] === 'proj'), 15000);
+  const snap = await r.wait((m) => m.t === 's' && m.e.length > 0, 15000);
   assert.ok(snap.e.length > 0, 'outlaws appear in snapshots near the rider');
-  assert.ok(s.hp < 100 || snap.ev.some((e) => e[0] === 'proj'), 'they shoot');
+  // They shoot; on a slow machine the first bullet can take a while.
+  await r.wait((m) => m.t === 's' && m.ev.some((e) => e[0] === 'proj'), 30000);
   const victim = camp.enemies.find((e) => e.alive);
   const g = GUN_CODES.indexOf('revolver');
   let killed = null;

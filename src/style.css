@@ -571,3 +571,4 @@ kbd {
 .dice-row { display: grid; grid-template-columns: 90px auto 1fr; gap: 10px; align-items: center; text-align: left; margin: 2px 0; }
 .dice-faces { font-size: 30px; letter-spacing: 2px; line-height: 1; color: #f3e6cc; }
 .dice-verdict { margin-top: 6px; font-weight: 700; color: #f0c27a; }
+.fps-meter { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 3px 8px; font: 600 12px/1.2 monospace; color: #f3e6cc; background: rgba(0, 0, 0, 0.55); border-radius: 3px; pointer-events: none; z-index: 6; }

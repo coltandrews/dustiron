@@ -79,6 +79,7 @@ The machine stops when nobody is connected and starts again on the next visit (a
 | Map | M or Tab (pauses the fight) |
 | Pause | Esc |
 | Mute | N |
+| Frame rate readout | I |
 | Tuning panel | ` (backquote) |
 
 ## How a run works

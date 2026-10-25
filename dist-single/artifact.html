@@ -575,6 +575,7 @@ kbd {
 .dice-row { display: grid; grid-template-columns: 90px auto 1fr; gap: 10px; align-items: center; text-align: left; margin: 2px 0; }
 .dice-faces { font-size: 30px; letter-spacing: 2px; line-height: 1; color: #f3e6cc; }
 .dice-verdict { margin-top: 6px; font-weight: 700; color: #f0c27a; }
+.fps-meter { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 3px 8px; font: 600 12px/1.2 monospace; color: #f3e6cc; background: rgba(0, 0, 0, 0.55); border-radius: 3px; pointer-events: none; z-index: 6; }
 
 </style>
 <script type="importmap">
@@ -672,6 +673,7 @@ kbd {
         <div><dt><kbd>Wheel</kbd></dt><dd>Camera zoom</dd></div>
         <div><dt><kbd>Esc</kbd></dt><dd>Pause</dd></div>
         <div><dt><kbd>N</kbd></dt><dd>Mute</dd></div>
+        <div><dt><kbd>I</kbd></dt><dd>Frame rate</dd></div>
         </dl>
         <p class="fine mobile-note">Dust &amp; Iron needs a keyboard and a mouse or trackpad.</p>
       </div>
@@ -14171,12 +14173,19 @@ async function boot() {
     if (e.repeat || e.target?.closest?.('input[type="text"], input:not([type]), textarea')) return;
     if (game.state === 'dead' && (e.code === 'KeyR' || e.code === 'Enter')) { audio.unlock(); game.newRun(); }
     else if (game.state === 'title' && e.code === 'Enter') { audio.unlock(); const s = loadSave(); if (s) game.continueRun(s); else game.newRun(); }
+    else if (e.code === 'F2' || e.code === 'KeyI') { e.preventDefault(); fps.hidden = !fps.hidden; }
     else if (e.code === 'KeyN') { audio.unlock(); audio.setMuted(!audio.muted); ui.toast(audio.muted ? 'Sound off' : 'Sound on', 1.2); }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) game.pause(true); });
   addEventListener('blur', () => game.pause(true));
   addEventListener('pagehide', () => game.save());
 
+  // F2 or I shows frame rate, draw calls and triangles.
+  const fps = document.createElement('div');
+  fps.className = 'fps-meter';
+  fps.hidden = true;
+  document.getElementById('app').appendChild(fps);
+  let frames = 0, fpsT = 0;
   const step = 1 / T.sim.hz;
   let acc = 0;
   let last = performance.now();
@@ -14201,6 +14210,12 @@ async function boot() {
         if (n === T.sim.maxTicksPerFrame) acc = 0;
       }
       game.frame(dt, acc / step);
+      frames++; fpsT += dt;
+      if (fpsT >= 1) {
+        const info = render.renderer.info.render;
+        if (!fps.hidden) fps.textContent = `${Math.round(frames / fpsT)} fps · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris`;
+        frames = 0; fpsT = 0;
+      }
       netUI.update(dt);
       input.endFrame();
     } catch (e) {
